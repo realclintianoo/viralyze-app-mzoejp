@@ -1,83 +1,60 @@
 
 import { OnboardingData } from '../types';
 
-// Mock AI functions for now - these would connect to actual AI services
-export const aiComplete = async (
+// Mock AI function for development
+// In production, this would integrate with OpenAI or similar service
+export async function aiComplete(
   kind: string,
   profile: OnboardingData | null,
   input: string
-): Promise<string> => {
-  console.log('AI Complete called:', { kind, profile, input });
-  
+): Promise<string> {
   // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
+  await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+
+  // Mock responses based on kind and input
   const responses = {
-    hook: [
-      "Stop scrolling if you want to grow faster",
-      "This mistake is killing your engagement",
-      "I tried this for 30 days and here's what happened",
-      "The algorithm change nobody is talking about",
-      "Why your content isn't going viral (and how to fix it)"
+    chat: [
+      `Great question! Based on your ${profile?.niche || 'content'} niche, here's what I'd suggest: ${generateMockResponse(input)}`,
+      `I love this direction! For ${profile?.platforms?.join(' and ') || 'your platforms'}, you could try: ${generateMockResponse(input)}`,
+      `This is perfect for your audience! Here's a strategy that works well: ${generateMockResponse(input)}`,
     ],
-    script: `Hook: "Stop scrolling if you want to grow faster"
-
-Value: Here's the thing most creators don't realize - consistency beats perfection every single time. I've been analyzing top creators for months, and the ones who post regularly (even if it's not perfect) always outperform those who post sporadically.
-
-The algorithm rewards consistency because it shows you're committed. Your audience starts expecting your content, and that anticipation drives engagement.
-
-CTA: Follow for more growth tips that actually work. What's your biggest content struggle? Drop it below! 👇`,
-    caption: `🚀 Ready to level up your content game?
-
-Here's what I learned after analyzing 1000+ viral posts:
-
-✨ Authenticity beats perfection
-📈 Consistency is your secret weapon  
-💡 Value first, promotion second
-🎯 Know your audience inside out
-
-The creators who understand this are the ones dominating their niches right now.
-
-What's your biggest content challenge? Let me know below! 👇
-
-#ContentCreator #SocialMediaTips #CreatorEconomy`,
-    calendar: `📅 7-Day Content Calendar
-
-Monday: Motivational Monday - Share your weekly goals
-Tuesday: Tutorial Tuesday - Teach something valuable  
-Wednesday: Behind the scenes - Show your process
-Thursday: Throwback Thursday - Share your journey
-Friday: Feature Friday - Highlight community/clients
-Saturday: Saturday Stories - Personal/lifestyle content
-Sunday: Sunday Reflection - Weekly wins and lessons
-
-Best posting times for your niche:
-- Morning: 7-9 AM
-- Lunch: 12-1 PM  
-- Evening: 6-8 PM`,
-    rewrite: `Platform Adaptations:
-
-📱 TikTok: "POV: You finally understand why your content isn't viral (it's not what you think)"
-
-📸 Instagram: "The harsh truth about why your posts aren't getting engagement ✨ Swipe for the solution that changed everything →"
-
-🎥 YouTube: "Why 99% of Creators Fail (And the Simple Fix That Changes Everything)"
-
-🐦 X/Twitter: "Unpopular opinion: Your content isn't bad. Your strategy is. Here's what actually works in 2024:"
-
-💼 LinkedIn: "After analyzing 10,000+ posts, I discovered the #1 reason most professional content fails. Here's what successful creators do differently:"`
+    script: [
+      "🎬 HOOK: Did you know that 90% of people quit before they see results?\n\n💡 VALUE: The secret isn't talent - it's consistency. Here's the 3-step system I use:\n\n1. Start with just 5 minutes daily\n2. Track your progress visually\n3. Celebrate small wins\n\n🚀 CTA: Try this for 7 days and watch what happens. Comment 'READY' if you're in!",
+      "🔥 HOOK: Everyone's talking about this 'weird' morning routine...\n\n✨ VALUE: It's not what you think. No ice baths or 4AM wake-ups. Just 3 simple habits that changed everything:\n\n• 2-minute gratitude practice\n• Phone-free first hour\n• One deep conversation daily\n\n💪 CTA: Which one will you try first? Let me know below!",
+    ],
+    hook: [
+      "• You're doing social media wrong (and here's why)\n• The #1 mistake killing your engagement\n• Why your content isn't converting\n• This changed everything for me\n• What nobody tells you about going viral\n• The secret successful creators won't share\n• Stop doing this immediately\n• Your audience is begging for this\n• This took me from 0 to 100K\n• The uncomfortable truth about growth",
+    ],
   };
-  
-  return responses[kind as keyof typeof responses] || responses.hook[0];
-};
 
-export const aiImage = async (prompt: string, size: string): Promise<string> => {
-  console.log('AI Image called:', { prompt, size });
+  const categoryResponses = responses[kind as keyof typeof responses] || responses.chat;
+  const randomResponse = categoryResponses[Math.floor(Math.random() * categoryResponses.length)];
   
+  return randomResponse;
+}
+
+export async function aiImage(prompt: string, size: string): Promise<string> {
   // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000));
   
   // Return a placeholder image URL
-  const dimensions = size === '16:9' ? '1920x1080' : size === '4:5' ? '1080x1350' : '1080x1080';
-  return `https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=${dimensions.split('x')[0]}&h=${dimensions.split('x')[1]}&fit=crop&crop=center`;
-};
+  const width = size === '16:9' ? 1920 : size === '4:5' ? 1080 : 1080;
+  const height = size === '16:9' ? 1080 : size === '4:5' ? 1350 : 1080;
+  
+  return `https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=${width}&h=${height}&fit=crop&crop=center`;
+}
+
+function generateMockResponse(input: string): string {
+  const templates = [
+    "Focus on storytelling - people connect with authentic experiences more than perfect content.",
+    "Try the 80/20 rule: 80% value-driven content, 20% promotional. This builds trust first.",
+    "Consistency beats perfection. Post regularly, even if it's not your best work.",
+    "Engage genuinely with your audience. Reply to comments like you're talking to a friend.",
+    "Use trending audio but make the content uniquely yours. Don't just copy what's viral.",
+    "Share behind-the-scenes content. People love seeing the real person behind the brand.",
+    "Ask questions in your captions to boost engagement. Make your audience part of the conversation.",
+    "Collaborate with others in your niche. Cross-pollination grows everyone's audience.",
+  ];
+  
+  return templates[Math.floor(Math.random() * templates.length)];
+}
