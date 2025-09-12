@@ -152,13 +152,12 @@ export default function SettingsScreen() {
       const jsonString = JSON.stringify(exportData, null, 2);
       const fileName = `viralyze-export-${new Date().toISOString().split('T')[0]}.json`;
       
-      // Get the document directory and check if it's available
-      const documentDirectory = (FileSystem as any).documentDirectory;
-      if (!documentDirectory) {
+      // Check if documentDirectory is available
+      if (!FileSystem.documentDirectory) {
         throw new Error('Document directory not available on this platform');
       }
       
-      const fileUri = documentDirectory + fileName;
+      const fileUri = FileSystem.documentDirectory + fileName;
 
       await FileSystem.writeAsStringAsync(fileUri, jsonString);
       
@@ -191,7 +190,7 @@ export default function SettingsScreen() {
               } else if (user) {
                 await supabase.from('saved_items').delete().eq('user_id', user.id);
                 await supabase.from('usage_log').delete().eq('user_id', user.id);
-                await supabase.from('profiles').delete().eq('user_id', user.id);
+                await supabase.from('profiles').delete().eq('id', user.id);
               }
               
               setProfile(null);
