@@ -15,6 +15,10 @@ export const colors = {
   white: '#FFFFFF',
   black: '#000000',
   overlay: 'rgba(0, 0, 0, 0.5)',
+  accentGlow: 'rgba(34, 197, 94, 0.2)',
+  cardHover: '#1A202C',
+  gradientStart: '#0B0F14',
+  gradientEnd: '#1A202C',
 };
 
 export const typography = {
@@ -28,15 +32,30 @@ export const typography = {
     fontWeight: '600' as const,
     lineHeight: 28,
   },
+  h3: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    lineHeight: 24,
+  },
   body: {
     fontSize: 16,
     fontWeight: '400' as const,
+    lineHeight: 24,
+  },
+  bodyMedium: {
+    fontSize: 16,
+    fontWeight: '500' as const,
     lineHeight: 24,
   },
   caption: {
     fontSize: 13,
     fontWeight: '400' as const,
     lineHeight: 18,
+  },
+  small: {
+    fontSize: 12,
+    fontWeight: '400' as const,
+    lineHeight: 16,
   },
 };
 
@@ -46,13 +65,16 @@ export const spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+  xxl: 48,
 };
 
 export const borderRadius = {
+  xs: 4,
   sm: 8,
   md: 12,
   lg: 16,
   xl: 20,
+  xxl: 24,
   full: 9999,
 };
 
@@ -77,6 +99,23 @@ export const shadows = {
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 8,
+  },
+  glow: {
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+};
+
+export const animations = {
+  fast: 150,
+  normal: 200,
+  slow: 300,
+  spring: {
+    damping: 15,
+    stiffness: 150,
   },
 };
 
@@ -103,12 +142,24 @@ export const commonStyles = StyleSheet.create({
     ...typography.h2,
     color: colors.text,
   },
+  h3: {
+    ...typography.h3,
+    color: colors.text,
+  },
   body: {
     ...typography.body,
     color: colors.text,
   },
+  bodyMedium: {
+    ...typography.bodyMedium,
+    color: colors.text,
+  },
   caption: {
     ...typography.caption,
+    color: colors.grey,
+  },
+  small: {
+    ...typography.small,
     color: colors.grey,
   },
   
@@ -125,6 +176,14 @@ export const commonStyles = StyleSheet.create({
     padding: spacing.sm,
     ...shadows.sm,
   },
+  cardGlow: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadows.glow,
+    borderWidth: 1,
+    borderColor: colors.accentGlow,
+  },
   
   // Buttons
   button: {
@@ -134,12 +193,23 @@ export const commonStyles = StyleSheet.create({
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: 48,
+    ...shadows.sm,
   },
   buttonText: {
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  buttonGlow: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 4,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    ...shadows.glow,
   },
   secondaryButton: {
     backgroundColor: 'transparent',
@@ -150,7 +220,7 @@ export const commonStyles = StyleSheet.create({
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: 48,
   },
   secondaryButtonText: {
     color: colors.text,
@@ -168,7 +238,11 @@ export const commonStyles = StyleSheet.create({
     paddingVertical: spacing.sm + 4,
     fontSize: 16,
     color: colors.text,
-    minHeight: 44,
+    minHeight: 48,
+  },
+  inputFocused: {
+    borderColor: colors.accent,
+    ...shadows.glow,
   },
   
   // Chips
@@ -185,6 +259,7 @@ export const commonStyles = StyleSheet.create({
   chipSelected: {
     backgroundColor: colors.accent,
     borderColor: colors.accent,
+    ...shadows.glow,
   },
   chipText: {
     color: colors.text,
@@ -209,12 +284,16 @@ export const commonStyles = StyleSheet.create({
   },
   
   // Spacing
+  mb4: { marginBottom: spacing.xs },
   mb8: { marginBottom: spacing.sm },
   mb16: { marginBottom: spacing.md },
   mb24: { marginBottom: spacing.lg },
+  mb32: { marginBottom: spacing.xl },
+  mt4: { marginTop: spacing.xs },
   mt8: { marginTop: spacing.sm },
   mt16: { marginTop: spacing.md },
   mt24: { marginTop: spacing.lg },
+  mt32: { marginTop: spacing.xl },
   
   // Flex
   flex1: { flex: 1 },
@@ -227,5 +306,41 @@ export const commonStyles = StyleSheet.create({
   borderBottom: {
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  
+  // Premium effects
+  glowEffect: {
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  
+  // Status badges
+  proBadge: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 2,
+    borderRadius: borderRadius.xs,
+  },
+  proText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.white,
+    textTransform: 'uppercase',
+  },
+  
+  limitBadge: {
+    backgroundColor: colors.error,
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 2,
+    borderRadius: borderRadius.xs,
+  },
+  limitText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.white,
+    textTransform: 'uppercase',
   },
 });
