@@ -152,12 +152,13 @@ export default function SettingsScreen() {
       const jsonString = JSON.stringify(exportData, null, 2);
       const fileName = `viralyze-export-${new Date().toISOString().split('T')[0]}.json`;
       
-      // Check if documentDirectory is available
-      if (!FileSystem.documentDirectory) {
+      // Use the correct way to access document directory
+      const documentDirectory = FileSystem.documentDirectory;
+      if (!documentDirectory) {
         throw new Error('Document directory not available on this platform');
       }
       
-      const fileUri = FileSystem.documentDirectory + fileName;
+      const fileUri = documentDirectory + fileName;
 
       await FileSystem.writeAsStringAsync(fileUri, jsonString);
       
