@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -32,13 +32,7 @@ const VerificationChecklist: React.FC<VerificationChecklistProps> = ({ visible, 
   const { quota } = useQuota();
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
 
-  useEffect(() => {
-    if (visible) {
-      generateChecklist();
-    }
-  }, [visible, user, isGuest, quota]);
-
-  const generateChecklist = async () => {
+  const generateChecklist = useCallback(async () => {
     const savedItems = await storage.getSavedItems();
     
     const items: ChecklistItem[] = [
@@ -105,7 +99,13 @@ const VerificationChecklist: React.FC<VerificationChecklistProps> = ({ visible, 
     ];
 
     setChecklist(items);
-  };
+  }, [isGuest, quota]);
+
+  useEffect(() => {
+    if (visible) {
+      generateChecklist();
+    }
+  }, [visible, generateChecklist]);
 
   const completedCount = checklist.filter(item => item.completed).length;
   const totalCount = checklist.length;

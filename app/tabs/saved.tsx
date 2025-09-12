@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,15 +42,7 @@ export default function SavedScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadSavedItems();
-  }, [user, isGuest]);
-
-  useEffect(() => {
-    filterItems();
-  }, [savedItems, selectedCategory, searchQuery]);
-
-  const loadSavedItems = async () => {
+  const loadSavedItems = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -76,9 +69,9 @@ export default function SavedScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isGuest, user, showToast]);
 
-  const filterItems = () => {
+  const filterItems = useCallback(() => {
     let filtered = savedItems;
 
     // Filter by category
@@ -97,7 +90,15 @@ export default function SavedScreen() {
     }
 
     setFilteredItems(filtered);
-  };
+  }, [savedItems, selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    loadSavedItems();
+  }, [loadSavedItems]);
+
+  useEffect(() => {
+    filterItems();
+  }, [filterItems]);
 
   const handleCategoryPress = (categoryId: string) => {
     setSelectedCategory(categoryId);

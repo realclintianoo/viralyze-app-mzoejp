@@ -89,6 +89,7 @@ For rewrites: Adapt content for different platforms while maintaining core messa
               }
             } catch (e) {
               // Ignore parsing errors for incomplete chunks
+              console.log('Parsing error for chunk:', e);
             }
           }
         }

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { storage } from '../utils/storage';
@@ -23,11 +23,7 @@ export const useQuota = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadQuota();
-  }, [user, isGuest]);
-
-  const loadQuota = async () => {
+  const loadQuota = useCallback(async () => {
     try {
       if (isGuest) {
         // Load from local storage for guests
@@ -68,7 +64,11 @@ export const useQuota = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isGuest, user]);
+
+  useEffect(() => {
+    loadQuota();
+  }, [loadQuota]);
 
   const incrementUsage = async (type: 'text' | 'image') => {
     try {

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -38,11 +38,7 @@ export default function SettingsScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [user, isGuest]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       if (isGuest) {
         const localProfile = await storage.getOnboardingData();
@@ -66,7 +62,11 @@ export default function SettingsScreen() {
     } catch (error) {
       console.error('Error loading data:', error);
     }
-  };
+  }, [isGuest, user]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleAuth = async () => {
     if (!email.trim() || !password.trim()) {
@@ -151,7 +151,7 @@ export default function SettingsScreen() {
 
       const jsonString = JSON.stringify(exportData, null, 2);
       const fileName = `viralyze-export-${new Date().toISOString().split('T')[0]}.json`;
-      const fileUri = FileSystem.documentDirectory + fileName;
+      const fileUri = (FileSystem.documentDirectory || '') + fileName;
 
       await FileSystem.writeAsStringAsync(fileUri, jsonString);
       

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -98,17 +98,7 @@ export default function ToolScreen() {
 
   const tool = TOOL_CONFIG[id as keyof typeof TOOL_CONFIG];
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  useEffect(() => {
-    if (tool?.isPro && !quota.isPro) {
-      setShowUpgradeModal(true);
-    }
-  }, [tool, quota.isPro]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       if (isGuest) {
         const localProfile = await storage.getOnboardingData();
@@ -132,7 +122,17 @@ export default function ToolScreen() {
     } catch (error) {
       console.error('Error loading profile:', error);
     }
-  };
+  }, [isGuest, user]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  useEffect(() => {
+    if (tool?.isPro && !quota.isPro) {
+      setShowUpgradeModal(true);
+    }
+  }, [tool, quota.isPro]);
 
   const handleGenerate = async () => {
     if (!input.trim()) {

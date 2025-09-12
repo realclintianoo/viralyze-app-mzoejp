@@ -44,7 +44,7 @@ export default function AnimatedCard({
         ...animations.spring,
       }),
     ]).start();
-  }, [delay]);
+  }, [delay, fadeAnim, scaleAnim]);
 
   const handlePressIn = () => {
     if (hover) {

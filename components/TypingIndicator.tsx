@@ -42,7 +42,7 @@ export default function TypingIndicator({ visible }: TypingIndicatorProps) {
       dot2Anim.setValue(0);
       dot3Anim.setValue(0);
     }
-  }, [visible]);
+  }, [visible, dot1Anim, dot2Anim, dot3Anim]);
 
   if (!visible) return null;
 

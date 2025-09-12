@@ -51,7 +51,7 @@ export default function QuotaPill({ remaining, total, type = 'text' }: QuotaPill
       pulseAnim.setValue(1);
       glowAnim.setValue(0);
     }
-  }, [remaining]);
+  }, [remaining, pulseAnim, glowAnim]);
 
   const getColor = () => {
     if (remaining === 0) return colors.error;

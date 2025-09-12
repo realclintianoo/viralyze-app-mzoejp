@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -56,17 +56,7 @@ export default function ChatScreen() {
   
   const scrollViewRef = useRef<ScrollView>(null);
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }
-  }, [messages, streamingContent]);
-
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       if (isGuest) {
         const localProfile = await storage.getOnboardingData();
@@ -90,7 +80,17 @@ export default function ChatScreen() {
     } catch (error) {
       console.error('Error loading initial data:', error);
     }
-  };
+  }, [isGuest, user]);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [messages, streamingContent]);
 
   const handleQuickAction = async (actionId: string) => {
     if (!canUseFeature('text')) {

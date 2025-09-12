@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { storage } from '../utils/storage';
@@ -38,6 +38,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const syncLocalDataToRemote = useCallback(async (userId: string) => {
+    try {
+      console.log('Syncing local data to remote for user:', userId);
+      
+      // Sync profile data
+      const localProfile = await storage.getOnboardingData();
+      if (localProfile) {
+        await upsertProfile(userId, localProfile);
+      }
+
+      // Sync saved items
+      const localSavedItems = await storage.getSavedItems();
+      if (localSavedItems.length > 0) {
+        await syncSavedItems(userId, localSavedItems);
+      }
+
+      console.log('Local data sync completed');
+    } catch (error) {
+      console.error('Error syncing local data:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -60,29 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  const syncLocalDataToRemote = async (userId: string) => {
-    try {
-      console.log('Syncing local data to remote for user:', userId);
-      
-      // Sync profile data
-      const localProfile = await storage.getOnboardingData();
-      if (localProfile) {
-        await upsertProfile(userId, localProfile);
-      }
-
-      // Sync saved items
-      const localSavedItems = await storage.getSavedItems();
-      if (localSavedItems.length > 0) {
-        await syncSavedItems(userId, localSavedItems);
-      }
-
-      console.log('Local data sync completed');
-    } catch (error) {
-      console.error('Error syncing local data:', error);
-    }
-  };
+  }, [syncLocalDataToRemote]);
 
   const upsertProfile = async (userId: string, profile: OnboardingData) => {
     const { error } = await supabase
