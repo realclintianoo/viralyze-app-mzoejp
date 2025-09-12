@@ -1,13 +1,12 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SavedItem, QuotaUsage, OnboardingData, ChatMessage } from '../types';
+import { SavedItem, QuotaUsage, OnboardingData } from '../types';
 
 const KEYS = {
   SAVED_ITEMS: 'saved_items',
   QUOTA_USAGE: 'quota_usage',
   ONBOARDING_DATA: 'onboarding_data',
   CHAT_HISTORY: 'chat_history',
-  USER_PREFERENCES: 'user_preferences',
 };
 
 export const storage = {
@@ -46,19 +45,6 @@ export const storage = {
       await this.saveSavedItems(filtered);
     } catch (error) {
       console.log('Error removing saved item:', error);
-    }
-  },
-
-  async updateSavedItem(id: string, updates: Partial<SavedItem>): Promise<void> {
-    try {
-      const items = await this.getSavedItems();
-      const index = items.findIndex(item => item.id === id);
-      if (index !== -1) {
-        items[index] = { ...items[index], ...updates };
-        await this.saveSavedItems(items);
-      }
-    } catch (error) {
-      console.log('Error updating saved item:', error);
     }
   },
 
@@ -131,50 +117,6 @@ export const storage = {
     }
   },
 
-  async getChatHistory(): Promise<ChatMessage[]> {
-    try {
-      const history = await AsyncStorage.getItem(KEYS.CHAT_HISTORY);
-      return history ? JSON.parse(history) : [];
-    } catch (error) {
-      console.log('Error getting chat history:', error);
-      return [];
-    }
-  },
-
-  async saveChatHistory(messages: ChatMessage[]): Promise<void> {
-    try {
-      // Keep only last 50 messages to prevent storage bloat
-      const trimmed = messages.slice(-50);
-      await AsyncStorage.setItem(KEYS.CHAT_HISTORY, JSON.stringify(trimmed));
-    } catch (error) {
-      console.log('Error saving chat history:', error);
-    }
-  },
-
-  async getUserPreferences(): Promise<any> {
-    try {
-      const prefs = await AsyncStorage.getItem(KEYS.USER_PREFERENCES);
-      return prefs ? JSON.parse(prefs) : {
-        hapticsEnabled: true,
-        reducedMotion: false,
-      };
-    } catch (error) {
-      console.log('Error getting user preferences:', error);
-      return {
-        hapticsEnabled: true,
-        reducedMotion: false,
-      };
-    }
-  },
-
-  async saveUserPreferences(preferences: any): Promise<void> {
-    try {
-      await AsyncStorage.setItem(KEYS.USER_PREFERENCES, JSON.stringify(preferences));
-    } catch (error) {
-      console.log('Error saving user preferences:', error);
-    }
-  },
-
   async clearAll(): Promise<void> {
     try {
       await AsyncStorage.multiRemove([
@@ -182,36 +124,9 @@ export const storage = {
         KEYS.QUOTA_USAGE,
         KEYS.ONBOARDING_DATA,
         KEYS.CHAT_HISTORY,
-        KEYS.USER_PREFERENCES,
       ]);
     } catch (error) {
       console.log('Error clearing storage:', error);
-    }
-  },
-
-  async exportData(): Promise<string> {
-    try {
-      const [savedItems, quotaUsage, onboardingData, chatHistory, preferences] = await Promise.all([
-        this.getSavedItems(),
-        this.getQuotaUsage(),
-        this.getOnboardingData(),
-        this.getChatHistory(),
-        this.getUserPreferences(),
-      ]);
-
-      const exportData = {
-        savedItems,
-        quotaUsage,
-        onboardingData,
-        chatHistory,
-        preferences,
-        exportDate: new Date().toISOString(),
-      };
-
-      return JSON.stringify(exportData, null, 2);
-    } catch (error) {
-      console.log('Error exporting data:', error);
-      throw error;
     }
   },
 };
