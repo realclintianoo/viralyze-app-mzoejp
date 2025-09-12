@@ -67,10 +67,14 @@ For rewrites: Adapt content for different platforms while maintaining core messa
 
       let fullContent = '';
       const decoder = new TextDecoder();
+      let isStreamActive = true;
 
-      while (true) {
+      while (isStreamActive) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          isStreamActive = false;
+          break;
+        }
 
         const chunk = decoder.decode(value);
         const lines = chunk.split('\n');
@@ -78,7 +82,10 @@ For rewrites: Adapt content for different platforms while maintaining core messa
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
-            if (data === '[DONE]') continue;
+            if (data === '[DONE]') {
+              isStreamActive = false;
+              break;
+            }
 
             try {
               const parsed = JSON.parse(data);
