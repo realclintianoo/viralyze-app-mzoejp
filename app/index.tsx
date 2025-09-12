@@ -1,52 +1,40 @@
-import React, { useState } from 'react';
-import { Text, View, Image, TouchableOpacity } from 'react-native';
+
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import { Redirect } from 'expo-router';
 import { commonStyles, colors } from '../styles/commonStyles';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import SimpleBottomSheet from '../components/BottomSheet';
+import { storage } from '../utils/storage';
 
+export default function Index() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasOnboarded, setHasOnboarded] = useState(false);
 
-export default function MainScreen() {
-  const [isBottomSheetVisible, setIsBottomSheetVisible] = useState(false);
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, []);
 
-  const handleOpenBottomSheet = () => {
-    setIsBottomSheetVisible(true);
+  const checkOnboardingStatus = async () => {
+    try {
+      const onboardingData = await storage.getOnboardingData();
+      setHasOnboarded(!!onboardingData);
+    } catch (error) {
+      console.log('Error checking onboarding status:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  return (
-      <SafeAreaView style={commonStyles.container}>
-        <View style={commonStyles.content}>
-          <Image
-            source={require('../assets/images/final_quest_240x240.png')}
-            style={{ width: 180, height: 180 }}
-            resizeMode="contain"
-          />
-          <Text style={commonStyles.title}>This is a placeholder app.</Text>
-          <Text style={commonStyles.text}>Your app will be displayed here when it's ready.</Text>
+  if (isLoading) {
+    return (
+      <View style={[commonStyles.container, commonStyles.center]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
 
-          <TouchableOpacity
-            style={{
-              backgroundColor: colors.primary,
-              paddingHorizontal: 24,
-              paddingVertical: 12,
-              borderRadius: 8,
-              marginTop: 30,
-            }}
-            onPress={handleOpenBottomSheet}
-          >
-            <Text style={{
-              color: colors.text,
-              fontSize: 16,
-              fontWeight: '600',
-            }}>
-              Open Bottom Sheet
-            </Text>
-          </TouchableOpacity>
-        </View>
+  if (!hasOnboarded) {
+    return <Redirect href="/onboarding" />;
+  }
 
-        <SimpleBottomSheet
-          isVisible={isBottomSheetVisible}
-          onClose={() => setIsBottomSheetVisible(false)}
-        />
-      </SafeAreaView>
-  );
+  return <Redirect href="/tabs" />;
 }
