@@ -54,5 +54,3 @@ export interface Database {
     };
   };
 }
-
-type DefaultSchema = Database['public'];

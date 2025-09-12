@@ -11,7 +11,7 @@ export interface User {
 }
 
 export interface SavedItem {
-  id: string;
+  id: string | number;
   user_id?: string;
   type: 'hook' | 'script' | 'caption' | 'calendar' | 'rewrite' | 'image';
   title: string;
@@ -24,6 +24,7 @@ export interface ChatMessage {
   type: 'user' | 'ai';
   content: string;
   timestamp: string;
+  kind?: string;
 }
 
 export interface QuotaUsage {
@@ -39,4 +40,22 @@ export interface OnboardingData {
   niche: string;
   followers: number;
   goal: string;
+}
+
+export interface Profile {
+  id: string;
+  platforms: string[];
+  niche: string | null;
+  followers: number;
+  goal: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UsageLog {
+  id: number;
+  user_id: string;
+  kind: string;
+  day: string;
+  count: number;
 }
