@@ -10,106 +10,104 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
-import { router, useLocalSearchParams } from 'expo-router';
-import { commonStyles, colors } from '../../styles/commonStyles';
+
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useQuota } from '../../hooks/useQuota';
-import { aiComplete, aiImage } from '../../lib/ai';
-import { supabase } from '../../lib/supabase';
 import { storage } from '../../utils/storage';
+import { aiComplete, aiImage } from '../../lib/ai';
+import { commonStyles, colors } from '../../styles/commonStyles';
+
 import AnimatedButton from '../../components/AnimatedButton';
 import SkeletonLoader from '../../components/SkeletonLoader';
 import UpgradeModal from '../../components/UpgradeModal';
 
 const TOOL_CONFIG = {
-  'script-generator': {
+  script: {
     title: 'Script Generator',
-    icon: 'videocam' as const,
+    description: 'Generate 30-60 second scripts with Hook → Value → CTA structure',
+    icon: 'videocam',
     placeholder: 'Describe your video topic...',
     type: 'text' as const,
   },
-  'hook-generator': {
+  hook: {
     title: 'Hook Generator',
-    icon: 'flash' as const,
+    description: 'Create compelling opening lines under 12 words',
+    icon: 'flash',
     placeholder: 'What topic do you want hooks for?',
     type: 'text' as const,
   },
-  'caption-generator': {
+  caption: {
     title: 'Caption Generator',
-    icon: 'text' as const,
+    description: 'Write engaging captions for your posts',
+    icon: 'text',
     placeholder: 'Describe your post content...',
     type: 'text' as const,
   },
-  'calendar': {
+  calendar: {
     title: 'Content Calendar',
-    icon: 'calendar' as const,
+    description: 'Get a 7-day content plan with posting times',
+    icon: 'calendar',
     placeholder: 'What type of content calendar do you need?',
     type: 'text' as const,
   },
-  'rewriter': {
+  rewriter: {
     title: 'Cross-Post Rewriter',
-    icon: 'repeat' as const,
-    placeholder: 'Paste your content to rewrite for different platforms...',
+    description: 'Adapt content for different platforms',
+    icon: 'repeat',
+    placeholder: 'Paste your content to rewrite...',
     type: 'text' as const,
   },
-  'ai-image': {
+  guardian: {
+    title: 'Guideline Guardian',
+    description: 'Check content for platform guidelines (Pro)',
+    icon: 'shield-checkmark',
+    placeholder: 'Paste your content to check...',
+    type: 'text' as const,
+    isPro: true,
+  },
+  image: {
     title: 'AI Image Maker',
-    icon: 'image' as const,
-    placeholder: 'Describe the image you want to create...',
+    description: 'Generate images with AI',
+    icon: 'image',
+    placeholder: 'Describe the image you want...',
     type: 'image' as const,
   },
 };
 
 const IMAGE_SIZES = [
   { label: 'Square (1:1)', value: '1024x1024' as const },
+  { label: 'Portrait (4:5)', value: '1024x1792' as const },
   { label: 'Landscape (16:9)', value: '1792x1024' as const },
-  { label: 'Portrait (9:16)', value: '1024x1792' as const },
 ];
 
-export default function ToolScreen() {
-  const { user, isGuest } = useAuth();
-  const { showToast } = useToast();
-  const { quota, canUseFeature, incrementUsage, getRemainingUsage } = useQuota();
+const ToolScreen = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
-  
   const [input, setInput] = useState('');
   const [results, setResults] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [selectedImageSize, setSelectedImageSize] = useState<'1024x1024' | '1792x1024' | '1024x1792'>('1024x1024');
+  const [selectedImageSize, setSelectedImageSize] = useState<'1024x1024' | '1024x1792' | '1792x1024'>('1024x1024');
+
+  const { user } = useAuth();
+  const { quota, incrementUsage, canUseFeature } = useQuota();
+  const { showToast } = useToast();
 
   const tool = TOOL_CONFIG[id as keyof typeof TOOL_CONFIG];
 
   const loadProfile = useCallback(async () => {
     try {
-      if (isGuest) {
-        const localProfile = await storage.getOnboardingData();
-        setProfile(localProfile);
-      } else if (user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        
-        if (profileData) {
-          setProfile({
-            platforms: profileData.platforms,
-            niche: profileData.niche,
-            followers: profileData.followers,
-            goal: profileData.goal,
-          });
-        }
-      }
+      const userProfile = await storage.getOnboardingData();
+      setProfile(userProfile);
     } catch (error) {
       console.error('Error loading profile:', error);
     }
-  }, [isGuest, user]);
+  }, []);
 
   useEffect(() => {
     loadProfile();
@@ -121,33 +119,50 @@ export default function ToolScreen() {
       return;
     }
 
-    const featureType = tool.type === 'image' ? 'image' : 'text';
-    if (!canUseFeature(featureType)) {
-      setShowUpgradeModal(true);
+    // Check if Pro tool and user doesn't have Pro
+    if (tool.isPro && !quota.isPro) {
+      // Allow access but show upgrade modal when trying to use
     }
   }, [tool, quota.isPro]);
 
-  const handleGenerate = async () => {
-    if (!input.trim() || isLoading) return;
+  if (!tool) {
+    return null;
+  }
 
-    const featureType = tool.type === 'image' ? 'image' : 'text';
-    if (!canUseFeature(featureType)) {
+  const handleGenerate = async () => {
+    if (!input.trim()) {
+      showToast('Please enter some input', 'error');
+      return;
+    }
+
+    // Check quota
+    if (!canUseFeature(tool.type)) {
       setShowUpgradeModal(true);
       return;
     }
 
-    setIsLoading(true);
+    // Check Pro requirement
+    if (tool.isPro && !quota.isPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    setLoading(true);
     setResults([]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await incrementUsage(tool.type);
 
       if (tool.type === 'image') {
-        const imageUrl = await aiImage(input.trim(), selectedImageSize);
+        const imageUrl = await aiImage({
+          prompt: input.trim(),
+          size: selectedImageSize,
+        });
         setResults([imageUrl]);
       } else {
         const responses = await aiComplete({
-          kind: id || 'general',
+          kind: id,
           profile,
           input: input.trim(),
           n: 3,
@@ -155,163 +170,183 @@ export default function ToolScreen() {
         setResults(responses);
       }
 
-      await incrementUsage(featureType);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
-      console.error('Error generating content:', error);
-      
-      // Show specific error messages based on the error type
-      if (error.message.includes('API key not configured')) {
-        Alert.alert(
-          'OpenAI API Key Required',
-          'To use AI features, you need to add your OpenAI API key to the .env file. Get your API key from https://platform.openai.com/api-keys',
-          [
-            { text: 'OK', style: 'default' }
-          ]
-        );
-      } else if (error.message.includes('Invalid OpenAI API key')) {
-        Alert.alert(
-          'Invalid API Key',
-          'Your OpenAI API key appears to be invalid. Please check your API key in the .env file.',
-          [
-            { text: 'OK', style: 'default' }
-          ]
-        );
-      } else if (error.message.includes('rate limit')) {
-        showToast('Rate limit exceeded. Please try again later.', 'error');
-      } else if (error.message.includes('Network error')) {
-        showToast('Network error. Please check your connection.', 'error');
-      } else {
-        showToast('Failed to generate content. Please try again.', 'error');
-      }
+      console.error('Generation error:', error);
+      showToast(error.message || 'Failed to generate content', 'error');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const handleCopy = async (content: string) => {
-    await Clipboard.setStringAsync(content);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    showToast('Copied to clipboard!', 'success');
+    try {
+      await Clipboard.setStringAsync(content);
+      showToast('Copied to clipboard', 'success');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      showToast('Failed to copy', 'error');
+    }
   };
 
   const handleSave = async (content: string, index: number) => {
     try {
       const savedItem = {
-        id: Date.now().toString() + index,
-        user_id: user?.id,
-        type: (tool.type === 'image' ? 'image' : id) as any,
-        title: tool.type === 'image' ? `Generated Image ${index + 1}` : content.substring(0, 50) + '...',
-        payload: { content, tool: id },
+        id: `${id}-${Date.now()}-${index}`,
+        user_id: user?.id || 'guest',
+        type: id as any,
+        title: `${tool.title}: ${input.substring(0, 50)}...`,
+        payload: {
+          content,
+          input,
+          generated_at: new Date().toISOString(),
+          tool: id,
+          ...(tool.type === 'image' && { imageSize: selectedImageSize }),
+        },
         created_at: new Date().toISOString(),
       };
 
-      if (isGuest) {
-        const currentItems = await storage.getSavedItems();
-        await storage.setSavedItems([...currentItems, savedItem]);
-      } else if (user) {
-        await supabase.from('saved_items').insert({
-          user_id: user.id,
-          type: savedItem.type,
-          title: savedItem.title,
-          payload: savedItem.payload,
-        });
-      }
-
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      showToast('Saved successfully!', 'success');
+      await storage.addSavedItem(savedItem);
+      showToast('Saved successfully', 'success');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      console.error('Error saving content:', error);
-      showToast('Failed to save. Please try again.', 'error');
+      console.error('Error saving item:', error);
+      showToast('Failed to save', 'error');
     }
   };
 
   const handleRefine = async (content: string) => {
-    setInput(`Refine this: ${content}`);
-    setResults([]);
+    const refinements = [
+      'Make this shorter and more punchy',
+      'Add more hype and excitement',
+      'Include a stronger call-to-action',
+    ];
+
+    Alert.alert(
+      'Refine Content',
+      'How would you like to refine this content?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        ...refinements.map((refinement, index) => ({
+          text: refinement,
+          onPress: () => refineContent(content, refinement),
+        })),
+      ]
+    );
   };
 
-  if (!tool) {
-    return (
-      <SafeAreaView style={commonStyles.safeArea}>
-        <View style={styles.container}>
-          <Text style={styles.errorText}>Tool not found</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const refineContent = async (originalContent: string, refinement: string) => {
+    if (!canUseFeature('text')) {
+      setShowUpgradeModal(true);
+      return;
+    }
 
-  const featureType = tool.type === 'image' ? 'image' : 'text';
+    setLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    try {
+      await incrementUsage('text');
+
+      const refinedResponses = await aiComplete({
+        kind: 'refine',
+        profile,
+        input: `Original content: "${originalContent}"\n\nRefinement request: ${refinement}`,
+        n: 1,
+      });
+
+      if (refinedResponses[0]) {
+        setResults(prev => [refinedResponses[0], ...prev]);
+        showToast('Content refined successfully', 'success');
+      }
+    } catch (error: any) {
+      console.error('Refinement error:', error);
+      showToast(error.message || 'Failed to refine content', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <SafeAreaView style={commonStyles.safeArea}>
+    <SafeAreaView style={commonStyles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{tool.title}</Text>
-        <View style={styles.quotaContainer}>
-          <Text style={styles.quotaText}>
-            {getRemainingUsage(featureType)} left
-          </Text>
+        <View style={styles.headerContent}>
+          <Ionicons name={tool.icon as any} size={24} color={colors.primary} />
+          <Text style={styles.title}>{tool.title}</Text>
         </View>
+        <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.description}>{tool.description}</Text>
+
+        {tool.isPro && !quota.isPro && (
+          <View style={styles.proNotice}>
+            <Ionicons name="star" size={16} color={colors.warning} />
+            <Text style={styles.proNoticeText}>Pro feature - Upgrade for unlimited access</Text>
+          </View>
+        )}
+
+        {/* Image size selector for image tool */}
+        {tool.type === 'image' && (
+          <View style={styles.imageSizeSelector}>
+            <Text style={styles.sectionTitle}>Image Size</Text>
+            <View style={styles.sizeOptions}>
+              {IMAGE_SIZES.map((size) => (
+                <TouchableOpacity
+                  key={size.value}
+                  style={[
+                    styles.sizeOption,
+                    selectedImageSize === size.value && styles.sizeOptionSelected,
+                  ]}
+                  onPress={() => setSelectedImageSize(size.value)}
+                >
+                  <Text
+                    style={[
+                      styles.sizeOptionText,
+                      selectedImageSize === size.value && styles.sizeOptionTextSelected,
+                    ]}
+                  >
+                    {size.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Input */}
         <View style={styles.inputSection}>
+          <Text style={styles.sectionTitle}>Input</Text>
           <TextInput
             style={styles.textInput}
             value={input}
             onChangeText={setInput}
             placeholder={tool.placeholder}
-            placeholderTextColor={colors.grey}
+            placeholderTextColor={colors.textSecondary}
             multiline
-            maxLength={500}
-          />
-
-          {tool.type === 'image' && (
-            <View style={styles.imageSizeSelector}>
-              <Text style={styles.sectionTitle}>Image Size</Text>
-              <View style={styles.sizeOptions}>
-                {IMAGE_SIZES.map((size) => (
-                  <TouchableOpacity
-                    key={size.value}
-                    style={[
-                      styles.sizeOption,
-                      selectedImageSize === size.value && styles.sizeOptionSelected,
-                    ]}
-                    onPress={() => setSelectedImageSize(size.value)}
-                  >
-                    <Text
-                      style={[
-                        styles.sizeOptionText,
-                        selectedImageSize === size.value && styles.sizeOptionTextSelected,
-                      ]}
-                    >
-                      {size.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          <AnimatedButton
-            title={isLoading ? 'Generating...' : 'Generate'}
-            onPress={handleGenerate}
-            disabled={!input.trim() || isLoading}
-            style={styles.generateButton}
+            numberOfLines={4}
+            maxLength={1000}
           />
         </View>
 
-        {isLoading && (
-          <View style={styles.loadingSection}>
-            <SkeletonLoader />
-            <Text style={styles.loadingText}>
-              {tool.type === 'image' ? 'Creating your image...' : 'Generating content...'}
-            </Text>
+        {/* Generate Button */}
+        <AnimatedButton
+          title={loading ? 'Generating...' : 'Generate'}
+          onPress={handleGenerate}
+          disabled={loading || !input.trim()}
+          style={styles.generateButton}
+        />
+
+        {/* Results */}
+        {loading && (
+          <View style={styles.resultsSection}>
+            <Text style={styles.sectionTitle}>Generating Results...</Text>
+            {[1, 2, 3].map((i) => (
+              <SkeletonLoader key={i} style={styles.skeletonResult} />
+            ))}
           </View>
         )}
 
@@ -322,37 +357,44 @@ export default function ToolScreen() {
               <View key={index} style={styles.resultCard}>
                 {tool.type === 'image' ? (
                   <View style={styles.imageResult}>
-                    <Text style={styles.resultText}>Image generated successfully!</Text>
-                    <Text style={styles.imageUrl}>{result}</Text>
+                    <Text style={styles.resultNumber}>Result {index + 1}</Text>
+                    <View style={styles.imageContainer}>
+                      <Text style={styles.imageUrl}>{result}</Text>
+                    </View>
                   </View>
                 ) : (
-                  <Text style={styles.resultText}>{result}</Text>
+                  <>
+                    <View style={styles.resultHeader}>
+                      <Text style={styles.resultNumber}>Result {index + 1}</Text>
+                    </View>
+                    <Text style={styles.resultText}>{result}</Text>
+                  </>
                 )}
-                
+
                 <View style={styles.resultActions}>
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleCopy(result)}
                   >
-                    <Ionicons name="copy" size={16} color={colors.accent} />
-                    <Text style={styles.actionText}>Copy</Text>
+                    <Ionicons name="copy-outline" size={16} color={colors.primary} />
+                    <Text style={styles.actionButtonText}>Copy</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleSave(result, index)}
                   >
-                    <Ionicons name="bookmark" size={16} color={colors.accent} />
-                    <Text style={styles.actionText}>Save</Text>
+                    <Ionicons name="bookmark-outline" size={16} color={colors.primary} />
+                    <Text style={styles.actionButtonText}>Save</Text>
                   </TouchableOpacity>
-                  
+
                   {tool.type !== 'image' && (
                     <TouchableOpacity
                       style={styles.actionButton}
                       onPress={() => handleRefine(result)}
                     >
-                      <Ionicons name="refresh" size={16} color={colors.accent} />
-                      <Text style={styles.actionText}>Refine</Text>
+                      <Ionicons name="create-outline" size={16} color={colors.primary} />
+                      <Text style={styles.actionButtonText}>Refine</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -360,192 +402,181 @@ export default function ToolScreen() {
             ))}
           </View>
         )}
-
-        {results.length === 0 && !isLoading && (
-          <View style={styles.emptyState}>
-            <Ionicons name={tool.icon} size={64} color={colors.grey} />
-            <Text style={styles.emptyTitle}>Ready to generate</Text>
-            <Text style={styles.emptySubtitle}>
-              Enter your prompt above and tap Generate to get started
-            </Text>
-            <Text style={styles.setupNote}>
-              💡 Make sure to add your OpenAI API key to use AI features
-            </Text>
-          </View>
-        )}
       </ScrollView>
 
       <UpgradeModal
         visible={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        type={featureType}
+        type={tool.type}
       />
     </SafeAreaView>
   );
-}
+};
 
-const styles = {
+const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   backButton: {
-    padding: 8,
-    marginLeft: -8,
+    padding: 4,
   },
-  headerTitle: {
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  title: {
     fontSize: 18,
-    fontWeight: '600' as const,
+    fontWeight: '600',
     color: colors.text,
-    flex: 1,
-    textAlign: 'center' as const,
+    marginLeft: 8,
   },
-  quotaContainer: {
-    backgroundColor: colors.card,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  quotaText: {
-    fontSize: 12,
-    color: colors.accent,
-    fontWeight: '500' as const,
-  },
-  container: {
-    flex: 1,
+  placeholder: {
+    width: 32,
   },
   content: {
-    padding: 16,
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  description: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  proNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.warning + '20',
+    borderColor: colors.warning + '40',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 24,
+  },
+  proNoticeText: {
+    fontSize: 14,
+    color: colors.warning,
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+  imageSizeSelector: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  sizeOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  sizeOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sizeOptionSelected: {
+    backgroundColor: colors.primary + '20',
+    borderColor: colors.primary,
+  },
+  sizeOptionText: {
+    fontSize: 14,
+    color: colors.text,
+  },
+  sizeOptionTextSelected: {
+    color: colors.primary,
+    fontWeight: '500',
   },
   inputSection: {
     marginBottom: 24,
   },
   textInput: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     color: colors.text,
-    minHeight: 120,
-    textAlignVertical: 'top' as const,
-    marginBottom: 16,
-  },
-  imageSizeSelector: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: colors.text,
-    marginBottom: 12,
-  },
-  sizeOptions: {
-    flexDirection: 'row' as const,
-    gap: 8,
-  },
-  sizeOption: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: 'center' as const,
-  },
-  sizeOptionSelected: {
-    backgroundColor: colors.accent,
-  },
-  sizeOptionText: {
-    fontSize: 14,
-    color: colors.text,
-    textAlign: 'center' as const,
-  },
-  sizeOptionTextSelected: {
-    color: colors.white,
-    fontWeight: '600' as const,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
   generateButton: {
-    marginTop: 8,
-  },
-  loadingSection: {
-    alignItems: 'center' as const,
-    paddingVertical: 32,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.grey,
-    marginTop: 16,
+    marginBottom: 32,
   },
   resultsSection: {
-    marginTop: 24,
+    marginBottom: 32,
+  },
+  skeletonResult: {
+    height: 120,
+    marginBottom: 16,
   },
   resultCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  resultHeader: {
+    marginBottom: 12,
+  },
+  resultNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
   },
   resultText: {
     fontSize: 16,
     color: colors.text,
-    lineHeight: 24,
-    marginBottom: 12,
-  },
-  imageResult: {
-    marginBottom: 12,
-  },
-  imageUrl: {
-    fontSize: 12,
-    color: colors.grey,
-    fontFamily: 'monospace',
-    marginTop: 8,
-  },
-  resultActions: {
-    flexDirection: 'row' as const,
-    gap: 16,
-  },
-  actionButton: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 4,
-  },
-  actionText: {
-    fontSize: 14,
-    color: colors.accent,
-    fontWeight: '500' as const,
-  },
-  emptyState: {
-    alignItems: 'center' as const,
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: colors.grey,
-    textAlign: 'center' as const,
     lineHeight: 22,
     marginBottom: 16,
   },
-  setupNote: {
+  imageResult: {
+    marginBottom: 16,
+  },
+  imageContainer: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  imageUrl: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontFamily: 'monospace',
+  },
+  resultActions: {
+    flexDirection: 'row',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  actionButtonText: {
     fontSize: 14,
-    color: colors.accent,
-    textAlign: 'center' as const,
-    fontStyle: 'italic' as const,
+    color: colors.primary,
+    fontWeight: '500',
+    marginLeft: 4,
   },
-  errorText: {
-    fontSize: 18,
-    color: colors.error,
-    textAlign: 'center' as const,
-    marginTop: 50,
-  },
-};
+});
+
+export default ToolScreen;

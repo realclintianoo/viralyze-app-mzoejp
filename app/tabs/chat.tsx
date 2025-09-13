@@ -15,330 +15,318 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
-import { commonStyles, colors } from '../../styles/commonStyles';
+
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useQuota } from '../../hooks/useQuota';
-import { aiComplete } from '../../lib/ai';
-import { supabase } from '../../lib/supabase';
 import { storage } from '../../utils/storage';
-import QuotaPill from '../../components/QuotaPill';
+import { aiComplete } from '../../lib/ai';
+import { commonStyles, colors } from '../../styles/commonStyles';
+
+import AnimatedButton from '../../components/AnimatedButton';
 import TypingIndicator from '../../components/TypingIndicator';
 import UpgradeModal from '../../components/UpgradeModal';
-import AnimatedButton from '../../components/AnimatedButton';
+import QuotaPill from '../../components/QuotaPill';
+import AuthSheet from '../../components/AuthSheet';
 
 interface ChatMessage {
   id: string;
-  type: 'user' | 'ai';
+  type: 'user' | 'ai' | 'system';
   content: string;
   timestamp: string;
   kind?: string;
 }
 
 const QUICK_ACTIONS = [
-  { id: 'hooks', title: 'Hooks', icon: 'flash' as const },
-  { id: 'ideas', title: 'Ideas', icon: 'bulb' as const },
-  { id: 'captions', title: 'Captions', icon: 'text' as const },
-  { id: 'calendar', title: 'Calendar', icon: 'calendar' as const },
+  { id: 'hooks', title: 'Hooks', icon: 'flash', prompt: 'Create 3 engaging hooks for my content' },
+  { id: 'ideas', title: 'Ideas', icon: 'bulb', prompt: 'Give me 5 content ideas for this week' },
+  { id: 'captions', title: 'Captions', icon: 'text', prompt: 'Write captions for my latest post' },
+  { id: 'calendar', title: 'Calendar', icon: 'calendar', prompt: 'Create a 7-day content calendar' },
 ];
 
-export default function ChatScreen() {
-  const { user, isGuest } = useAuth();
-  const { showToast } = useToast();
-  const { quota, canUseFeature, incrementUsage, getRemainingUsage } = useQuota();
-  
+const ChatScreen = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [profile, setProfile] = useState(null);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
-  
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showAuthSheet, setShowAuthSheet] = useState(false);
+  const [profile, setProfile] = useState(null);
+
   const scrollViewRef = useRef<ScrollView>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const { user, isGuest } = useAuth();
+  const { quota, incrementUsage, canUseFeature, getRemainingUsage } = useQuota();
+  const { showToast } = useToast();
 
   const loadInitialData = useCallback(async () => {
     try {
-      if (isGuest) {
-        const localProfile = await storage.getOnboardingData();
-        setProfile(localProfile);
-      } else if (user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+      // Load saved messages
+      const savedMessages = await storage.getChatMessages();
+      
+      if (savedMessages.length === 0) {
+        // Add welcome message
+        const welcomeMessage: ChatMessage = {
+          id: 'welcome',
+          type: 'system',
+          content: `Welcome to VIRALYZE! 🚀
+
+I'm your AI growth coach, ready to help you create viral content. Here's what I can do:
+
+• Generate engaging hooks and scripts
+• Write platform-specific captions  
+• Create content calendars
+• Rewrite content for different platforms
+• Generate AI images for your posts
+
+${isGuest ? `As a guest, you have ${getRemainingUsage('text')} text requests and ${getRemainingUsage('image')} image request remaining today.` : 'You have unlimited requests as a signed-in user!'}
+
+Try the quick actions below or ask me anything!`,
+          timestamp: new Date().toISOString(),
+        };
         
-        if (profileData) {
-          setProfile({
-            platforms: profileData.platforms,
-            niche: profileData.niche,
-            followers: profileData.followers,
-            goal: profileData.goal,
-          });
-        }
+        setMessages([welcomeMessage]);
+        await storage.setChatMessages([welcomeMessage]);
+      } else {
+        setMessages(savedMessages);
       }
+
+      // Load user profile
+      const userProfile = await storage.getOnboardingData();
+      setProfile(userProfile);
     } catch (error) {
       console.error('Error loading initial data:', error);
     }
-  }, [isGuest, user]);
+  }, [isGuest, getRemainingUsage]);
 
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messages.length > 0) {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
+    if (messages.length > 0 || streamingContent) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
   }, [messages, streamingContent]);
 
-  const handleQuickAction = async (actionId: string) => {
-    if (!canUseFeature('text')) {
-      setShowUpgradeModal(true);
-      return;
-    }
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
-    const prompts = {
-      hooks: 'Generate 5 viral hooks for my niche',
-      ideas: 'Give me 5 content ideas for this week',
-      captions: 'Create 3 engaging captions for my latest post',
-      calendar: 'Create a 7-day content calendar for my niche',
-    };
-
-    const prompt = prompts[actionId as keyof typeof prompts];
-    if (prompt) {
-      await sendMessage(prompt, actionId);
+  const handleQuickAction = (actionId: string) => {
+    const action = QUICK_ACTIONS.find(a => a.id === actionId);
+    if (action) {
+      setInputText(action.prompt);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
-  const sendMessage = async (text: string, kind?: string) => {
-    if (!text.trim() || isTyping) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isGenerating) return;
 
+    // Check quota
     if (!canUseFeature('text')) {
       setShowUpgradeModal(true);
       return;
     }
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}`,
       type: 'user',
       content: text.trim(),
       timestamp: new Date().toISOString(),
-      kind,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInputText('');
-    setIsTyping(true);
+    setIsGenerating(true);
     setStreamingContent('');
 
-    try {
-      const controller = new AbortController();
-      setAbortController(controller);
+    // Create abort controller for cancellation
+    abortControllerRef.current = new AbortController();
 
-      let fullResponse = '';
-      
-      const responses = await aiComplete({
-        kind: kind || 'general',
+    try {
+      // Increment usage
+      await incrementUsage('text');
+
+      // Generate AI response
+      const aiResponses = await aiComplete({
+        kind: 'chat',
         profile,
-        input: text,
+        input: text.trim(),
         n: 1,
         stream: true,
         onChunk: (chunk) => {
-          fullResponse += chunk;
-          setStreamingContent(fullResponse);
+          setStreamingContent(prev => prev + chunk);
         },
-        signal: controller.signal,
+        signal: abortControllerRef.current.signal,
       });
 
       const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: `ai-${Date.now()}`,
         type: 'ai',
-        content: fullResponse || responses[0],
+        content: aiResponses[0] || streamingContent,
         timestamp: new Date().toISOString(),
-        kind,
+        kind: 'chat',
       };
 
-      setMessages(prev => [...prev, aiMessage]);
-      await incrementUsage('text');
-      
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
+      await storage.setChatMessages(finalMessages);
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
+      console.error('Error generating response:', error);
+      
       if (error.name !== 'AbortError') {
-        console.error('Error sending message:', error);
+        const errorMessage: ChatMessage = {
+          id: `error-${Date.now()}`,
+          type: 'system',
+          content: `Sorry, I encountered an error: ${error.message}`,
+          timestamp: new Date().toISOString(),
+        };
+
+        const finalMessages = [...updatedMessages, errorMessage];
+        setMessages(finalMessages);
+        await storage.setChatMessages(finalMessages);
         
-        // Show specific error messages based on the error type
-        if (error.message.includes('API key not configured')) {
-          Alert.alert(
-            'OpenAI API Key Required',
-            'To use AI features, you need to add your OpenAI API key to the .env file. Get your API key from https://platform.openai.com/api-keys',
-            [
-              { text: 'OK', style: 'default' }
-            ]
-          );
-        } else if (error.message.includes('Invalid OpenAI API key')) {
-          Alert.alert(
-            'Invalid API Key',
-            'Your OpenAI API key appears to be invalid. Please check your API key in the .env file.',
-            [
-              { text: 'OK', style: 'default' }
-            ]
-          );
-        } else if (error.message.includes('rate limit')) {
-          showToast('Rate limit exceeded. Please try again later.', 'error');
-        } else if (error.message.includes('Network error')) {
-          showToast('Network error. Please check your connection.', 'error');
-        } else {
-          showToast('Failed to generate response. Please try again.', 'error');
-        }
+        showToast(error.message, 'error');
       }
     } finally {
-      setIsTyping(false);
+      setIsGenerating(false);
       setStreamingContent('');
-      setAbortController(null);
+      abortControllerRef.current = null;
     }
   };
 
   const cancelGeneration = () => {
-    if (abortController) {
-      abortController.abort();
-      setAbortController(null);
-      setIsTyping(false);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsGenerating(false);
       setStreamingContent('');
+      showToast('Generation cancelled', 'info');
     }
   };
 
   const copyMessage = async (content: string) => {
-    await Clipboard.setStringAsync(content);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    showToast('Copied to clipboard!', 'success');
-  };
-
-  const saveMessage = async (message: ChatMessage) => {
     try {
-      const savedItem = {
-        id: Date.now().toString(),
-        user_id: user?.id,
-        type: (message.kind || 'caption') as any,
-        title: message.content.substring(0, 50) + '...',
-        payload: { content: message.content, kind: message.kind },
-        created_at: new Date().toISOString(),
-      };
-
-      if (isGuest) {
-        const currentItems = await storage.getSavedItems();
-        await storage.setSavedItems([...currentItems, savedItem]);
-      } else if (user) {
-        await supabase.from('saved_items').insert({
-          user_id: user.id,
-          type: savedItem.type,
-          title: savedItem.title,
-          payload: savedItem.payload,
-        });
-      }
-
+      await Clipboard.setStringAsync(content);
+      showToast('Copied to clipboard', 'success');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      showToast('Saved successfully!', 'success');
     } catch (error) {
-      console.error('Error saving message:', error);
-      showToast('Failed to save. Please try again.', 'error');
+      showToast('Failed to copy', 'error');
     }
   };
 
-  const renderMessage = (message: ChatMessage) => (
-    <View
-      key={message.id}
-      style={[
-        styles.messageContainer,
-        message.type === 'user' ? styles.userMessage : styles.aiMessage,
-      ]}
-    >
-      <Text style={styles.messageText}>{message.content}</Text>
-      
-      {message.type === 'ai' && (
-        <View style={styles.messageActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => copyMessage(message.content)}
-          >
-            <Ionicons name="copy" size={16} color={colors.grey} />
-            <Text style={styles.actionText}>Copy</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => saveMessage(message)}
-          >
-            <Ionicons name="bookmark" size={16} color={colors.grey} />
-            <Text style={styles.actionText}>Save</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
+  const saveMessage = async (message: ChatMessage) => {
+    if (!message.content.trim()) return;
 
-  return (
-    <SafeAreaView style={commonStyles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>VIRALYZE</Text>
-        <View style={styles.headerRight}>
-          <QuotaPill
-            remaining={getRemainingUsage('text')}
-            total={quota.maxTextRequests}
-            type="text"
-          />
-          <TouchableOpacity style={styles.avatarButton}>
-            <Ionicons name="person-circle" size={32} color={colors.accent} />
-          </TouchableOpacity>
+    try {
+      const savedItem = {
+        id: `saved-${Date.now()}`,
+        user_id: user?.id || 'guest',
+        type: (message.kind as any) || 'caption',
+        title: `Chat: ${message.content.substring(0, 50)}...`,
+        payload: {
+          content: message.content,
+          generated_at: message.timestamp,
+          source: 'chat',
+        },
+        created_at: new Date().toISOString(),
+      };
+
+      await storage.addSavedItem(savedItem);
+      showToast('Saved successfully', 'success');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error saving message:', error);
+      showToast('Failed to save', 'error');
+    }
+  };
+
+  const renderMessage = (message: ChatMessage) => {
+    const isUser = message.type === 'user';
+    const isSystem = message.type === 'system';
+
+    return (
+      <View
+        key={message.id}
+        style={[
+          styles.messageContainer,
+          isUser && styles.userMessageContainer,
+          isSystem && styles.systemMessageContainer,
+        ]}
+      >
+        <View
+          style={[
+            styles.messageBubble,
+            isUser && styles.userMessageBubble,
+            isSystem && styles.systemMessageBubble,
+          ]}
+        >
+          <Text
+            style={[
+              styles.messageText,
+              isUser && styles.userMessageText,
+              isSystem && styles.systemMessageText,
+            ]}
+          >
+            {message.content}
+          </Text>
+
+          {/* Action buttons for AI messages */}
+          {message.type === 'ai' && (
+            <View style={styles.messageActions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => copyMessage(message.content)}
+              >
+                <Ionicons name="copy-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.actionText}>Copy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => saveMessage(message)}
+              >
+                <Ionicons name="bookmark-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.actionText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
+    );
+  };
 
+  return (
+    <SafeAreaView style={commonStyles.container}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {messages.length === 0 && (
-            <View style={styles.emptyState}>
-              <Ionicons name="chatbubbles" size={64} color={colors.grey} />
-              <Text style={styles.emptyTitle}>Start a conversation</Text>
-              <Text style={styles.emptySubtitle}>
-                Ask me anything about growing your social media presence
-              </Text>
-              <Text style={styles.setupNote}>
-                💡 Make sure to add your OpenAI API key to use AI features
-              </Text>
-            </View>
-          )}
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>VIRALYZE</Text>
+            <QuotaPill />
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => setShowAuthSheet(true)}
+            >
+              <Ionicons
+                name={isGuest ? "person-add" : "person"}
+                size={24}
+                color={colors.text}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-          {messages.map(renderMessage)}
-
-          {isTyping && (
-            <View style={[styles.messageContainer, styles.aiMessage]}>
-              {streamingContent ? (
-                <Text style={styles.messageText}>{streamingContent}</Text>
-              ) : (
-                <TypingIndicator visible={true} />
-              )}
-              
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={cancelGeneration}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
-
+        {/* Quick Actions */}
         <View style={styles.quickActions}>
           <ScrollView
             horizontal
@@ -351,203 +339,240 @@ export default function ChatScreen() {
                 style={styles.quickActionChip}
                 onPress={() => handleQuickAction(action.id)}
               >
-                <Ionicons name={action.icon} size={16} color={colors.accent} />
+                <Ionicons name={action.icon as any} size={16} color={colors.primary} />
                 <Text style={styles.quickActionText}>{action.title}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
+        {/* Messages */}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {messages.map(renderMessage)}
+
+          {/* Streaming message */}
+          {isGenerating && streamingContent && (
+            <View style={styles.messageContainer}>
+              <View style={styles.messageBubble}>
+                <Text style={styles.messageText}>{streamingContent}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Typing indicator */}
+          {isGenerating && !streamingContent && <TypingIndicator />}
+        </ScrollView>
+
+        {/* Input */}
         <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.textInput}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Ask me anything..."
-            placeholderTextColor={colors.grey}
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!inputText.trim() || isTyping) && styles.sendButtonDisabled,
-            ]}
-            onPress={() => sendMessage(inputText)}
-            disabled={!inputText.trim() || isTyping}
-          >
-            <Ionicons
-              name="send"
-              size={20}
-              color={(!inputText.trim() || isTyping) ? colors.grey : colors.white}
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Ask me anything..."
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              maxLength={500}
+              editable={!isGenerating}
             />
-          </TouchableOpacity>
+            {isGenerating ? (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={cancelGeneration}
+              >
+                <Ionicons name="stop" size={24} color={colors.error} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  (!inputText.trim() || !canUseFeature('text')) && styles.sendButtonDisabled,
+                ]}
+                onPress={() => sendMessage(inputText)}
+                disabled={!inputText.trim() || !canUseFeature('text')}
+              >
+                <Ionicons name="send" size={20} color={colors.background} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </KeyboardAvoidingView>
 
+      {/* Modals */}
       <UpgradeModal
         visible={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         type="text"
       />
+
+      <AuthSheet
+        visible={showAuthSheet}
+        onClose={() => setShowAuthSheet(false)}
+        onContinueAsGuest={() => {}}
+      />
     </SafeAreaView>
   );
-}
+};
 
-const styles = {
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   header: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginRight: 12,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
+    padding: 8,
+  },
+  quickActions: {
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700' as const,
-    color: colors.text,
+  quickActionsContent: {
+    paddingHorizontal: 20,
   },
-  headerRight: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 12,
+  quickActionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
   },
-  avatarButton: {
-    padding: 4,
-  },
-  container: {
-    flex: 1,
+  quickActionText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '500',
+    marginLeft: 6,
   },
   messagesContainer: {
     flex: 1,
   },
   messagesContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: colors.grey,
-    textAlign: 'center' as const,
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  setupNote: {
-    fontSize: 14,
-    color: colors.accent,
-    textAlign: 'center' as const,
-    fontStyle: 'italic' as const,
+    paddingVertical: 16,
   },
   messageContainer: {
-    marginVertical: 8,
-    maxWidth: '85%',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
-  userMessage: {
-    alignSelf: 'flex-end' as const,
-    backgroundColor: colors.accent,
+  userMessageContainer: {
+    alignItems: 'flex-end',
+  },
+  systemMessageContainer: {
+    alignItems: 'center',
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    backgroundColor: colors.surface,
     borderRadius: 16,
+    padding: 16,
+  },
+  userMessageBubble: {
+    backgroundColor: colors.primary,
     borderBottomRightRadius: 4,
-    padding: 12,
   },
-  aiMessage: {
-    alignSelf: 'flex-start' as const,
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    borderBottomLeftRadius: 4,
-    padding: 12,
+  systemMessageBubble: {
+    backgroundColor: colors.warning + '20',
+    borderColor: colors.warning + '40',
+    borderWidth: 1,
   },
   messageText: {
     fontSize: 16,
     color: colors.text,
     lineHeight: 22,
   },
-  messageActions: {
-    flexDirection: 'row' as const,
-    marginTop: 8,
-    gap: 16,
+  userMessageText: {
+    color: colors.background,
   },
-  actionButton: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 4,
-  },
-  actionText: {
-    fontSize: 14,
-    color: colors.grey,
-  },
-  cancelButton: {
-    marginTop: 8,
-    alignSelf: 'flex-start' as const,
-  },
-  cancelText: {
-    fontSize: 14,
-    color: colors.error,
-  },
-  quickActions: {
-    paddingVertical: 12,
-  },
-  quickActionsContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  quickActionChip: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
-  },
-  quickActionText: {
-    fontSize: 14,
+  systemMessageText: {
     color: colors.text,
-    fontWeight: '500' as const,
+    textAlign: 'center',
   },
-  inputContainer: {
-    flexDirection: 'row' as const,
-    alignItems: 'flex-end' as const,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.background,
+  messageActions: {
+    flexDirection: 'row',
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    gap: 12,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  actionText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 48,
   },
   textInput: {
     flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     fontSize: 16,
     color: colors.text,
     maxHeight: 100,
+    marginRight: 12,
   },
   sendButton: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     borderRadius: 20,
     width: 40,
     height: 40,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sendButtonDisabled: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.textSecondary,
+    opacity: 0.5,
   },
-};
+  cancelButton: {
+    padding: 8,
+  },
+});
+
+export default ChatScreen;
