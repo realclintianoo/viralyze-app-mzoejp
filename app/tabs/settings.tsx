@@ -158,8 +158,11 @@ const SettingsScreen = () => {
 
   const handleExportData = async () => {
     try {
+      // Get document directory path
+      const documentDirectory = FileSystem.documentDirectory;
+      
       // Check if document directory is available
-      if (!FileSystem.documentDirectory) {
+      if (!documentDirectory) {
         throw new Error('Document directory not available on this platform');
       }
 
@@ -167,7 +170,7 @@ const SettingsScreen = () => {
       const jsonString = JSON.stringify(allData, null, 2);
       
       const fileName = `viralyze-export-${new Date().toISOString().split('T')[0]}.json`;
-      const fileUri = FileSystem.documentDirectory + fileName;
+      const fileUri = documentDirectory + fileName;
       
       await FileSystem.writeAsStringAsync(fileUri, jsonString);
       
