@@ -2,18 +2,23 @@
 import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
 export const colors = {
+  // Main colors
   background: '#0B0F14',
   text: '#E6EAF0',
   accent: '#22C55E',
+  
+  // UI colors
   card: '#1A1F26',
   border: '#2A2F36',
-  grey: '#6B7280',
-  lightGrey: '#9CA3AF',
-  success: '#22C55E',
-  warning: '#F59E0B',
-  error: '#EF4444',
+  grey: '#8B9299',
   white: '#FFFFFF',
   black: '#000000',
+  
+  // Status colors
+  error: '#EF4444',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  info: '#3B82F6',
 };
 
 export const spacing = {
@@ -30,175 +35,119 @@ export const borderRadius = {
   md: 8,
   lg: 12,
   xl: 16,
+  xxl: 24,
   full: 9999,
 };
 
 export const typography = {
-  h1: {
-    fontSize: 32,
-    fontWeight: '700' as const,
-    lineHeight: 40,
-    color: colors.text,
+  xs: 12,
+  sm: 14,
+  md: 16,
+  lg: 18,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
+
+export const shadows = {
+  sm: {
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  h2: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    lineHeight: 32,
-    color: colors.text,
+  md: {
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  h3: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    lineHeight: 28,
-    color: colors.text,
-  },
-  body: {
-    fontSize: 16,
-    fontWeight: '400' as const,
-    lineHeight: 24,
-    color: colors.text,
-  },
-  caption: {
-    fontSize: 14,
-    fontWeight: '400' as const,
-    lineHeight: 20,
-    color: colors.grey,
-  },
-  small: {
-    fontSize: 12,
-    fontWeight: '400' as const,
-    lineHeight: 16,
-    color: colors.grey,
+  lg: {
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
 };
 
 export const animations = {
-  spring: {
-    tension: 300,
-    friction: 20,
-  },
-  timing: {
-    duration: 200,
-  },
+  fast: 150,
+  normal: 300,
+  slow: 500,
 };
 
 export const commonStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
+  container: {
     flex: 1,
-    paddingHorizontal: 16,
+    backgroundColor: colors.background,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 6,
-  },
-  text: {
-    fontSize: 16,
-    color: colors.text,
-    lineHeight: 24,
-  },
-  smallText: {
-    fontSize: 14,
-    color: colors.grey,
-    lineHeight: 20,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
-    elevation: 4,
-  },
-  button: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+  centered: {
+    flex: 1,
     justifyContent: 'center',
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.text,
-    marginVertical: 8,
-  },
-  chip: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  chipSelected: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  chipText: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  chipTextSelected: {
-    color: colors.white,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   spaceBetween: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  center: {
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  button: {
+    backgroundColor: colors.accent,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  shadow: {
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
-    elevation: 2,
+  buttonText: {
+    color: colors.white,
+    fontSize: typography.md,
+    fontWeight: '600',
+  },
+  input: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.md,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  title: {
+    fontSize: typography.xxl,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  subtitle: {
+    fontSize: typography.lg,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  body: {
+    fontSize: typography.md,
+    color: colors.text,
+    lineHeight: 24,
+  },
+  caption: {
+    fontSize: typography.sm,
+    color: colors.grey,
   },
 });

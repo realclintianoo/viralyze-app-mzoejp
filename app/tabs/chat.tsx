@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -167,7 +168,31 @@ export default function ChatScreen() {
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         console.error('Error sending message:', error);
-        showToast('Failed to generate response. Please try again.', 'error');
+        
+        // Show specific error messages based on the error type
+        if (error.message.includes('API key not configured')) {
+          Alert.alert(
+            'OpenAI API Key Required',
+            'To use AI features, you need to add your OpenAI API key to the .env file. Get your API key from https://platform.openai.com/api-keys',
+            [
+              { text: 'OK', style: 'default' }
+            ]
+          );
+        } else if (error.message.includes('Invalid OpenAI API key')) {
+          Alert.alert(
+            'Invalid API Key',
+            'Your OpenAI API key appears to be invalid. Please check your API key in the .env file.',
+            [
+              { text: 'OK', style: 'default' }
+            ]
+          );
+        } else if (error.message.includes('rate limit')) {
+          showToast('Rate limit exceeded. Please try again later.', 'error');
+        } else if (error.message.includes('Network error')) {
+          showToast('Network error. Please check your connection.', 'error');
+        } else {
+          showToast('Failed to generate response. Please try again.', 'error');
+        }
       }
     } finally {
       setIsTyping(false);
@@ -287,6 +312,9 @@ export default function ChatScreen() {
               <Text style={styles.emptyTitle}>Start a conversation</Text>
               <Text style={styles.emptySubtitle}>
                 Ask me anything about growing your social media presence
+              </Text>
+              <Text style={styles.setupNote}>
+                💡 Make sure to add your OpenAI API key to use AI features
               </Text>
             </View>
           )}
@@ -417,6 +445,13 @@ const styles = {
     color: colors.grey,
     textAlign: 'center' as const,
     lineHeight: 22,
+    marginBottom: 16,
+  },
+  setupNote: {
+    fontSize: 14,
+    color: colors.accent,
+    textAlign: 'center' as const,
+    fontStyle: 'italic' as const,
   },
   messageContainer: {
     marginVertical: 8,
