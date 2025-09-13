@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { documentDirectory, writeAsStringAsync } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import { useAuth } from '../../contexts/AuthContext';
@@ -153,13 +153,13 @@ export default function SettingsScreen() {
       const fileName = `viralyze-export-${new Date().toISOString().split('T')[0]}.json`;
       
       // Use the correct way to access document directory
-      if (!documentDirectory) {
+      if (!FileSystem.documentDirectory) {
         throw new Error('Document directory not available on this platform');
       }
       
-      const fileUri = documentDirectory + fileName;
+      const fileUri = FileSystem.documentDirectory + fileName;
 
-      await writeAsStringAsync(fileUri, jsonString);
+      await FileSystem.writeAsStringAsync(fileUri, jsonString);
       
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri);

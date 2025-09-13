@@ -29,6 +29,11 @@ export const storage = {
     }
   },
 
+  // Alias for backward compatibility
+  async saveOnboardingData(data: OnboardingData): Promise<void> {
+    return this.setOnboardingData(data);
+  },
+
   // Saved items
   async getSavedItems(): Promise<SavedItem[]> {
     try {
