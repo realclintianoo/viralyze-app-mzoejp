@@ -9,6 +9,7 @@ import {
   Switch,
   TextInput,
   Modal,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -157,11 +158,16 @@ const SettingsScreen = () => {
 
   const handleExportData = async () => {
     try {
+      // Check if document directory is available
+      if (!FileSystem.documentDirectory) {
+        throw new Error('Document directory not available on this platform');
+      }
+
       const allData = await storage.getAllData();
       const jsonString = JSON.stringify(allData, null, 2);
       
       const fileName = `viralyze-export-${new Date().toISOString().split('T')[0]}.json`;
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      const fileUri = FileSystem.documentDirectory + fileName;
       
       await FileSystem.writeAsStringAsync(fileUri, jsonString);
       
@@ -170,9 +176,9 @@ const SettingsScreen = () => {
       } else {
         showToast('Export saved to device storage', 'success');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error exporting data:', error);
-      showToast('Error exporting data', 'error');
+      showToast(`Error exporting data: ${error.message}`, 'error');
     }
   };
 
