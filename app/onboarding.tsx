@@ -44,7 +44,6 @@ export default function Onboarding() {
   const [customNiche, setCustomNiche] = useState('');
   const [followers, setFollowers] = useState(1000);
   const [goal, setGoal] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const formatFollowers = (value: number): string => {
     if (value >= 1000000) {
@@ -99,14 +98,6 @@ export default function Onboarding() {
   };
 
   const handleComplete = async () => {
-    if (isProcessing) {
-      console.log('Already processing, ignoring duplicate tap');
-      return;
-    }
-
-    setIsProcessing(true);
-    console.log('Starting onboarding completion...');
-    
     try {
       const onboardingData: OnboardingData = {
         platforms: selectedPlatforms,
@@ -115,21 +106,11 @@ export default function Onboarding() {
         goal,
       };
 
-      console.log('Onboarding data to save:', onboardingData);
-      
       await storage.saveOnboardingData(onboardingData);
-      console.log('Onboarding data saved successfully');
-      
-      // Verify the data was saved
-      const savedData = await storage.getOnboardingData();
-      console.log('Verified saved data:', savedData);
-      
       router.replace('/tabs');
     } catch (error) {
-      console.error('Error saving onboarding data:', error);
+      console.log('Error saving onboarding data:', error);
       Alert.alert('Error', 'Failed to save your information. Please try again.');
-    } finally {
-      setIsProcessing(false);
     }
   };
 
@@ -286,19 +267,13 @@ export default function Onboarding() {
             <TouchableOpacity
               style={[
                 commonStyles.button,
-                { 
-                  flex: 1, 
-                  opacity: (canProceed() && !isProcessing) ? 1 : 0.5 
-                },
+                { flex: 1, opacity: canProceed() ? 1 : 0.5 },
               ]}
               onPress={handleNext}
-              disabled={!canProceed() || isProcessing}
+              disabled={!canProceed()}
             >
               <Text style={commonStyles.buttonText}>
-                {isProcessing 
-                  ? 'Processing...' 
-                  : (step === 3 ? 'Get Started' : 'Next')
-                }
+                {step === 3 ? 'Get Started' : 'Next'}
               </Text>
             </TouchableOpacity>
           </View>
