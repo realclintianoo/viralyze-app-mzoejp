@@ -7,11 +7,21 @@ export interface SystemCheckResult {
   openaiConfigured: boolean;
   hasApiKey: boolean;
   polyfillsLoaded: boolean;
+  networkConnectivity: boolean;
+  environmentVariables: {
+    openaiKey: string;
+    supabaseUrl: string;
+    supabaseKey: string;
+  };
   errors: string[];
+  warnings: string[];
 }
 
-export const performSystemCheck = (): SystemCheckResult => {
+export const performSystemCheck = async (): Promise<SystemCheckResult> => {
   const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  console.log('🔍 Starting system check...');
   
   // Check OpenAI configuration
   const openaiConfig = checkOpenAIConfig();
@@ -22,44 +32,185 @@ export const performSystemCheck = (): SystemCheckResult => {
     // Test if URL constructor is available
     new URL('https://example.com');
     polyfillsLoaded = true;
+    console.log('✅ URL polyfill loaded successfully');
   } catch (error) {
     errors.push('URL polyfill not loaded properly');
     polyfillsLoaded = false;
+    console.log('❌ URL polyfill failed to load');
+  }
+  
+  // Check network connectivity
+  let networkConnectivity = false;
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      method: 'HEAD',
+      timeout: 5000,
+    });
+    networkConnectivity = response.ok || response.status === 401; // 401 is expected without API key
+    console.log('✅ Network connectivity check passed');
+  } catch (error) {
+    warnings.push('Network connectivity check failed - may affect API calls');
+    networkConnectivity = false;
+    console.log('⚠️ Network connectivity check failed');
   }
   
   // Check environment variables
-  if (!process.env.EXPO_PUBLIC_OPENAI_API_KEY) {
+  const envVars = {
+    openaiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY || '',
+    supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || '',
+    supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
+  };
+  
+  if (!envVars.openaiKey) {
     errors.push('EXPO_PUBLIC_OPENAI_API_KEY not set in environment');
-  }
-  
-  if (process.env.EXPO_PUBLIC_OPENAI_API_KEY === 'your_openai_api_key_here') {
+  } else if (envVars.openaiKey === 'your_openai_api_key_here') {
     errors.push('OpenAI API key is still set to placeholder value');
+  } else if (!envVars.openaiKey.startsWith('sk-')) {
+    warnings.push('OpenAI API key format appears invalid (should start with sk-)');
   }
   
-  return {
+  if (!envVars.supabaseUrl) {
+    warnings.push('EXPO_PUBLIC_SUPABASE_URL not set in environment');
+  }
+  
+  if (!envVars.supabaseKey) {
+    warnings.push('EXPO_PUBLIC_SUPABASE_ANON_KEY not set in environment');
+  }
+  
+  // Check React Native specific configurations
+  if (Platform.OS === 'web') {
+    warnings.push('Running on web platform - some features may be limited');
+  }
+  
+  const result = {
     platform: Platform.OS,
     openaiConfigured: openaiConfig.isConfigured,
     hasApiKey: openaiConfig.hasApiKey,
     polyfillsLoaded,
-    errors
+    networkConnectivity,
+    environmentVariables: envVars,
+    errors,
+    warnings
   };
+  
+  console.log('🔍 System check completed:', result);
+  return result;
 };
 
-export const logSystemCheck = () => {
-  const result = performSystemCheck();
-  console.log('=== SYSTEM CHECK ===');
+export const logSystemCheck = async () => {
+  const result = await performSystemCheck();
+  console.log('=== SYSTEM CHECK REPORT ===');
   console.log('Platform:', result.platform);
   console.log('OpenAI Configured:', result.openaiConfigured);
   console.log('Has API Key:', result.hasApiKey);
   console.log('Polyfills Loaded:', result.polyfillsLoaded);
+  console.log('Network Connectivity:', result.networkConnectivity);
   
   if (result.errors.length > 0) {
-    console.log('Errors:');
+    console.log('❌ ERRORS:');
     result.errors.forEach(error => console.log('  -', error));
-  } else {
+  }
+  
+  if (result.warnings.length > 0) {
+    console.log('⚠️ WARNINGS:');
+    result.warnings.forEach(warning => console.log('  -', warning));
+  }
+  
+  if (result.errors.length === 0 && result.warnings.length === 0) {
     console.log('✅ All checks passed');
   }
-  console.log('==================');
+  
+  console.log('============================');
   
   return result;
+};
+
+export const checkOpenAIConnection = async (): Promise<{ success: boolean; message: string; details?: any }> => {
+  try {
+    console.log('🔗 Testing OpenAI connection...');
+    
+    const openaiConfig = checkOpenAIConfig();
+    if (!openaiConfig.isConfigured) {
+      return {
+        success: false,
+        message: 'OpenAI not configured - missing API key or client initialization failed'
+      };
+    }
+    
+    // Test with a simple completion
+    const { aiComplete } = await import('../lib/ai');
+    const result = await aiComplete({
+      kind: 'connection-test',
+      profile: null,
+      input: 'Respond with exactly: "Connection successful"',
+      n: 1,
+    });
+    
+    if (result && result[0] && result[0].toLowerCase().includes('connection successful')) {
+      console.log('✅ OpenAI connection test passed');
+      return {
+        success: true,
+        message: 'OpenAI connection successful',
+        details: { response: result[0] }
+      };
+    } else {
+      console.log('⚠️ OpenAI responded but with unexpected content');
+      return {
+        success: true,
+        message: 'OpenAI connection works but response was unexpected',
+        details: { response: result[0] }
+      };
+    }
+  } catch (error: any) {
+    console.log('❌ OpenAI connection test failed:', error.message);
+    return {
+      success: false,
+      message: error.message || 'Unknown connection error',
+      details: { error: error.toString() }
+    };
+  }
+};
+
+export const generateSystemReport = async (): Promise<string> => {
+  const systemCheck = await performSystemCheck();
+  const connectionTest = await checkOpenAIConnection();
+  
+  const report = `
+VIRALYZE System Report
+Generated: ${new Date().toISOString()}
+
+=== PLATFORM INFO ===
+Platform: ${systemCheck.platform}
+React Native Version: ${Platform.constants?.reactNativeVersion?.major}.${Platform.constants?.reactNativeVersion?.minor}.${Platform.constants?.reactNativeVersion?.patch}
+
+=== CONFIGURATION STATUS ===
+OpenAI Configured: ${systemCheck.openaiConfigured ? '✅' : '❌'}
+Has API Key: ${systemCheck.hasApiKey ? '✅' : '❌'}
+Polyfills Loaded: ${systemCheck.polyfillsLoaded ? '✅' : '❌'}
+Network Connectivity: ${systemCheck.networkConnectivity ? '✅' : '❌'}
+
+=== CONNECTION TEST ===
+OpenAI Connection: ${connectionTest.success ? '✅' : '❌'}
+Test Message: ${connectionTest.message}
+${connectionTest.details ? `Details: ${JSON.stringify(connectionTest.details, null, 2)}` : ''}
+
+=== ENVIRONMENT VARIABLES ===
+OpenAI Key: ${systemCheck.environmentVariables.openaiKey ? `${systemCheck.environmentVariables.openaiKey.substring(0, 7)}...` : 'Not set'}
+Supabase URL: ${systemCheck.environmentVariables.supabaseUrl || 'Not set'}
+Supabase Key: ${systemCheck.environmentVariables.supabaseKey ? `${systemCheck.environmentVariables.supabaseKey.substring(0, 10)}...` : 'Not set'}
+
+=== ISSUES ===
+${systemCheck.errors.length > 0 ? `ERRORS:\n${systemCheck.errors.map(e => `- ${e}`).join('\n')}` : 'No errors found'}
+
+${systemCheck.warnings.length > 0 ? `WARNINGS:\n${systemCheck.warnings.map(w => `- ${w}`).join('\n')}` : 'No warnings'}
+
+=== RECOMMENDATIONS ===
+${systemCheck.errors.length > 0 ? '1. Fix the errors listed above before using AI features' : ''}
+${!systemCheck.hasApiKey ? '2. Add your OpenAI API key to the .env file' : ''}
+${!systemCheck.networkConnectivity ? '3. Check your internet connection' : ''}
+${systemCheck.warnings.length > 0 ? '4. Review warnings for potential issues' : ''}
+${systemCheck.errors.length === 0 && systemCheck.warnings.length === 0 ? 'System is properly configured! 🎉' : ''}
+`;
+
+  return report.trim();
 };

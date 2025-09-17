@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useState, useEffect } from 'react';
 import { OnboardingData, QuotaUsage } from '../../types';
 import OpenAIDebug from '../../components/OpenAIDebug';
+import SystemStatusIndicator from '../../components/SystemStatusIndicator';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function SettingsScreen() {
@@ -175,6 +176,14 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        {/* System Status */}
+        <View style={{ marginBottom: 32 }}>
+          <Text style={[commonStyles.text, { fontSize: 18, fontWeight: '600', marginBottom: 16 }]}>
+            System
+          </Text>
+          <SystemStatusIndicator onPress={() => setShowDebug(true)} />
+        </View>
+
         {/* Profile Section */}
         {renderSection('Profile', (
           <>
@@ -240,8 +249,8 @@ export default function SettingsScreen() {
           <>
             {renderSettingItem(
               'bug-outline',
-              'OpenAI Debug',
-              'Test OpenAI connection and configuration',
+              'Advanced Debug Tools',
+              'Detailed system diagnostics and testing',
               () => setShowDebug(true),
               undefined,
               true
