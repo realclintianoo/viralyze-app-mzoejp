@@ -21,17 +21,15 @@ export interface SavedItem {
 
 export interface ChatMessage {
   id: string;
-  type: 'user' | 'ai';
   content: string;
-  timestamp: string;
+  isUser: boolean;
+  timestamp: Date;
+  isError?: boolean;
 }
 
 export interface QuotaUsage {
-  textRequests: number;
-  imageRequests: number;
-  maxTextRequests: number;
-  maxImageRequests: number;
-  resetDate: string;
+  text: number;
+  image: number;
 }
 
 export interface OnboardingData {

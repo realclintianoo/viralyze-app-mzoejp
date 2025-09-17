@@ -6,10 +6,37 @@ const KEYS = {
   SAVED_ITEMS: 'saved_items',
   QUOTA_USAGE: 'quota_usage',
   ONBOARDING_DATA: 'onboarding_data',
-  CHAT_HISTORY: 'chat_history',
+  CHAT_MESSAGES: 'chat_messages',
 };
 
 export const storage = {
+  // Generic storage methods
+  async getItem(key: string): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch (error) {
+      console.log(`Error getting item ${key}:`, error);
+      return null;
+    }
+  },
+
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (error) {
+      console.log(`Error setting item ${key}:`, error);
+    }
+  },
+
+  async removeItem(key: string): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch (error) {
+      console.log(`Error removing item ${key}:`, error);
+    }
+  },
+
+  // Saved items methods
   async getSavedItems(): Promise<SavedItem[]> {
     try {
       const items = await AsyncStorage.getItem(KEYS.SAVED_ITEMS);
@@ -48,6 +75,7 @@ export const storage = {
     }
   },
 
+  // Quota usage methods
   async getQuotaUsage(): Promise<QuotaUsage> {
     try {
       const usage = await AsyncStorage.getItem(KEYS.QUOTA_USAGE);
@@ -58,7 +86,7 @@ export const storage = {
         if (parsed.resetDate !== today) {
           return this.resetQuota();
         }
-        return parsed;
+        return { text: parsed.text || 0, image: parsed.image || 0 };
       }
       return this.resetQuota();
     } catch (error) {
@@ -69,14 +97,15 @@ export const storage = {
 
   async resetQuota(): Promise<QuotaUsage> {
     const quota: QuotaUsage = {
-      textRequests: 0,
-      imageRequests: 0,
-      maxTextRequests: 2,
-      maxImageRequests: 1,
-      resetDate: new Date().toDateString(),
+      text: 0,
+      image: 0,
     };
     try {
-      await AsyncStorage.setItem(KEYS.QUOTA_USAGE, JSON.stringify(quota));
+      const quotaWithReset = {
+        ...quota,
+        resetDate: new Date().toDateString(),
+      };
+      await AsyncStorage.setItem(KEYS.QUOTA_USAGE, JSON.stringify(quotaWithReset));
     } catch (error) {
       console.log('Error resetting quota:', error);
     }
@@ -87,18 +116,19 @@ export const storage = {
     try {
       const current = await this.getQuotaUsage();
       const updated = {
-        ...current,
-        textRequests: current.textRequests + textIncrement,
-        imageRequests: current.imageRequests + imageIncrement,
+        text: current.text + textIncrement,
+        image: current.image + imageIncrement,
+        resetDate: new Date().toDateString(),
       };
       await AsyncStorage.setItem(KEYS.QUOTA_USAGE, JSON.stringify(updated));
-      return updated;
+      return { text: updated.text, image: updated.image };
     } catch (error) {
       console.log('Error updating quota usage:', error);
       return await this.getQuotaUsage();
     }
   },
 
+  // Onboarding data methods
   async getOnboardingData(): Promise<OnboardingData | null> {
     try {
       const data = await AsyncStorage.getItem(KEYS.ONBOARDING_DATA);
@@ -117,16 +147,38 @@ export const storage = {
     }
   },
 
+  // Clear all data
   async clearAll(): Promise<void> {
     try {
       await AsyncStorage.multiRemove([
         KEYS.SAVED_ITEMS,
         KEYS.QUOTA_USAGE,
         KEYS.ONBOARDING_DATA,
-        KEYS.CHAT_HISTORY,
+        KEYS.CHAT_MESSAGES,
       ]);
     } catch (error) {
       console.log('Error clearing storage:', error);
+    }
+  },
+
+  // Export data
+  async exportData(): Promise<any> {
+    try {
+      const [savedItems, quotaUsage, onboardingData] = await Promise.all([
+        this.getSavedItems(),
+        this.getQuotaUsage(),
+        this.getOnboardingData(),
+      ]);
+
+      return {
+        savedItems,
+        quotaUsage,
+        onboardingData,
+        exportDate: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.log('Error exporting data:', error);
+      return null;
     }
   },
 };

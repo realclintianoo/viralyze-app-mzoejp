@@ -17,63 +17,11 @@ interface StartupNotificationProps {
   onDismiss?: () => void;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    backgroundColor: '#FEE2E2',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FECACA',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#DC2626',
-    marginBottom: 2,
-  },
-  message: {
-    fontSize: 12,
-    color: '#B91C1C',
-    lineHeight: 16,
-  },
-  actionButton: {
-    backgroundColor: '#DC2626',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  actionText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  closeButton: {
-    padding: 4,
-  },
-});
-
 export default function StartupNotification({ onDismiss }: StartupNotificationProps) {
   const [visible, setVisible] = useState(false);
-  const [slideAnim] = useState(new Animated.Value(-100));
+  const [systemHealthy, setSystemHealthy] = useState(true);
   const [criticalIssues, setCriticalIssues] = useState<string[]>([]);
+  const slideAnim = useState(new Animated.Value(-100))[0];
 
   useEffect(() => {
     checkSystemOnStartup();
@@ -84,16 +32,19 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
       console.log('🚀 Running startup system check...');
       const health = await quickHealthCheck();
       
-      if (!health.healthy) {
-        console.log('🚨 Critical issues detected on startup:', health.criticalIssues);
-        setCriticalIssues(health.criticalIssues);
+      setSystemHealthy(health.healthy);
+      setCriticalIssues(health.criticalIssues);
+      
+      if (!health.healthy && health.criticalIssues.length > 0) {
+        console.log('⚠️ Critical issues detected on startup:', health.criticalIssues);
         showNotification();
       } else {
         console.log('✅ System healthy on startup');
       }
     } catch (error) {
-      console.log('❌ Startup system check failed:', error);
-      setCriticalIssues(['System check failed']);
+      console.error('❌ Startup system check failed:', error);
+      setSystemHealthy(false);
+      setCriticalIssues(['System check failed to run']);
       showNotification();
     }
   };
@@ -119,84 +70,151 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
   };
 
   const handleFixConfiguration = () => {
-    const hasApiKeyIssue = criticalIssues.some(issue => 
-      issue.includes('OpenAI API key') || issue.includes('placeholder')
+    const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY || 'not set';
+    
+    Alert.alert(
+      'OpenAI Configuration Required',
+      `AI features are not working because of configuration issues.\n\nCurrent API key: "${apiKey}"\n\nTo fix this:\n\n1. Go to https://platform.openai.com/api-keys\n2. Create a new API key (or copy an existing one)\n3. Open the .env file in your project root\n4. Replace the current value with your actual API key\n5. Restart the development server\n6. Make sure billing is set up in your OpenAI account\n\nYour API key should start with "sk-proj-" and be about 164 characters long.`,
+      [
+        { text: 'Open OpenAI Dashboard', onPress: () => Linking.openURL('https://platform.openai.com/api-keys') },
+        { text: 'Dismiss', onPress: hideNotification, style: 'cancel' }
+      ]
     );
-
-    if (hasApiKeyIssue) {
-      const currentApiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY || 'not set';
-      
-      Alert.alert(
-        'OpenAI API Key Required',
-        `To use AI features, you need to replace the placeholder API key with your actual OpenAI API key.\n\nCurrent value: "${currentApiKey}"\n\nSteps to fix:\n1. Go to https://platform.openai.com/api-keys\n2. Create a new API key\n3. Open the .env file in your project\n4. Replace the placeholder with your actual key\n5. Restart the app\n6. Make sure billing is set up in OpenAI\n\nWould you like to open the OpenAI website?`,
-        [
-          { text: 'Not Now', style: 'cancel' },
-          { 
-            text: 'Open Website', 
-            onPress: () => Linking.openURL('https://platform.openai.com/api-keys')
-          },
-        ]
-      );
-    } else {
-      Alert.alert(
-        'Configuration Issues',
-        `Found ${criticalIssues.length} critical issue(s):\n\n${criticalIssues.map(issue => `• ${issue}`).join('\n')}\n\nPlease check your configuration and restart the app.`,
-        [{ text: 'OK' }]
-      );
-    }
   };
 
   const getMessage = () => {
-    const hasApiKeyIssue = criticalIssues.some(issue => 
-      issue.includes('OpenAI API key') || issue.includes('placeholder')
-    );
-
-    if (hasApiKeyIssue) {
-      return {
-        title: 'OpenAI API Key Required',
-        message: 'AI features won\'t work until you configure your OpenAI API key in the .env file.',
-      };
+    if (criticalIssues.includes('OpenAI API key missing')) {
+      return 'OpenAI API key not found. AI features will not work.';
+    } else if (criticalIssues.includes('OpenAI API key is placeholder')) {
+      return 'OpenAI API key is still set to placeholder value. Please replace it with your actual key.';
+    } else if (criticalIssues.includes('Invalid OpenAI API key format')) {
+      return 'OpenAI API key format appears invalid. Please check your key.';
+    } else if (criticalIssues.includes('OpenAI initialization failed')) {
+      return 'OpenAI client failed to initialize. Please check your configuration.';
+    } else {
+      return 'System configuration issues detected. AI features may not work properly.';
     }
-
-    return {
-      title: 'Configuration Issues Detected',
-      message: `${criticalIssues.length} critical issue(s) found. AI features may not work properly.`,
-    };
   };
 
-  if (!visible) return null;
-
-  const { title, message } = getMessage();
+  if (!visible || systemHealthy) {
+    return null;
+  }
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
         styles.container,
-        { transform: [{ translateY: slideAnim }] }
+        {
+          transform: [{ translateY: slideAnim }],
+        },
       ]}
     >
       <View style={styles.content}>
-        <Ionicons name="warning" size={20} color="#DC2626" />
-        
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
+        <View style={styles.header}>
+          <Ionicons name="warning" size={24} color="#F59E0B" />
+          <Text style={styles.title}>Configuration Required</Text>
+          <TouchableOpacity onPress={hideNotification} style={styles.closeButton}>
+            <Ionicons name="close" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
         
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={handleFixConfiguration}
-        >
-          <Text style={styles.actionText}>Fix</Text>
-        </TouchableOpacity>
+        <Text style={styles.message}>
+          {getMessage()}
+        </Text>
         
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={hideNotification}
-        >
-          <Ionicons name="close" size={16} color="#B91C1C" />
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.fixButton}
+            onPress={handleFixConfiguration}
+          >
+            <Text style={styles.fixButtonText}>Fix Configuration</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.dismissButton}
+            onPress={hideNotification}
+          >
+            <Text style={styles.dismissButtonText}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#FFF3CD',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F59E0B',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  content: {
+    padding: 16,
+    paddingTop: 60, // Account for status bar
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D97706',
+    marginLeft: 8,
+    flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  message: {
+    fontSize: 14,
+    color: '#B45309',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  fixButton: {
+    backgroundColor: '#D97706',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flex: 1,
+  },
+  fixButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  dismissButton: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D97706',
+  },
+  dismissButtonText: {
+    color: '#D97706',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+});
