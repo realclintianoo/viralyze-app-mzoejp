@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import Slider from '@react-native-community/slider';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -37,47 +38,42 @@ interface OnboardingFlowProps {
 
 const QUESTIONS = [
   {
-    id: 'platforms',
-    title: 'Which platforms do you create for?',
-    icon: 'apps-outline' as keyof typeof Ionicons.glyphMap,
-    options: [
-      { label: 'TikTok', value: 'tiktok' },
-      { label: 'Instagram', value: 'instagram' },
-      { label: 'YouTube', value: 'youtube' },
-      { label: 'X (Twitter)', value: 'twitter' },
-      { label: 'LinkedIn', value: 'linkedin' },
-      { label: 'All Platforms', value: 'all' },
-    ],
+    id: 'followers',
+    title: 'How many followers do you have?',
+    icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
+    type: 'slider' as const,
   },
   {
     id: 'niche',
     title: 'What\'s your niche?',
     icon: 'pricetag-outline' as keyof typeof Ionicons.glyphMap,
+    type: 'options' as const,
     options: [
-      { label: 'Business', value: 'business' },
-      { label: 'Lifestyle', value: 'lifestyle' },
-      { label: 'Tech', value: 'tech' },
-      { label: 'Fitness', value: 'fitness' },
-      { label: 'Food', value: 'food' },
-      { label: 'Other', value: 'other' },
+      { label: 'Fitness', value: 'fitness', emoji: '💪' },
+      { label: 'Tech', value: 'tech', emoji: '💻' },
+      { label: 'Fashion', value: 'fashion', emoji: '👗' },
+      { label: 'Music', value: 'music', emoji: '🎵' },
+      { label: 'Food', value: 'food', emoji: '🍕' },
+      { label: 'Other', value: 'other', emoji: '✨' },
     ],
   },
   {
     id: 'goal',
     title: 'What\'s your goal?',
     icon: 'rocket-outline' as keyof typeof Ionicons.glyphMap,
+    type: 'options' as const,
     options: [
-      { label: 'Grow followers', value: 'grow_followers' },
-      { label: 'Monetize content', value: 'monetize' },
-      { label: 'Create better content', value: 'better_content' },
-      { label: 'Build personal brand', value: 'personal_brand' },
+      { label: 'Grow followers', value: 'grow_followers', emoji: '📈' },
+      { label: 'Monetize', value: 'monetize', emoji: '💰' },
+      { label: 'Improve content', value: 'improve_content', emoji: '🎯' },
     ],
   },
 ];
 
 const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, username = 'Creator' }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [followerCount, setFollowerCount] = useState(1000);
   const [showConfetti, setShowConfetti] = useState(false);
 
   // Animation values
@@ -90,6 +86,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
   const iconRotation = useSharedValue(0);
   const progressWidth = useSharedValue(0);
   const confettiOpacity = useSharedValue(0);
+  const sliderOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
@@ -119,12 +116,14 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
     titleTranslateY.value = 20;
     iconScale.value = 0;
     iconRotation.value = 0;
+    sliderOpacity.value = 0;
 
     // Animate in
     titleOpacity.value = withDelay(200, withTiming(1, { duration: 600 }));
     titleTranslateY.value = withDelay(200, withSpring(0, { damping: 15, stiffness: 100 }));
     iconScale.value = withDelay(400, withSpring(1, { damping: 12, stiffness: 150 }));
     iconRotation.value = withDelay(400, withSpring(360, { damping: 15, stiffness: 100 }));
+    sliderOpacity.value = withDelay(600, withTiming(1, { duration: 600 }));
   };
 
   const updateProgress = () => {
@@ -139,6 +138,26 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
       withDelay(2000, withTiming(0, { duration: 500 }))
     );
     setTimeout(() => setShowConfetti(false), 3000);
+  };
+
+  const formatFollowers = (value: number): string => {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}M+`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(0)}K`;
+    } else {
+      return value.toString();
+    }
+  };
+
+  const handleSliderChange = (value: number) => {
+    setFollowerCount(Math.round(value));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleQuickSelect = (value: number) => {
+    setFollowerCount(value);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const backgroundAnimatedStyle = useAnimatedStyle(() => ({
@@ -170,6 +189,10 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
     opacity: confettiOpacity.value,
   }));
 
+  const sliderAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: sliderOpacity.value,
+  }));
+
   const handleAnswer = (value: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
@@ -185,16 +208,31 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
     }, 300);
   };
 
-  const handleComplete = async (finalAnswers: Record<string, string>) => {
+  const handleSliderNext = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    const newAnswers = { ...answers, followers: followerCount };
+    setAnswers(newAnswers);
+
+    setTimeout(() => {
+      if (currentStep < QUESTIONS.length - 1) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        handleComplete(newAnswers);
+      }
+    }, 300);
+  };
+
+  const handleComplete = async (finalAnswers: Record<string, any>) => {
     try {
       // Show confetti
       showConfettiAnimation();
 
       // Save onboarding data
       const onboardingData: OnboardingData = {
-        platforms: finalAnswers.platforms ? [finalAnswers.platforms] : ['All Platforms'],
+        platforms: ['all'], // Default to all platforms
         niche: finalAnswers.niche || 'other',
-        followers: 1000, // Default follower count
+        followers: finalAnswers.followers || followerCount,
         goal: finalAnswers.goal || 'grow_followers',
       };
 
@@ -207,16 +245,6 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
     } catch (error) {
       console.error('Error saving onboarding data:', error);
       Alert.alert('Error', 'Failed to save your information. Please try again.');
-    }
-  };
-
-  const getFollowerCount = (range: string): number => {
-    switch (range) {
-      case '0-1k': return 500;
-      case '1k-10k': return 5000;
-      case '10k-100k': return 50000;
-      case '100k+': return 100000;
-      default: return 1000;
     }
   };
 
@@ -281,30 +309,104 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
                       {currentQuestion.title}
                     </Animated.Text>
 
-                    {/* Answer Options */}
-                    <View style={styles.optionsContainer}>
-                      {currentQuestion.options.map((option, index) => (
+                    {/* Content based on question type */}
+                    {currentQuestion.type === 'slider' ? (
+                      <Animated.View style={[styles.sliderContainer, sliderAnimatedStyle]}>
+                        {/* Current Value Display */}
+                        <View style={styles.valueContainer}>
+                          <LinearGradient
+                            colors={['#22C55E', '#10B981']}
+                            style={styles.valueBackground}
+                          >
+                            <Text style={styles.valueText}>
+                              {formatFollowers(followerCount)} followers
+                            </Text>
+                          </LinearGradient>
+                        </View>
+
+                        {/* Slider */}
+                        <View style={styles.sliderWrapper}>
+                          <Slider
+                            style={styles.slider}
+                            minimumValue={0}
+                            maximumValue={1000000}
+                            value={followerCount}
+                            onValueChange={handleSliderChange}
+                            minimumTrackTintColor="#22C55E"
+                            maximumTrackTintColor="rgba(255, 255, 255, 0.2)"
+                            thumbStyle={styles.sliderThumb}
+                            trackStyle={styles.sliderTrack}
+                          />
+                          
+                          {/* Slider Labels */}
+                          <View style={styles.sliderLabels}>
+                            <Text style={styles.sliderLabel}>0</Text>
+                            <Text style={styles.sliderLabel}>1M+</Text>
+                          </View>
+                        </View>
+
+                        {/* Quick Select Buttons */}
+                        <View style={styles.quickSelectContainer}>
+                          {[100, 1000, 10000, 100000, 500000].map((value) => (
+                            <TouchableOpacity
+                              key={value}
+                              style={[
+                                styles.quickSelectButton,
+                                followerCount === value && styles.quickSelectButtonActive
+                              ]}
+                              onPress={() => handleQuickSelect(value)}
+                            >
+                              <Text style={[
+                                styles.quickSelectText,
+                                followerCount === value && styles.quickSelectTextActive
+                              ]}>
+                                {formatFollowers(value)}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+
+                        {/* Next Button */}
                         <TouchableOpacity
-                          key={option.value}
-                          style={[
-                            styles.optionButton,
-                            { 
-                              transform: [{ 
-                                translateY: withDelay(600 + index * 100, withSpring(0, { damping: 15, stiffness: 100 }))
-                              }] 
-                            }
-                          ]}
-                          onPress={() => handleAnswer(option.value)}
+                          style={styles.nextButton}
+                          onPress={handleSliderNext}
                         >
                           <LinearGradient
-                            colors={['rgba(34, 197, 94, 0.1)', 'rgba(16, 185, 129, 0.05)']}
-                            style={styles.optionGradient}
+                            colors={['#22C55E', '#10B981']}
+                            style={styles.nextButtonGradient}
                           >
-                            <Text style={styles.optionText}>{option.label}</Text>
+                            <Text style={styles.nextButtonText}>Continue</Text>
+                            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
                           </LinearGradient>
                         </TouchableOpacity>
-                      ))}
-                    </View>
+                      </Animated.View>
+                    ) : (
+                      /* Answer Options */
+                      <View style={styles.optionsContainer}>
+                        {currentQuestion.options?.map((option, index) => (
+                          <TouchableOpacity
+                            key={option.value}
+                            style={[
+                              styles.optionButton,
+                              { 
+                                transform: [{ 
+                                  translateY: withDelay(600 + index * 100, withSpring(0, { damping: 15, stiffness: 100 }))
+                                }] 
+                              }
+                            ]}
+                            onPress={() => handleAnswer(option.value)}
+                          >
+                            <LinearGradient
+                              colors={['rgba(34, 197, 94, 0.1)', 'rgba(16, 185, 129, 0.05)']}
+                              style={styles.optionGradient}
+                            >
+                              <Text style={styles.optionEmoji}>{option.emoji}</Text>
+                              <Text style={styles.optionText}>{option.label}</Text>
+                            </LinearGradient>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
                   </LinearGradient>
                 </BlurView>
               </Animated.View>
@@ -339,7 +441,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
                         colors={['#22C55E', '#10B981']}
                         style={styles.completionIconBackground}
                       >
-                        <Ionicons name="checkmark" size={64} color="#FFFFFF" />
+                        <Text style={styles.completionEmoji}>🎉</Text>
                       </LinearGradient>
                     </View>
 
@@ -456,6 +558,111 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     lineHeight: 32,
   },
+  sliderContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  valueContainer: {
+    marginBottom: 32,
+  },
+  valueBackground: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  valueText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  sliderWrapper: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderThumb: {
+    backgroundColor: '#22C55E',
+    width: 24,
+    height: 24,
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  sliderTrack: {
+    height: 4,
+    borderRadius: 2,
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  sliderLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  quickSelectContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 32,
+  },
+  quickSelectButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  quickSelectButtonActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderColor: '#22C55E',
+  },
+  quickSelectText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  quickSelectTextActive: {
+    color: '#22C55E',
+  },
+  nextButton: {
+    width: '100%',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  nextButtonGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  nextButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   optionsContainer: {
     width: '100%',
     gap: 12,
@@ -467,10 +674,15 @@ const styles = StyleSheet.create({
   optionGradient: {
     paddingVertical: 16,
     paddingHorizontal: 24,
+    flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(34, 197, 94, 0.3)',
     borderRadius: 16,
+  },
+  optionEmoji: {
+    fontSize: 24,
+    marginRight: 12,
   },
   optionText: {
     fontSize: 16,
@@ -517,6 +729,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 30,
     elevation: 30,
+  },
+  completionEmoji: {
+    fontSize: 64,
   },
   completionTitle: {
     fontSize: 32,

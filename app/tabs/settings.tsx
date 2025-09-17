@@ -18,7 +18,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../utils/storage';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import { LinearGradient } from 'expo-linear-gradient';
-import LogoutModal from '../../components/LogoutModal';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -40,7 +39,6 @@ interface PremiumSettingCardProps {
   gradient?: string[];
   index: number;
   isPro?: boolean;
-  isDestructive?: boolean;
 }
 
 const PremiumSettingCard: React.FC<PremiumSettingCardProps> = ({
@@ -52,7 +50,6 @@ const PremiumSettingCard: React.FC<PremiumSettingCardProps> = ({
   gradient,
   index,
   isPro = false,
-  isDestructive = false,
 }) => {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
@@ -86,20 +83,6 @@ const PremiumSettingCard: React.FC<PremiumSettingCardProps> = ({
     }
   };
 
-  const cardColors = isDestructive 
-    ? ['rgba(239, 68, 68, 0.1)', 'rgba(220, 38, 38, 0.05)']
-    : gradient || [colors.glassBackground, colors.glassBackgroundStrong];
-
-  const borderColor = isDestructive 
-    ? 'rgba(239, 68, 68, 0.3)'
-    : isPro ? colors.borderGlow : colors.glassBorderStrong;
-
-  const iconBgColor = isDestructive 
-    ? '#EF4444' 
-    : isPro ? colors.primary : colors.backgroundTertiary;
-
-  const iconColor = isDestructive || isPro ? colors.white : colors.primary;
-
   return (
     <Animated.View style={[animatedStyle, { marginBottom: 16 }]}>
       <TouchableOpacity
@@ -110,17 +93,17 @@ const PremiumSettingCard: React.FC<PremiumSettingCardProps> = ({
         activeOpacity={0.9}
       >
         <LinearGradient
-          colors={cardColors}
+          colors={gradient || [colors.glassBackground, colors.glassBackgroundStrong]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
             borderRadius: 20,
             padding: 1,
-            shadowColor: isDestructive ? '#EF4444' : isPro ? colors.glowPrimary : colors.neuDark,
+            shadowColor: isPro ? colors.glowPrimary : colors.neuDark,
             shadowOffset: { width: 0, height: isPro ? 0 : 12 },
-            shadowOpacity: isPro || isDestructive ? 0.8 : 0.3,
-            shadowRadius: isPro || isDestructive ? 20 : 16,
-            elevation: isPro || isDestructive ? 20 : 12,
+            shadowOpacity: isPro ? 0.8 : 0.3,
+            shadowRadius: isPro ? 20 : 16,
+            elevation: isPro ? 20 : 12,
           }}
         >
           <BlurView
@@ -138,7 +121,7 @@ const PremiumSettingCard: React.FC<PremiumSettingCardProps> = ({
                 flexDirection: 'row',
                 alignItems: 'center',
                 borderWidth: 1,
-                borderColor: borderColor,
+                borderColor: isPro ? colors.borderGlow : colors.glassBorderStrong,
                 borderRadius: 20,
               }}
             >
@@ -147,33 +130,26 @@ const PremiumSettingCard: React.FC<PremiumSettingCardProps> = ({
                   width: 48,
                   height: 48,
                   borderRadius: 16,
-                  backgroundColor: iconBgColor,
+                  backgroundColor: isPro ? colors.primary : colors.backgroundTertiary,
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: 16,
-                  shadowColor: isDestructive ? '#EF4444' : isPro ? colors.glowPrimary : colors.neuDark,
-                  shadowOffset: { width: 0, height: isPro || isDestructive ? 0 : 6 },
-                  shadowOpacity: isPro || isDestructive ? 0.6 : 0.2,
-                  shadowRadius: isPro || isDestructive ? 12 : 8,
-                  elevation: isPro || isDestructive ? 12 : 6,
+                  shadowColor: isPro ? colors.glowPrimary : colors.neuDark,
+                  shadowOffset: { width: 0, height: isPro ? 0 : 6 },
+                  shadowOpacity: isPro ? 0.6 : 0.2,
+                  shadowRadius: isPro ? 12 : 8,
+                  elevation: isPro ? 12 : 6,
                 }}
               >
                 <Ionicons
                   name={icon}
                   size={24}
-                  color={iconColor}
+                  color={isPro ? colors.white : colors.primary}
                 />
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={[
-                  commonStyles.textBold, 
-                  { 
-                    fontSize: 17, 
-                    marginBottom: 2,
-                    color: isDestructive ? '#EF4444' : colors.text
-                  }
-                ]}>
+                <Text style={[commonStyles.textBold, { fontSize: 17, marginBottom: 2 }]}>
                   {title}
                 </Text>
                 {subtitle && (
@@ -187,7 +163,7 @@ const PremiumSettingCard: React.FC<PremiumSettingCardProps> = ({
                 <Ionicons
                   name="chevron-forward"
                   size={20}
-                  color={isDestructive ? '#EF4444' : colors.textSecondary}
+                  color={colors.textSecondary}
                   style={{ opacity: 0.6 }}
                 />
               ))}
@@ -225,7 +201,6 @@ const PremiumSettingCard: React.FC<PremiumSettingCardProps> = ({
 export default function SettingsScreen() {
   const [profile, setProfile] = useState<OnboardingData | null>(null);
   const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { user, signOut } = useAuth();
 
   const headerOpacity = useSharedValue(0);
@@ -322,24 +297,18 @@ export default function SettingsScreen() {
   };
 
   const handleSignOut = () => {
-    setShowLogoutModal(true);
-  };
-
-  const confirmSignOut = async () => {
-    try {
-      setShowLogoutModal(false);
-      await signOut();
-      // Navigate back to the index page which will show the auth flow
-      router.replace('/');
-      Alert.alert('Success', 'You have been signed out');
-    } catch (error) {
-      console.error('Sign out error:', error);
-      Alert.alert('Error', 'Failed to sign out');
+    if (user) {
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign Out', style: 'destructive', onPress: signOut },
+        ]
+      );
+    } else {
+      Alert.alert('Info', 'You are currently using the app as a guest.');
     }
-  };
-
-  const cancelSignOut = () => {
-    setShowLogoutModal(false);
   };
 
   return (
@@ -427,31 +396,15 @@ export default function SettingsScreen() {
             <Text style={[commonStyles.subtitle, { marginBottom: 16, opacity: 0.8 }]}>
               Account
             </Text>
-            {user && (
-              <PremiumSettingCard
-                icon="log-out-outline"
-                title="Logout"
-                subtitle="Sign out of your account"
-                onPress={handleSignOut}
-                index={6}
-                isDestructive
-              />
-            )}
             <PremiumSettingCard
-              icon="information-circle-outline"
-              title="Account Status"
+              icon="log-out-outline"
+              title={user ? 'Sign Out' : 'Account Status'}
               subtitle={user ? user.email : 'Using as guest'}
-              index={user ? 7 : 6}
+              onPress={user ? handleSignOut : undefined}
+              index={6}
             />
           </View>
         </ScrollView>
-
-        {/* Logout Modal */}
-        <LogoutModal
-          visible={showLogoutModal}
-          onConfirm={confirmSignOut}
-          onCancel={cancelSignOut}
-        />
       </LinearGradient>
     </SafeAreaView>
   );

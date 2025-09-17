@@ -96,11 +96,11 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel 
               </View>
 
               {/* Title */}
-              <Text style={styles.title}>Sign Out</Text>
+              <Text style={styles.title}>Are you sure you want to log out?</Text>
               
               {/* Message */}
               <Text style={styles.message}>
-                Are you sure you want to log out?
+                You'll need to sign in again to access your account and saved content.
               </Text>
 
               {/* Buttons */}
@@ -116,12 +116,9 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel 
                   style={styles.confirmButton}
                   onPress={handleConfirm}
                 >
-                  <LinearGradient
-                    colors={['#EF4444', '#DC2626']}
-                    style={styles.confirmButtonGradient}
-                  >
+                  <View style={styles.confirmButtonContent}>
                     <Text style={styles.confirmButtonText}>Confirm</Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               </View>
             </LinearGradient>
@@ -135,14 +132,14 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
   },
   modalContainer: {
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 340,
     borderRadius: 24,
     overflow: 'hidden',
   },
@@ -172,18 +169,19 @@ const styles = StyleSheet.create({
     elevation: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#E6EAF0',
     marginBottom: 12,
     textAlign: 'center',
+    lineHeight: 26,
   },
   message: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#94A3B8',
     textAlign: 'center',
     marginBottom: 32,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -207,21 +205,20 @@ const styles = StyleSheet.create({
   confirmButton: {
     flex: 1,
     borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#EF4444',
+    backgroundColor: 'transparent',
     overflow: 'hidden',
   },
-  confirmButtonGradient: {
-    paddingVertical: 14,
+  confirmButtonContent: {
+    paddingVertical: 12,
     alignItems: 'center',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 12,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   confirmButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#EF4444',
   },
 });
 

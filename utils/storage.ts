@@ -47,14 +47,6 @@ export const storage = {
     }
   },
 
-  async setSavedItems(items: SavedItem[]): Promise<void> {
-    try {
-      await AsyncStorage.setItem(KEYS.SAVED_ITEMS, JSON.stringify(items));
-    } catch (error) {
-      console.log('Error setting saved items:', error);
-    }
-  },
-
   async saveSavedItems(items: SavedItem[]): Promise<void> {
     try {
       await AsyncStorage.setItem(KEYS.SAVED_ITEMS, JSON.stringify(items));
