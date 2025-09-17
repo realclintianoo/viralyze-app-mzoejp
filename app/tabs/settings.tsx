@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../utils/storage';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import { LinearGradient } from 'expo-linear-gradient';
+import LogoutModal from '../../components/LogoutModal';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -201,6 +202,7 @@ const PremiumSettingCard: React.FC<PremiumSettingCardProps> = ({
 export default function SettingsScreen() {
   const [profile, setProfile] = useState<OnboardingData | null>(null);
   const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { user, signOut } = useAuth();
 
   const headerOpacity = useSharedValue(0);
@@ -298,17 +300,26 @@ export default function SettingsScreen() {
 
   const handleSignOut = () => {
     if (user) {
-      Alert.alert(
-        'Sign Out',
-        'Are you sure you want to sign out?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign Out', style: 'destructive', onPress: signOut },
-        ]
-      );
+      setShowLogoutModal(true);
     } else {
       Alert.alert('Info', 'You are currently using the app as a guest.');
     }
+  };
+
+  const handleLogoutConfirm = async () => {
+    try {
+      setShowLogoutModal(false);
+      await signOut();
+      // Navigate back to the root to trigger the index screen check
+      router.replace('/');
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
   };
 
   return (
@@ -403,8 +414,43 @@ export default function SettingsScreen() {
               onPress={user ? handleSignOut : undefined}
               index={6}
             />
+            
+            {/* Debug: Test Logout (for development) */}
+            <PremiumSettingCard
+              icon="bug-outline"
+              title="Test Logout Flow"
+              subtitle="Clear data and restart onboarding"
+              onPress={() => {
+                Alert.alert(
+                  'Test Logout',
+                  'This will clear all data and restart the onboarding flow.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { 
+                      text: 'Test', 
+                      onPress: async () => {
+                        try {
+                          await storage.clearAll();
+                          router.replace('/');
+                        } catch (error) {
+                          console.error('Error during test logout:', error);
+                        }
+                      }
+                    },
+                  ]
+                );
+              }}
+              index={7}
+            />
           </View>
         </ScrollView>
+
+        {/* Logout Modal */}
+        <LogoutModal
+          visible={showLogoutModal}
+          onConfirm={handleLogoutConfirm}
+          onCancel={handleLogoutCancel}
+        />
       </LinearGradient>
     </SafeAreaView>
   );

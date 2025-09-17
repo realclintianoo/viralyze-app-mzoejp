@@ -79,6 +79,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (event === 'SIGNED_IN' && session?.user) {
         await syncLocalDataToRemote(session.user.id);
       }
+
+      // Clear local data when user signs out
+      if (event === 'SIGNED_OUT') {
+        console.log('User signed out, clearing local data');
+        try {
+          await storage.clearAll();
+        } catch (error) {
+          console.error('Error clearing data on sign out:', error);
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -139,9 +149,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error signing out:', error);
+    try {
+      // Clear all local storage data first
+      await storage.clearAll();
+      console.log('Local storage cleared during logout');
+      
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+      } else {
+        console.log('Successfully signed out');
+      }
+    } catch (error) {
+      console.error('Error during logout process:', error);
     }
   };
 

@@ -147,6 +147,15 @@ export const storage = {
     }
   },
 
+  async clearOnboardingData(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(KEYS.ONBOARDING_DATA);
+      console.log('Onboarding data cleared');
+    } catch (error) {
+      console.log('Error clearing onboarding data:', error);
+    }
+  },
+
   // Clear all data
   async clearAll(): Promise<void> {
     try {

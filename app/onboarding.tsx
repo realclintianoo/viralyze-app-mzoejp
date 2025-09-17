@@ -45,6 +45,21 @@ export default function Onboarding() {
   const [followers, setFollowers] = useState(1000);
   const [goal, setGoal] = useState('');
 
+  // Clear any existing data when onboarding starts (fresh start)
+  React.useEffect(() => {
+    const clearExistingData = async () => {
+      try {
+        // Clear all local storage to ensure fresh start
+        await storage.clearAll();
+        console.log('Cleared existing data for fresh onboarding start');
+      } catch (error) {
+        console.error('Error clearing existing data:', error);
+      }
+    };
+    
+    clearExistingData();
+  }, []);
+
   const formatFollowers = (value: number): string => {
     if (value >= 1000000) {
       return `${(value / 1000000).toFixed(1)}M`;
@@ -107,7 +122,10 @@ export default function Onboarding() {
       };
 
       await storage.saveOnboardingData(onboardingData);
-      router.replace('/tabs');
+      console.log('Onboarding data saved successfully:', onboardingData);
+      
+      // Navigate to tabs with replace to prevent going back to onboarding
+      router.replace('/tabs/chat');
     } catch (error) {
       console.log('Error saving onboarding data:', error);
       Alert.alert('Error', 'Failed to save your information. Please try again.');
