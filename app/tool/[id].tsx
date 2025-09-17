@@ -15,7 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import { storage } from '../../utils/storage';
-import { aiComplete, aiImage } from '../../utils/ai';
+import { aiComplete, aiImage } from '../../lib/ai';
 import { OnboardingData } from '../../types';
 
 const TOOL_CONFIG = {
@@ -58,15 +58,15 @@ const TOOL_CONFIG = {
 };
 
 const IMAGE_SIZES = [
-  { id: '16:9', label: '16:9 (YouTube)', width: 1920, height: 1080 },
-  { id: '4:5', label: '4:5 (Instagram)', width: 1080, height: 1350 },
-  { id: '1:1', label: '1:1 (Square)', width: 1080, height: 1080 },
+  { id: '1024x1024', label: '1:1 (Square)', width: 1024, height: 1024 },
+  { id: '1792x1024', label: '16:9 (YouTube)', width: 1792, height: 1024 },
+  { id: '1024x1792', label: '4:5 (Instagram)', width: 1024, height: 1792 },
 ];
 
 export default function ToolScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [input, setInput] = useState('');
-  const [selectedSize, setSelectedSize] = useState('1:1');
+  const [selectedSize, setSelectedSize] = useState('1024x1024');
   const [results, setResults] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [profile, setProfile] = useState<OnboardingData | null>(null);
@@ -97,25 +97,30 @@ export default function ToolScreen() {
         // Update quota for image
         await storage.updateQuotaUsage(0, 1);
         
-        const imageUrl = await aiImage(input, selectedSize);
+        const imageUrl = await aiImage({
+          prompt: input,
+          size: selectedSize as '1024x1024' | '1792x1024' | '1024x1792'
+        });
         setResults([imageUrl]);
       } else {
         // Update quota for text
         await storage.updateQuotaUsage(1, 0);
         
         // Generate multiple results for text tools
-        const promises = Array(3).fill(null).map(() => 
-          aiComplete(id || 'hook', profile, input)
-        );
+        const responses = await aiComplete({
+          kind: id || 'hook',
+          profile,
+          input,
+          n: 3
+        });
         
-        const responses = await Promise.all(promises);
         setResults(responses);
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
+    } catch (error: any) {
       console.log('Error generating content:', error);
-      Alert.alert('Error', 'Failed to generate content. Please try again.');
+      Alert.alert('Error', error.message || 'Failed to generate content. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -195,7 +200,7 @@ export default function ToolScreen() {
                 <Text style={[commonStyles.subtitle, { marginBottom: 8 }]}>
                   Image Size
                 </Text>
-                <View style={[commonStyles.row, { gap: 8 }]}>
+                <View style={[commonStyles.row, { gap: 8, flexWrap: 'wrap' }]}>
                   {IMAGE_SIZES.map(size => (
                     <TouchableOpacity
                       key={size.id}
@@ -273,6 +278,9 @@ export default function ToolScreen() {
                           <Ionicons name="image" size={48} color={colors.grey} />
                           <Text style={[commonStyles.smallText, { marginTop: 8 }]}>
                             Generated Image
+                          </Text>
+                          <Text style={[commonStyles.smallText, { marginTop: 4, color: colors.grey }]}>
+                            URL: {result}
                           </Text>
                         </View>
                       </View>

@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import { storage } from '../../utils/storage';
-import { aiComplete } from '../../utils/ai';
+import { aiComplete } from '../../lib/ai';
 import { ChatMessage, QuotaUsage, OnboardingData } from '../../types';
 
 const QUICK_ACTIONS = [
@@ -92,7 +92,14 @@ export default function ChatScreen() {
     setIsLoading(true);
 
     try {
-      const response = await aiComplete(actionType || 'chat', profile, text);
+      const responses = await aiComplete({
+        kind: actionType || 'chat',
+        profile,
+        input: text,
+        n: 1
+      });
+      
+      const response = responses[0] || 'Sorry, I couldn\'t generate a response. Please try again.';
       
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -108,9 +115,9 @@ export default function ChatScreen() {
       setQuota(updatedQuota);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
+    } catch (error: any) {
       console.log('Error sending message:', error);
-      Alert.alert('Error', 'Failed to get AI response. Please try again.');
+      Alert.alert('Error', error.message || 'Failed to get AI response. Please try again.');
     } finally {
       setIsLoading(false);
     }
