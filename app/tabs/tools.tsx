@@ -117,8 +117,8 @@ interface PremiumToolCardProps {
 
 function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) {
   const opacity = useSharedValue(0);
-  const scale = useSharedValue(0.7);
-  const translateY = useSharedValue(60);
+  const scale = useSharedValue(0.8);
+  const translateY = useSharedValue(40);
   const pressScale = useSharedValue(1);
   const glowOpacity = useSharedValue(0);
   const rotateZ = useSharedValue(0);
@@ -126,32 +126,32 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
   const iconScale = useSharedValue(1);
 
   useEffect(() => {
-    const delay = index * 150;
+    const delay = index * 100;
     
     // Staggered entrance animation
-    opacity.value = withDelay(delay, withTiming(1, { duration: 1000 }));
+    opacity.value = withDelay(delay, withTiming(1, { duration: 600 }));
     scale.value = withDelay(delay, withSpring(1, { 
-      damping: 10, 
-      stiffness: 100,
-      mass: 1.2,
+      damping: 12, 
+      stiffness: 120,
+      mass: 1,
     }));
     translateY.value = withDelay(delay, withSpring(0, {
-      damping: 12,
-      stiffness: 80,
-      mass: 1,
+      damping: 15,
+      stiffness: 100,
+      mass: 0.8,
     }));
 
     // Subtle idle animation
     setTimeout(() => {
       iconScale.value = withRepeat(
         withSequence(
-          withTiming(1.1, { duration: 2000 }),
-          withTiming(1, { duration: 2000 })
+          withTiming(1.05, { duration: 3000 }),
+          withTiming(1, { duration: 3000 })
         ),
         -1,
         true
       );
-    }, delay + 1000);
+    }, delay + 600);
   }, [index]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -176,23 +176,23 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
   }));
 
   const handlePressIn = () => {
-    pressScale.value = withSpring(0.88, { damping: 12, stiffness: 400 });
-    glowOpacity.value = withTiming(1, { duration: 200 });
-    borderGlow.value = withTiming(1, { duration: 200 });
-    rotateZ.value = withSpring(tool.isPro ? 3 : -2, { damping: 12, stiffness: 300 });
-    iconScale.value = withSpring(1.2, { damping: 15, stiffness: 400 });
+    pressScale.value = withSpring(0.92, { damping: 15, stiffness: 400 });
+    glowOpacity.value = withTiming(0.8, { duration: 150 });
+    borderGlow.value = withTiming(0.6, { duration: 150 });
+    rotateZ.value = withSpring(tool.isPro ? 2 : -1, { damping: 15, stiffness: 300 });
+    iconScale.value = withSpring(1.15, { damping: 18, stiffness: 400 });
   };
 
   const handlePressOut = () => {
-    pressScale.value = withSpring(1, { damping: 12, stiffness: 400 });
-    glowOpacity.value = withTiming(0, { duration: 500 });
-    borderGlow.value = withTiming(0, { duration: 500 });
-    rotateZ.value = withSpring(0, { damping: 12, stiffness: 300 });
-    iconScale.value = withSpring(1.1, { damping: 15, stiffness: 400 });
+    pressScale.value = withSpring(1, { damping: 15, stiffness: 400 });
+    glowOpacity.value = withTiming(0, { duration: 300 });
+    borderGlow.value = withTiming(0, { duration: 300 });
+    rotateZ.value = withSpring(0, { damping: 15, stiffness: 300 });
+    iconScale.value = withSpring(1.05, { damping: 18, stiffness: 400 });
   };
 
   const handlePress = () => {
-    runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Heavy);
+    runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
     runOnJS(onPress)();
   };
 
@@ -221,24 +221,24 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
   };
 
   return (
-    <View style={{ marginBottom: 20, position: 'relative' }}>
+    <View style={{ marginBottom: 16, position: 'relative' }}>
       {/* Outer glow effect */}
       <Animated.View
         style={[
           {
             position: 'absolute',
-            top: -8,
-            left: -8,
-            right: -8,
-            bottom: -8,
-            borderRadius: 28,
+            top: -4,
+            left: -4,
+            right: -4,
+            bottom: -4,
+            borderRadius: 20,
             backgroundColor: tool.gradient[0],
-            opacity: 0.15,
+            opacity: 0.1,
             shadowColor: tool.gradient[0],
             shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 1,
-            shadowRadius: 24,
-            elevation: 20,
+            shadowOpacity: 0.6,
+            shadowRadius: 16,
+            elevation: 12,
           },
           glowStyle,
         ]}
@@ -249,14 +249,14 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
         style={[
           {
             position: 'absolute',
-            top: -2,
-            left: -2,
-            right: -2,
-            bottom: -2,
-            borderRadius: 22,
-            borderWidth: 2,
+            top: -1,
+            left: -1,
+            right: -1,
+            bottom: -1,
+            borderRadius: 17,
+            borderWidth: 1,
             borderColor: tool.gradient[0],
-            opacity: 0.6,
+            opacity: 0.4,
           },
           borderGlowStyle,
         ]}
@@ -266,8 +266,8 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
         style={[
           {
             width: cardWidth,
-            height: 170,
-            borderRadius: 20,
+            height: 140,
+            borderRadius: 16,
             overflow: 'hidden',
           },
           animatedStyle,
@@ -277,11 +277,11 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
         onPress={handlePress}
         activeOpacity={1}
       >
-        <BlurView intensity={30} style={{ flex: 1 }}>
+        <BlurView intensity={20} style={{ flex: 1 }}>
           <LinearGradient
             colors={[
-              `${tool.gradient[0]}12`,
-              `${tool.gradient[1]}20`,
+              `${tool.gradient[0]}10`,
+              `${tool.gradient[1]}18`,
             ]}
             style={[
               commonStyles.toolCardContent,
@@ -289,6 +289,7 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
                 flex: 1,
                 justifyContent: 'space-between',
                 position: 'relative',
+                padding: 14,
               }
             ]}
           >
@@ -296,27 +297,22 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
             <View
               style={{
                 position: 'absolute',
-                top: 16,
-                right: 16,
-                backgroundColor: `${tool.gradient[0]}25`,
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: `${tool.gradient[0]}40`,
-                shadowColor: tool.gradient[0],
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.3,
-                shadowRadius: 4,
-                elevation: 4,
+                top: 10,
+                right: 10,
+                backgroundColor: `${tool.gradient[0]}20`,
+                paddingHorizontal: 6,
+                paddingVertical: 3,
+                borderRadius: 6,
+                borderWidth: 0.5,
+                borderColor: `${tool.gradient[0]}30`,
               }}
             >
               <Text
                 style={{
-                  fontSize: 9,
+                  fontSize: 7,
                   fontWeight: '800',
                   color: tool.gradient[0],
-                  letterSpacing: 0.8,
+                  letterSpacing: 0.3,
                   textTransform: 'uppercase',
                 }}
               >
@@ -325,16 +321,16 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
             </View>
 
             {/* Icon and Pro Badge */}
-            <View style={{ alignItems: 'flex-start', marginTop: 8 }}>
+            <View style={{ alignItems: 'flex-start', marginTop: 4 }}>
               <Animated.View
                 style={[
                   {
-                    width: 56,
-                    height: 56,
-                    borderRadius: 16,
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginBottom: 12,
+                    marginBottom: 8,
                     overflow: 'hidden',
                   },
                   iconAnimatedStyle,
@@ -348,13 +344,13 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
                     alignItems: 'center',
                     justifyContent: 'center',
                     shadowColor: tool.gradient[0],
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.5,
-                    shadowRadius: 12,
-                    elevation: 8,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    elevation: 6,
                   }}
                 >
-                  <Ionicons name={tool.icon} size={28} color={colors.white} />
+                  <Ionicons name={tool.icon} size={20} color={colors.white} />
                 </LinearGradient>
               </Animated.View>
               
@@ -362,24 +358,24 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
                 <View
                   style={{
                     backgroundColor: colors.warning,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: 10,
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 6,
                     shadowColor: colors.warning,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.5,
-                    shadowRadius: 8,
-                    elevation: 6,
-                    borderWidth: 1,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 4,
+                    elevation: 4,
+                    borderWidth: 0.5,
                     borderColor: 'rgba(245, 158, 11, 0.3)',
                   }}
                 >
                   <Text
                     style={{
                       color: colors.white,
-                      fontSize: 10,
+                      fontSize: 8,
                       fontWeight: '900',
-                      letterSpacing: 1,
+                      letterSpacing: 0.5,
                       textTransform: 'uppercase',
                     }}
                   >
@@ -393,46 +389,55 @@ function PremiumToolCard({ tool, index, onPress, quota }: PremiumToolCardProps) 
             <View style={{ flex: 1, justifyContent: 'flex-end' }}>
               <Text
                 style={{
-                  fontSize: 16,
+                  fontSize: 13,
                   fontWeight: '800',
                   color: colors.text,
-                  marginBottom: 6,
-                  letterSpacing: -0.3,
-                  lineHeight: 20,
+                  marginBottom: 3,
+                  letterSpacing: -0.2,
+                  lineHeight: 16,
                 }}
+                numberOfLines={1}
               >
                 {tool.title}
               </Text>
               
               <Text
                 style={{
-                  fontSize: 12,
+                  fontSize: 10,
                   color: colors.textSecondary,
-                  lineHeight: 16,
-                  marginBottom: 12,
+                  lineHeight: 13,
+                  marginBottom: 8,
                   fontWeight: '500',
                 }}
+                numberOfLines={1}
               >
                 {tool.description}
               </Text>
 
               {/* Usage indicator */}
               {!tool.isPro && (
-                <View style={[commonStyles.usageCounter, { alignSelf: 'flex-start' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={[commonStyles.usageCounter, { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <View
                       style={[
                         commonStyles.statusDot,
                         {
                           backgroundColor: getUsageColor(),
                           shadowColor: getUsageColor(),
+                          width: 6,
+                          height: 6,
+                          borderRadius: 3,
                         }
                       ]}
                     />
                     <Text
                       style={[
                         commonStyles.usageCounterText,
-                        { color: getUsageColor() }
+                        { 
+                          color: getUsageColor(),
+                          fontSize: 9,
+                          letterSpacing: 0.3,
+                        }
                       ]}
                     >
                       {getRemainingUses()} LEFT TODAY
@@ -454,13 +459,13 @@ interface PremiumStatsCardProps {
 
 function PremiumStatsCard({ quota }: PremiumStatsCardProps) {
   const pulseScale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0.3);
+  const glowOpacity = useSharedValue(0.2);
 
   useEffect(() => {
     if (quota && (quota.text >= 2 || quota.image >= 1)) {
       pulseScale.value = withRepeat(
         withSequence(
-          withTiming(1.02, { duration: 2000 }),
+          withTiming(1.01, { duration: 2000 }),
           withTiming(1, { duration: 2000 })
         ),
         -1,
@@ -468,8 +473,8 @@ function PremiumStatsCard({ quota }: PremiumStatsCardProps) {
       );
       glowOpacity.value = withRepeat(
         withSequence(
-          withTiming(0.6, { duration: 2000 }),
-          withTiming(0.3, { duration: 2000 })
+          withTiming(0.4, { duration: 2000 }),
+          withTiming(0.2, { duration: 2000 })
         ),
         -1,
         true
@@ -491,84 +496,89 @@ function PremiumStatsCard({ quota }: PremiumStatsCardProps) {
   const imageProgress = (1 - quota.image) / 1;
 
   return (
-    <View style={{ marginBottom: 28, position: 'relative' }}>
+    <View style={{ marginBottom: 20, position: 'relative' }}>
       {/* Glow effect */}
       <Animated.View
         style={[
           {
             position: 'absolute',
-            top: -6,
-            left: -6,
-            right: -6,
-            bottom: -6,
-            borderRadius: 26,
+            top: -4,
+            left: -4,
+            right: -4,
+            bottom: -4,
+            borderRadius: 20,
             backgroundColor: colors.success,
             shadowColor: colors.success,
             shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.4,
-            shadowRadius: 20,
-            elevation: 16,
+            shadowOpacity: 0.3,
+            shadowRadius: 16,
+            elevation: 12,
           },
           glowStyle,
         ]}
       />
 
       <Animated.View style={[animatedStyle]}>
-        <BlurView intensity={30} style={{ borderRadius: 20, overflow: 'hidden' }}>
+        <BlurView intensity={20} style={{ borderRadius: 16, overflow: 'hidden' }}>
           <LinearGradient
-            colors={['rgba(34, 197, 94, 0.08)', 'rgba(22, 163, 74, 0.15)']}
+            colors={['rgba(34, 197, 94, 0.06)', 'rgba(22, 163, 74, 0.12)']}
             style={[
               commonStyles.premiumCard,
-              { margin: 0, borderColor: colors.glassBorderStrong }
+              { 
+                margin: 0, 
+                borderColor: colors.glassBorderStrong,
+                padding: 16,
+                borderRadius: 16,
+              }
             ]}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <LinearGradient
                 colors={[colors.success, colors.gradientAccent]}
                 style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginRight: 12,
+                  marginRight: 10,
                   shadowColor: colors.success,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 8,
-                  elevation: 6,
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 6,
+                  elevation: 4,
                 }}
               >
-                <Ionicons name="stats-chart" size={20} color={colors.white} />
+                <Ionicons name="stats-chart" size={16} color={colors.white} />
               </LinearGradient>
               
-              <Text style={[commonStyles.textLarge, { flex: 1 }]}>
+              <Text style={[commonStyles.textLarge, { fontSize: 16, flex: 1 }]}>
                 Daily Usage
               </Text>
             </View>
             
-            <View style={{ gap: 16 }}>
+            <View style={{ gap: 12 }}>
               {/* Text requests */}
               <View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text style={[commonStyles.textBold, { fontSize: 15 }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={[commonStyles.textBold, { fontSize: 13 }]}>
                     Text Requests
                   </Text>
-                  <Text style={[commonStyles.textBold, { fontSize: 15, color: textProgress > 0.5 ? colors.success : colors.warning }]}>
+                  <Text style={[commonStyles.textBold, { fontSize: 13, color: textProgress > 0.5 ? colors.success : colors.warning }]}>
                     {2 - quota.text}/2
                   </Text>
                 </View>
                 <View
                   style={{
-                    height: 8,
+                    height: 6,
                     backgroundColor: colors.border,
-                    borderRadius: 4,
+                    borderRadius: 3,
                     overflow: 'hidden',
                     shadowColor: colors.neuDark,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 4,
-                    elevation: 4,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 2,
+                    elevation: 2,
                   }}
                 >
                   <LinearGradient
@@ -576,12 +586,12 @@ function PremiumStatsCard({ quota }: PremiumStatsCardProps) {
                     style={{
                       height: '100%',
                       width: `${textProgress * 100}%`,
-                      borderRadius: 4,
+                      borderRadius: 3,
                       shadowColor: textProgress > 0.5 ? colors.success : colors.warning,
                       shadowOffset: { width: 0, height: 0 },
-                      shadowOpacity: 0.6,
-                      shadowRadius: 4,
-                      elevation: 4,
+                      shadowOpacity: 0.4,
+                      shadowRadius: 3,
+                      elevation: 3,
                     }}
                   />
                 </View>
@@ -589,25 +599,25 @@ function PremiumStatsCard({ quota }: PremiumStatsCardProps) {
 
               {/* Image requests */}
               <View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <Text style={[commonStyles.textBold, { fontSize: 15 }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={[commonStyles.textBold, { fontSize: 13 }]}>
                     Image Requests
                   </Text>
-                  <Text style={[commonStyles.textBold, { fontSize: 15, color: imageProgress > 0.5 ? colors.success : colors.warning }]}>
+                  <Text style={[commonStyles.textBold, { fontSize: 13, color: imageProgress > 0.5 ? colors.success : colors.warning }]}>
                     {1 - quota.image}/1
                   </Text>
                 </View>
                 <View
                   style={{
-                    height: 8,
+                    height: 6,
                     backgroundColor: colors.border,
-                    borderRadius: 4,
+                    borderRadius: 3,
                     overflow: 'hidden',
                     shadowColor: colors.neuDark,
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 4,
-                    elevation: 4,
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 2,
+                    elevation: 2,
                   }}
                 >
                   <LinearGradient
@@ -615,12 +625,12 @@ function PremiumStatsCard({ quota }: PremiumStatsCardProps) {
                     style={{
                       height: '100%',
                       width: `${imageProgress * 100}%`,
-                      borderRadius: 4,
+                      borderRadius: 3,
                       shadowColor: imageProgress > 0.5 ? colors.success : colors.warning,
                       shadowOffset: { width: 0, height: 0 },
-                      shadowOpacity: 0.6,
-                      shadowRadius: 4,
-                      elevation: 4,
+                      shadowOpacity: 0.4,
+                      shadowRadius: 3,
+                      elevation: 3,
                     }}
                   />
                 </View>
@@ -636,16 +646,16 @@ function PremiumStatsCard({ quota }: PremiumStatsCardProps) {
 export default function ToolsScreen() {
   const [quota, setQuota] = useState<QuotaUsage | null>(null);
   const headerOpacity = useSharedValue(0);
-  const headerTranslateY = useSharedValue(-40);
+  const headerTranslateY = useSharedValue(-30);
   const headerScale = useSharedValue(0.9);
 
   useEffect(() => {
     loadQuota();
     
     // Premium header animation
-    headerOpacity.value = withTiming(1, { duration: 800 });
-    headerTranslateY.value = withSpring(0, { damping: 12, stiffness: 120 });
-    headerScale.value = withSpring(1, { damping: 15, stiffness: 150 });
+    headerOpacity.value = withTiming(1, { duration: 600 });
+    headerTranslateY.value = withSpring(0, { damping: 15, stiffness: 120 });
+    headerScale.value = withSpring(1, { damping: 18, stiffness: 150 });
   }, []);
 
   const loadQuota = async () => {
@@ -719,40 +729,45 @@ export default function ToolsScreen() {
     >
       <SafeAreaView style={{ flex: 1 }}>
         {/* Premium Header */}
-        <Animated.View style={[{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 }, headerAnimatedStyle]}>
-          <BlurView intensity={25} style={{ borderRadius: 20, overflow: 'hidden' }}>
+        <Animated.View style={[{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }, headerAnimatedStyle]}>
+          <BlurView intensity={20} style={{ borderRadius: 16, overflow: 'hidden' }}>
             <LinearGradient
-              colors={['rgba(34, 197, 94, 0.08)', 'rgba(22, 163, 74, 0.15)']}
+              colors={['rgba(34, 197, 94, 0.06)', 'rgba(22, 163, 74, 0.12)']}
               style={[
                 commonStyles.premiumCard,
-                { margin: 0, borderColor: colors.glassBorderStrong }
+                { 
+                  margin: 0, 
+                  borderColor: colors.glassBorderStrong,
+                  padding: 16,
+                  borderRadius: 16,
+                }
               ]}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <LinearGradient
                   colors={[colors.gradientStart, colors.gradientEnd]}
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 14,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginRight: 16,
+                    marginRight: 12,
                     shadowColor: colors.glowPrimary,
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.6,
-                    shadowRadius: 12,
-                    elevation: 8,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    elevation: 6,
                   }}
                 >
-                  <Ionicons name="construct" size={24} color={colors.white} />
+                  <Ionicons name="construct" size={18} color={colors.white} />
                 </LinearGradient>
                 
                 <View style={{ flex: 1 }}>
-                  <Text style={[commonStyles.title, { marginBottom: 2 }]}>
+                  <Text style={[commonStyles.title, { marginBottom: 1, fontSize: 20 }]}>
                     AI Tools
                   </Text>
-                  <Text style={[commonStyles.textSmall, { opacity: 0.9, fontWeight: '600' }]}>
+                  <Text style={[commonStyles.textSmall, { opacity: 0.8, fontWeight: '500', fontSize: 12 }]}>
                     Supercharge your content creation
                   </Text>
                 </View>
@@ -763,7 +778,7 @@ export default function ToolsScreen() {
 
         <ScrollView 
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
         >
           {/* Premium Stats Card */}
           <PremiumStatsCard quota={quota} />

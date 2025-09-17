@@ -83,27 +83,27 @@ interface PremiumQuickActionCardProps {
 function PremiumQuickActionCard({ action, index, onPress, disabled }: PremiumQuickActionCardProps) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
-  const translateY = useSharedValue(40);
+  const translateY = useSharedValue(30);
   const glowOpacity = useSharedValue(0);
   const rotateZ = useSharedValue(0);
   const iconScale = useSharedValue(1);
 
   useEffect(() => {
-    const delay = index * 120;
-    opacity.value = withDelay(delay, withTiming(1, { duration: 800 }));
-    translateY.value = withDelay(delay, withSpring(0, { damping: 12, stiffness: 120 }));
+    const delay = index * 80;
+    opacity.value = withDelay(delay, withTiming(1, { duration: 600 }));
+    translateY.value = withDelay(delay, withSpring(0, { damping: 15, stiffness: 120 }));
 
     // Subtle idle animation
     setTimeout(() => {
       iconScale.value = withRepeat(
         withSequence(
-          withTiming(1.1, { duration: 2500 }),
-          withTiming(1, { duration: 2500 })
+          withTiming(1.05, { duration: 3000 }),
+          withTiming(1, { duration: 3000 })
         ),
         -1,
         true
       );
-    }, delay + 800);
+    }, delay + 600);
   }, [index]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -124,43 +124,43 @@ function PremiumQuickActionCard({ action, index, onPress, disabled }: PremiumQui
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.92, { damping: 12, stiffness: 400 });
-    glowOpacity.value = withTiming(1, { duration: 200 });
-    rotateZ.value = withSpring(-2, { damping: 12, stiffness: 300 });
-    iconScale.value = withSpring(1.2, { damping: 15, stiffness: 400 });
+    scale.value = withSpring(0.94, { damping: 15, stiffness: 400 });
+    glowOpacity.value = withTiming(0.6, { duration: 150 });
+    rotateZ.value = withSpring(-1, { damping: 15, stiffness: 300 });
+    iconScale.value = withSpring(1.1, { damping: 18, stiffness: 400 });
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 400 });
-    glowOpacity.value = withTiming(0, { duration: 400 });
-    rotateZ.value = withSpring(0, { damping: 12, stiffness: 300 });
-    iconScale.value = withSpring(1.1, { damping: 15, stiffness: 400 });
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+    glowOpacity.value = withTiming(0, { duration: 300 });
+    rotateZ.value = withSpring(0, { damping: 15, stiffness: 300 });
+    iconScale.value = withSpring(1.05, { damping: 18, stiffness: 400 });
   };
 
   const handlePress = () => {
-    runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Heavy);
+    runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
     runOnJS(onPress)();
   };
 
   return (
-    <View style={{ marginRight: 16, position: 'relative' }}>
+    <View style={{ marginRight: 12, position: 'relative' }}>
       {/* Glow effect */}
       <Animated.View
         style={[
           {
             position: 'absolute',
-            top: -6,
-            left: -6,
-            right: -6,
-            bottom: -6,
-            borderRadius: 24,
+            top: -4,
+            left: -4,
+            right: -4,
+            bottom: -4,
+            borderRadius: 18,
             backgroundColor: action.gradient[0],
-            opacity: 0.2,
+            opacity: 0.15,
             shadowColor: action.gradient[0],
             shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.8,
-            shadowRadius: 20,
-            elevation: 16,
+            shadowOpacity: 0.6,
+            shadowRadius: 16,
+            elevation: 12,
           },
           glowStyle,
         ]}
@@ -169,9 +169,9 @@ function PremiumQuickActionCard({ action, index, onPress, disabled }: PremiumQui
       <AnimatedTouchableOpacity
         style={[
           {
-            width: 150,
-            height: 130,
-            borderRadius: 18,
+            width: 120,
+            height: 100,
+            borderRadius: 14,
             overflow: 'hidden',
             opacity: disabled ? 0.5 : 1,
           },
@@ -183,11 +183,11 @@ function PremiumQuickActionCard({ action, index, onPress, disabled }: PremiumQui
         disabled={disabled}
         activeOpacity={1}
       >
-        <BlurView intensity={25} style={{ flex: 1 }}>
+        <BlurView intensity={20} style={{ flex: 1 }}>
           <LinearGradient
             colors={[
-              `${action.gradient[0]}15`,
-              `${action.gradient[1]}25`,
+              `${action.gradient[0]}12`,
+              `${action.gradient[1]}20`,
             ]}
             style={[
               commonStyles.toolCardContent,
@@ -195,6 +195,7 @@ function PremiumQuickActionCard({ action, index, onPress, disabled }: PremiumQui
                 flex: 1,
                 justifyContent: 'space-between',
                 borderColor: colors.glassBorderStrong,
+                padding: 12,
               }
             ]}
           >
@@ -202,22 +203,22 @@ function PremiumQuickActionCard({ action, index, onPress, disabled }: PremiumQui
             <View
               style={{
                 position: 'absolute',
-                top: 12,
-                right: 12,
-                backgroundColor: `${action.gradient[0]}25`,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: `${action.gradient[0]}40`,
+                top: 8,
+                right: 8,
+                backgroundColor: `${action.gradient[0]}20`,
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 6,
+                borderWidth: 0.5,
+                borderColor: `${action.gradient[0]}30`,
               }}
             >
               <Text
                 style={{
-                  fontSize: 8,
+                  fontSize: 7,
                   fontWeight: '800',
                   color: action.gradient[0],
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.2,
                   textTransform: 'uppercase',
                 }}
               >
@@ -226,16 +227,16 @@ function PremiumQuickActionCard({ action, index, onPress, disabled }: PremiumQui
             </View>
 
             {/* Icon */}
-            <View style={{ alignItems: 'flex-start', marginTop: 8 }}>
+            <View style={{ alignItems: 'flex-start', marginTop: 4 }}>
               <Animated.View
                 style={[
                   {
-                    width: 52,
-                    height: 52,
-                    borderRadius: 14,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginBottom: 8,
+                    marginBottom: 6,
                     overflow: 'hidden',
                   },
                   iconAnimatedStyle,
@@ -249,13 +250,13 @@ function PremiumQuickActionCard({ action, index, onPress, disabled }: PremiumQui
                     alignItems: 'center',
                     justifyContent: 'center',
                     shadowColor: action.gradient[0],
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.5,
-                    shadowRadius: 12,
-                    elevation: 8,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    elevation: 6,
                   }}
                 >
-                  <Ionicons name={action.icon} size={26} color={colors.white} />
+                  <Ionicons name={action.icon} size={18} color={colors.white} />
                 </LinearGradient>
               </Animated.View>
             </View>
@@ -264,22 +265,24 @@ function PremiumQuickActionCard({ action, index, onPress, disabled }: PremiumQui
             <View style={{ flex: 1, justifyContent: 'flex-end' }}>
               <Text
                 style={{
-                  fontSize: 15,
+                  fontSize: 12,
                   fontWeight: '800',
                   color: colors.text,
-                  marginBottom: 4,
-                  letterSpacing: -0.2,
+                  marginBottom: 2,
+                  letterSpacing: -0.1,
                 }}
+                numberOfLines={1}
               >
                 {action.title}
               </Text>
               
               <Text
                 style={{
-                  fontSize: 11,
+                  fontSize: 9,
                   color: colors.textSecondary,
                   fontWeight: '500',
                 }}
+                numberOfLines={1}
               >
                 {action.description}
               </Text>
@@ -299,13 +302,13 @@ interface PremiumQuotaPillProps {
 function PremiumQuotaPill({ remaining, total }: PremiumQuotaPillProps) {
   const progress = remaining / total;
   const pulseScale = useSharedValue(1);
-  const glowOpacity = useSharedValue(0.3);
+  const glowOpacity = useSharedValue(0.2);
 
   useEffect(() => {
     if (remaining <= 1) {
       pulseScale.value = withRepeat(
         withSequence(
-          withTiming(1.05, { duration: 1500 }),
+          withTiming(1.02, { duration: 1500 }),
           withTiming(1, { duration: 1500 })
         ),
         -1,
@@ -313,8 +316,8 @@ function PremiumQuotaPill({ remaining, total }: PremiumQuotaPillProps) {
       );
       glowOpacity.value = withRepeat(
         withSequence(
-          withTiming(0.8, { duration: 1500 }),
-          withTiming(0.3, { duration: 1500 })
+          withTiming(0.5, { duration: 1500 }),
+          withTiming(0.2, { duration: 1500 })
         ),
         -1,
         true
@@ -343,37 +346,37 @@ function PremiumQuotaPill({ remaining, total }: PremiumQuotaPillProps) {
         style={[
           {
             position: 'absolute',
-            top: -4,
-            left: -4,
-            right: -4,
-            bottom: -4,
-            borderRadius: 24,
+            top: -3,
+            left: -3,
+            right: -3,
+            bottom: -3,
+            borderRadius: 18,
             backgroundColor: getColor(),
             shadowColor: getColor(),
             shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.6,
-            shadowRadius: 12,
-            elevation: 12,
+            shadowOpacity: 0.4,
+            shadowRadius: 10,
+            elevation: 8,
           },
           glowStyle,
         ]}
       />
 
       <Animated.View style={animatedStyle}>
-        <BlurView intensity={25} style={{ borderRadius: 20, overflow: 'hidden' }}>
+        <BlurView intensity={20} style={{ borderRadius: 15, overflow: 'hidden' }}>
           <LinearGradient
             colors={[
-              `${getColor()}15`,
-              `${getColor()}25`,
+              `${getColor()}12`,
+              `${getColor()}20`,
             ]}
             style={{
-              paddingHorizontal: 20,
-              paddingVertical: 10,
+              paddingHorizontal: 16,
+              paddingVertical: 8,
               borderWidth: 1,
               borderColor: colors.glassBorderStrong,
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 10,
+              gap: 8,
             }}
           >
             <View
@@ -382,15 +385,18 @@ function PremiumQuotaPill({ remaining, total }: PremiumQuotaPillProps) {
                 {
                   backgroundColor: getColor(),
                   shadowColor: getColor(),
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
                 }
               ]}
             />
             <Text
               style={{
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: '800',
                 color: colors.text,
-                letterSpacing: 0.8,
+                letterSpacing: 0.5,
                 textTransform: 'uppercase',
               }}
             >
@@ -415,17 +421,17 @@ export default function ChatScreen() {
 
   // Animation values
   const headerOpacity = useSharedValue(0);
-  const headerTranslateY = useSharedValue(-30);
-  const headerScale = useSharedValue(0.9);
+  const headerTranslateY = useSharedValue(-20);
+  const headerScale = useSharedValue(0.95);
 
   useEffect(() => {
     loadInitialData();
     checkSystemHealth();
     
     // Premium header animation
-    headerOpacity.value = withTiming(1, { duration: 800 });
-    headerTranslateY.value = withSpring(0, { damping: 12, stiffness: 120 });
-    headerScale.value = withSpring(1, { damping: 15, stiffness: 150 });
+    headerOpacity.value = withTiming(1, { duration: 600 });
+    headerTranslateY.value = withSpring(0, { damping: 15, stiffness: 120 });
+    headerScale.value = withSpring(1, { damping: 18, stiffness: 150 });
   }, []);
 
   const loadInitialData = async () => {
@@ -476,7 +482,7 @@ export default function ChatScreen() {
   };
 
   const handleQuickAction = async (actionId: string) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     if (!systemHealthy) {
       showConfigurationError();
@@ -625,47 +631,47 @@ export default function ChatScreen() {
       style={{
         alignSelf: message.isUser ? 'flex-end' : 'flex-start',
         maxWidth: '85%',
-        marginBottom: 20,
+        marginBottom: 16,
       }}
     >
       {message.isUser ? (
-        <View style={{ borderRadius: 24, overflow: 'hidden' }}>
+        <View style={{ borderRadius: 20, overflow: 'hidden' }}>
           <LinearGradient
             colors={[colors.gradientStart, colors.gradientEnd]}
             style={{
-              padding: 20,
+              padding: 16,
               shadowColor: colors.glowPrimary,
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.4,
-              shadowRadius: 16,
-              elevation: 12,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.3,
+              shadowRadius: 12,
+              elevation: 8,
             }}
           >
-            <Text style={{ color: colors.white, fontSize: 16, lineHeight: 24, fontWeight: '500' }}>
+            <Text style={{ color: colors.white, fontSize: 15, lineHeight: 22, fontWeight: '500' }}>
               {message.content}
             </Text>
           </LinearGradient>
         </View>
       ) : (
-        <BlurView intensity={25} style={{ borderRadius: 24, overflow: 'hidden' }}>
+        <BlurView intensity={20} style={{ borderRadius: 20, overflow: 'hidden' }}>
           <View
             style={{
-              backgroundColor: message.isError ? 'rgba(239, 68, 68, 0.1)' : colors.glassBackgroundStrong,
-              padding: 20,
+              backgroundColor: message.isError ? 'rgba(239, 68, 68, 0.08)' : colors.glassBackgroundStrong,
+              padding: 16,
               borderWidth: 1,
-              borderColor: message.isError ? 'rgba(239, 68, 68, 0.3)' : colors.glassBorderStrong,
+              borderColor: message.isError ? 'rgba(239, 68, 68, 0.25)' : colors.glassBorderStrong,
               shadowColor: colors.neuDark,
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.3,
-              shadowRadius: 16,
-              elevation: 12,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.2,
+              shadowRadius: 12,
+              elevation: 8,
             }}
           >
             <Text
               style={{
                 color: message.isError ? colors.error : colors.text,
-                fontSize: 16,
-                lineHeight: 24,
+                fontSize: 15,
+                lineHeight: 22,
                 fontWeight: '500',
               }}
             >
@@ -673,23 +679,23 @@ export default function ChatScreen() {
             </Text>
 
             {!message.isError && (
-              <View style={{ flexDirection: 'row', gap: 20, marginTop: 16 }}>
+              <View style={{ flexDirection: 'row', gap: 16, marginTop: 12 }}>
                 <TouchableOpacity
                   onPress={() => copyMessage(message.content)}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 8,
+                    gap: 6,
                     backgroundColor: colors.glassBackground,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    borderRadius: 12,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 10,
                     borderWidth: 1,
                     borderColor: colors.glassBorder,
                   }}
                 >
-                  <Ionicons name="copy" size={16} color={colors.text} />
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+                  <Ionicons name="copy" size={14} color={colors.text} />
+                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>
                     Copy
                   </Text>
                 </TouchableOpacity>
@@ -699,17 +705,17 @@ export default function ChatScreen() {
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 8,
+                    gap: 6,
                     backgroundColor: colors.glassBackground,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    borderRadius: 12,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 10,
                     borderWidth: 1,
                     borderColor: colors.glassBorder,
                   }}
                 >
-                  <Ionicons name="bookmark" size={16} color={colors.success} />
-                  <Text style={{ color: colors.success, fontSize: 14, fontWeight: '600' }}>
+                  <Ionicons name="bookmark" size={14} color={colors.success} />
+                  <Text style={{ color: colors.success, fontSize: 12, fontWeight: '600' }}>
                     Save
                   </Text>
                 </TouchableOpacity>
@@ -737,67 +743,67 @@ export default function ChatScreen() {
       <SafeAreaView style={{ flex: 1 }}>
         {/* Premium Header */}
         <Animated.View style={[headerAnimatedStyle]}>
-          <BlurView intensity={25} style={{ borderBottomWidth: 1, borderBottomColor: colors.glassBorder }}>
-            <View style={[commonStyles.header, { backgroundColor: 'transparent' }]}>
-              <View style={{ borderRadius: 16, overflow: 'hidden' }}>
+          <BlurView intensity={20} style={{ borderBottomWidth: 1, borderBottomColor: colors.glassBorder }}>
+            <View style={[commonStyles.header, { backgroundColor: 'transparent', paddingVertical: 12 }]}>
+              <View style={{ borderRadius: 14, overflow: 'hidden' }}>
                 <LinearGradient
                   colors={[colors.gradientStart, colors.gradientEnd]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={{
-                    paddingHorizontal: 20,
-                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
                     shadowColor: colors.glowPrimary,
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 12,
-                    elevation: 8,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 6,
                   }}
                 >
-                  <Text style={[commonStyles.headerTitle, { color: colors.white, fontSize: 24 }]}>
+                  <Text style={[commonStyles.headerTitle, { color: colors.white, fontSize: 20 }]}>
                     VIRALYZE
                   </Text>
                 </LinearGradient>
               </View>
               
-              <View style={{ flexDirection: 'row', gap: 16 }}>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
                 <TouchableOpacity
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
                     backgroundColor: colors.glassBackground,
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1,
                     borderColor: colors.glassBorder,
                     shadowColor: colors.neuDark,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 6,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 6,
+                    elevation: 4,
                   }}
                 >
-                  <Ionicons name="notifications" size={20} color={colors.text} />
+                  <Ionicons name="notifications" size={16} color={colors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
                     backgroundColor: colors.glassBackground,
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1,
                     borderColor: colors.glassBorder,
                     shadowColor: colors.neuDark,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 6,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 6,
+                    elevation: 4,
                   }}
                 >
-                  <Ionicons name="person-circle" size={20} color={colors.text} />
+                  <Ionicons name="person-circle" size={16} color={colors.text} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -805,12 +811,12 @@ export default function ChatScreen() {
         </Animated.View>
 
         {/* Quota Display */}
-        <View style={{ paddingHorizontal: 20, paddingVertical: 20, alignItems: 'flex-end' }}>
+        <View style={{ paddingHorizontal: 20, paddingVertical: 16, alignItems: 'flex-end' }}>
           <PremiumQuotaPill remaining={2 - quota.text} total={2} />
         </View>
 
         {/* Premium Quick Actions */}
-        <View style={{ paddingBottom: 24 }}>
+        <View style={{ paddingBottom: 20 }}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -832,42 +838,48 @@ export default function ChatScreen() {
         <ScrollView
           ref={scrollViewRef}
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+          contentContainerStyle={{ padding: 20, paddingBottom: 80 }}
           showsVerticalScrollIndicator={false}
         >
           {messages.length === 0 && (
-            <View style={{ alignItems: 'center', marginTop: 60 }}>
-              <BlurView intensity={25} style={{ borderRadius: 24, overflow: 'hidden' }}>
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <BlurView intensity={20} style={{ borderRadius: 20, overflow: 'hidden' }}>
                 <LinearGradient
-                  colors={['rgba(34, 197, 94, 0.08)', 'rgba(22, 163, 74, 0.15)']}
+                  colors={['rgba(34, 197, 94, 0.06)', 'rgba(22, 163, 74, 0.12)']}
                   style={[
                     commonStyles.premiumCard,
-                    { margin: 0, alignItems: 'center', borderColor: colors.glassBorderStrong }
+                    { 
+                      margin: 0, 
+                      alignItems: 'center', 
+                      borderColor: colors.glassBorderStrong,
+                      padding: 20,
+                      borderRadius: 20,
+                    }
                   ]}
                 >
                   <LinearGradient
                     colors={[colors.gradientStart, colors.gradientEnd]}
                     style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 20,
+                      width: 60,
+                      height: 60,
+                      borderRadius: 16,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      marginBottom: 20,
+                      marginBottom: 16,
                       shadowColor: colors.glowPrimary,
-                      shadowOffset: { width: 0, height: 8 },
-                      shadowOpacity: 0.4,
-                      shadowRadius: 16,
-                      elevation: 12,
+                      shadowOffset: { width: 0, height: 6 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 12,
+                      elevation: 8,
                     }}
                   >
-                    <Ionicons name="chatbubbles" size={40} color={colors.white} />
+                    <Ionicons name="chatbubbles" size={28} color={colors.white} />
                   </LinearGradient>
                   
-                  <Text style={[commonStyles.textLarge, { textAlign: 'center', marginBottom: 8 }]}>
+                  <Text style={[commonStyles.textLarge, { textAlign: 'center', marginBottom: 6, fontSize: 18 }]}>
                     Welcome to VIRALYZE
                   </Text>
-                  <Text style={[commonStyles.textSmall, { textAlign: 'center', maxWidth: 280, lineHeight: 22 }]}>
+                  <Text style={[commonStyles.textSmall, { textAlign: 'center', maxWidth: 260, lineHeight: 20, fontSize: 13 }]}>
                     {systemHealthy 
                       ? 'Ask me anything about growing your social media presence! I&apos;m here to help you create viral content.'
                       : 'Configure your OpenAI API key to start chatting with AI and unlock powerful content creation tools.'
@@ -882,25 +894,25 @@ export default function ChatScreen() {
 
           {isLoading && (
             <View style={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
-              <BlurView intensity={25} style={{ borderRadius: 24, overflow: 'hidden' }}>
+              <BlurView intensity={20} style={{ borderRadius: 20, overflow: 'hidden' }}>
                 <View
                   style={{
                     backgroundColor: colors.glassBackgroundStrong,
-                    padding: 20,
+                    padding: 16,
                     borderWidth: 1,
                     borderColor: colors.glassBorderStrong,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 16,
+                    gap: 12,
                     shadowColor: colors.neuDark,
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 16,
-                    elevation: 12,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 12,
+                    elevation: 8,
                   }}
                 >
                   <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={[commonStyles.text, { fontWeight: '500' }]}>
+                  <Text style={[commonStyles.text, { fontWeight: '500', fontSize: 14 }]}>
                     AI is thinking...
                   </Text>
                 </View>
@@ -912,32 +924,32 @@ export default function ChatScreen() {
         {/* Premium Input */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          style={{ paddingHorizontal: 20, paddingBottom: 16 }}
         >
-          <BlurView intensity={30} style={{ borderRadius: 24, overflow: 'hidden' }}>
+          <BlurView intensity={25} style={{ borderRadius: 20, overflow: 'hidden' }}>
             <View
               style={{
                 backgroundColor: colors.glassBackgroundStrong,
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 16,
-                paddingHorizontal: 24,
-                paddingVertical: 18,
+                gap: 12,
+                paddingHorizontal: 20,
+                paddingVertical: 14,
                 borderWidth: 1,
                 borderColor: colors.glassBorderStrong,
                 shadowColor: colors.neuDark,
-                shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: 0.4,
-                shadowRadius: 20,
-                elevation: 16,
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                elevation: 12,
               }}
             >
               <TextInput
                 style={{
                   flex: 1,
                   color: colors.text,
-                  fontSize: 16,
-                  maxHeight: 100,
+                  fontSize: 15,
+                  maxHeight: 80,
                   fontWeight: '500',
                 }}
                 placeholder={systemHealthy ? "Ask me anything..." : "Configure OpenAI API key first..."}
@@ -951,9 +963,9 @@ export default function ChatScreen() {
                 onPress={() => sendMessage(inputText)}
                 disabled={!inputText.trim() || isLoading || !systemHealthy}
                 style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 16,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
                   alignItems: 'center',
                   justifyContent: 'center',
                   overflow: 'hidden',
@@ -971,13 +983,13 @@ export default function ChatScreen() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     shadowColor: (!inputText.trim() || isLoading || !systemHealthy) ? 'transparent' : colors.glowPrimary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.6,
-                    shadowRadius: 12,
-                    elevation: 8,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    elevation: 6,
                   }}
                 >
-                  <Ionicons name="send" size={20} color={colors.white} />
+                  <Ionicons name="send" size={16} color={colors.white} />
                 </LinearGradient>
               </TouchableOpacity>
             </View>
