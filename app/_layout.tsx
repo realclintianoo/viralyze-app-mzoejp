@@ -1,46 +1,46 @@
 
-// Import polyfills first, before any other imports
-import 'react-native-url-polyfill/auto';
-
+import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useEffect, useState } from 'react';
-import { setupErrorLogging } from '../utils/errorLogger';
-import { logSystemCheck } from '../utils/systemCheck';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ToastProvider } from '../contexts/ToastContext';
-import SystemCheckNotification from '../components/SystemCheckNotification';
-import OpenAIDebug from '../components/OpenAIDebug';
+import StartupNotification from '../components/StartupNotification';
+import { logSystemCheck } from '../utils/systemCheck';
 
 export default function RootLayout() {
-  const [showDebug, setShowDebug] = useState(false);
+  const [showStartupNotification, setShowStartupNotification] = useState(true);
 
   useEffect(() => {
-    setupErrorLogging();
-    
-    // Run system check on startup
-    setTimeout(() => {
-      logSystemCheck();
-    }, 1000);
+    // Run system check on app startup
+    logSystemCheck();
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <AuthProvider>
-          <ToastProvider>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                animation: 'default',
-              }}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <ToastProvider>
+          <StatusBar style="light" backgroundColor="#0B0F14" />
+          
+          {showStartupNotification && (
+            <StartupNotification 
+              onDismiss={() => setShowStartupNotification(false)} 
             />
-            <SystemCheckNotification onOpenDebug={() => setShowDebug(true)} />
-            <OpenAIDebug visible={showDebug} onClose={() => setShowDebug(false)} />
-          </ToastProvider>
-        </AuthProvider>
-      </GestureHandlerRootView>
-    </SafeAreaProvider>
+          )}
+          
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: '#0B0F14' },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="tabs" />
+            <Stack.Screen name="tool/[id]" />
+          </Stack>
+        </ToastProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

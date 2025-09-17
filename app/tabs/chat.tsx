@@ -16,8 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import { storage } from '../../utils/storage';
-import { aiComplete } from '../../lib/ai';
+import { aiComplete, checkOpenAIConfig } from '../../lib/ai';
 import { ChatMessage, QuotaUsage, OnboardingData } from '../../types';
+import { quickHealthCheck } from '../../utils/systemCheck';
 
 const QUICK_ACTIONS = [
   { id: 'hooks', label: 'Hooks', icon: 'flash' as keyof typeof Ionicons.glyphMap },
@@ -33,10 +34,13 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [quota, setQuota] = useState<QuotaUsage | null>(null);
   const [profile, setProfile] = useState<OnboardingData | null>(null);
+  const [systemHealthy, setSystemHealthy] = useState(true);
+  const [criticalIssues, setCriticalIssues] = useState<string[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadInitialData();
+    checkSystemHealth();
   }, []);
 
   const loadInitialData = async () => {
@@ -52,7 +56,28 @@ export default function ChatScreen() {
     }
   };
 
+  const checkSystemHealth = async () => {
+    try {
+      const health = await quickHealthCheck();
+      setSystemHealthy(health.healthy);
+      setCriticalIssues(health.criticalIssues);
+      
+      if (!health.healthy) {
+        console.log('🚨 System health check failed:', health.criticalIssues);
+      }
+    } catch (error) {
+      console.log('Error checking system health:', error);
+      setSystemHealthy(false);
+      setCriticalIssues(['System check failed']);
+    }
+  };
+
   const handleQuickAction = async (actionId: string) => {
+    if (!systemHealthy) {
+      showConfigurationError();
+      return;
+    }
+
     if (!quota || quota.textRequests >= quota.maxTextRequests) {
       showUpgradeModal();
       return;
@@ -75,6 +100,11 @@ export default function ChatScreen() {
   const sendMessage = async (text: string, actionType?: string) => {
     if (!text.trim() || isLoading) return;
 
+    if (!systemHealthy) {
+      showConfigurationError();
+      return;
+    }
+
     if (!quota || quota.textRequests >= quota.maxTextRequests) {
       showUpgradeModal();
       return;
@@ -92,6 +122,8 @@ export default function ChatScreen() {
     setIsLoading(true);
 
     try {
+      console.log('🤖 Sending message to AI:', { kind: actionType || 'chat', input: text });
+      
       const responses = await aiComplete({
         kind: actionType || 'chat',
         profile,
@@ -100,6 +132,8 @@ export default function ChatScreen() {
       });
       
       const response = responses[0] || 'Sorry, I couldn\'t generate a response. Please try again.';
+      
+      console.log('✅ AI response received:', response.substring(0, 100) + '...');
       
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -116,11 +150,35 @@ export default function ChatScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
-      console.log('Error sending message:', error);
-      Alert.alert('Error', error.message || 'Failed to get AI response. Please try again.');
+      console.log('❌ Error sending message:', error);
+      
+      // Check if it's a configuration error
+      if (error.message?.includes('API key') || error.message?.includes('configured')) {
+        setSystemHealthy(false);
+        setCriticalIssues(['OpenAI API key not configured']);
+        showConfigurationError();
+      } else {
+        Alert.alert('Error', error.message || 'Failed to get AI response. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const showConfigurationError = () => {
+    const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
+    const isPlaceholder = apiKey === 'your_openai_api_key_here';
+    
+    Alert.alert(
+      'AI Not Configured',
+      isPlaceholder 
+        ? 'Your OpenAI API key is not set up yet. Please:\n\n1. Go to https://platform.openai.com/api-keys\n2. Create an API key\n3. Replace "your_openai_api_key_here" in your .env file\n4. Restart the app'
+        : 'There\'s an issue with your AI configuration. Please check your OpenAI API key and restart the app.',
+      [
+        { text: 'Check Settings', onPress: () => console.log('Navigate to settings') },
+        { text: 'OK', style: 'cancel' },
+      ]
+    );
   };
 
   const showUpgradeModal = () => {
@@ -216,6 +274,45 @@ export default function ChatScreen() {
     </View>
   );
 
+  const renderConfigurationWarning = () => {
+    if (systemHealthy) return null;
+
+    return (
+      <View style={{
+        margin: 16,
+        padding: 16,
+        backgroundColor: '#FFF3CD',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#FFEAA7',
+      }}>
+        <View style={[commonStyles.row, { alignItems: 'center', gap: 8, marginBottom: 8 }]}>
+          <Ionicons name="warning" size={20} color="#D68910" />
+          <Text style={{ color: '#D68910', fontWeight: '600', fontSize: 16 }}>
+            AI Not Configured
+          </Text>
+        </View>
+        <Text style={{ color: '#8B6914', marginBottom: 12 }}>
+          {criticalIssues.includes('OpenAI API key is placeholder') || criticalIssues.includes('OpenAI API key missing')
+            ? 'Your OpenAI API key needs to be set up for AI features to work.'
+            : 'There are configuration issues preventing AI from working.'}
+        </Text>
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#D68910',
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            borderRadius: 8,
+            alignSelf: 'flex-start',
+          }}
+          onPress={showConfigurationError}
+        >
+          <Text style={{ color: 'white', fontWeight: '600' }}>Fix Configuration</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={commonStyles.safeArea}>
       <KeyboardAvoidingView
@@ -250,6 +347,9 @@ export default function ChatScreen() {
           </View>
         </View>
 
+        {/* Configuration Warning */}
+        {renderConfigurationWarning()}
+
         {/* Quota Display */}
         <View style={{ padding: 16, paddingBottom: 8 }}>
           <Text style={[commonStyles.smallText, { textAlign: 'center' }]}>
@@ -267,8 +367,16 @@ export default function ChatScreen() {
           {QUICK_ACTIONS.map(action => (
             <TouchableOpacity
               key={action.id}
-              style={[commonStyles.chip, { alignItems: 'center', minWidth: 80 }]}
+              style={[
+                commonStyles.chip, 
+                { 
+                  alignItems: 'center', 
+                  minWidth: 80,
+                  opacity: systemHealthy ? 1 : 0.5
+                }
+              ]}
               onPress={() => handleQuickAction(action.id)}
+              disabled={!systemHealthy}
             >
               <Ionicons name={action.icon} size={20} color={colors.text} />
               <Text style={[commonStyles.chipText, { marginTop: 4, fontSize: 12 }]}>
@@ -292,7 +400,9 @@ export default function ChatScreen() {
                 Welcome to VIRALYZE!
               </Text>
               <Text style={[commonStyles.smallText, { textAlign: 'center', marginTop: 8 }]}>
-                Ask me anything about growing your social media presence
+                {systemHealthy 
+                  ? 'Ask me anything about growing your social media presence'
+                  : 'Please configure your OpenAI API key to start chatting'}
               </Text>
             </View>
           ) : (
@@ -318,22 +428,30 @@ export default function ChatScreen() {
             <TextInput
               style={[
                 commonStyles.input,
-                { flex: 1, marginVertical: 0 }
+                { 
+                  flex: 1, 
+                  marginVertical: 0,
+                  opacity: systemHealthy ? 1 : 0.5
+                }
               ]}
-              placeholder="Ask me anything..."
+              placeholder={systemHealthy ? "Ask me anything..." : "Configure OpenAI API key first..."}
               placeholderTextColor={colors.grey}
               value={inputText}
               onChangeText={setInputText}
               multiline
               maxLength={500}
+              editable={systemHealthy}
             />
             <TouchableOpacity
               style={[
                 commonStyles.button,
-                { paddingHorizontal: 16, opacity: inputText.trim() ? 1 : 0.5 }
+                { 
+                  paddingHorizontal: 16, 
+                  opacity: (inputText.trim() && systemHealthy) ? 1 : 0.5 
+                }
               ]}
               onPress={() => sendMessage(inputText)}
-              disabled={!inputText.trim() || isLoading}
+              disabled={!inputText.trim() || isLoading || !systemHealthy}
             >
               <Ionicons name="send" size={20} color={colors.white} />
             </TouchableOpacity>

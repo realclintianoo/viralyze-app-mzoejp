@@ -15,27 +15,80 @@ interface SystemStatusIndicatorProps {
   onPress: () => void;
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  healthy: {
+    backgroundColor: '#D4F4DD',
+    borderWidth: 1,
+    borderColor: '#22C55E',
+  },
+  unhealthy: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  warning: {
+    backgroundColor: '#FFF3CD',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  loading: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  text: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  healthyText: {
+    color: '#15803D',
+  },
+  unhealthyText: {
+    color: '#DC2626',
+  },
+  warningText: {
+    color: '#D97706',
+  },
+  loadingText: {
+    color: colors.text,
+  },
+  subText: {
+    fontSize: 10,
+    opacity: 0.8,
+  },
+});
+
 export default function SystemStatusIndicator({ onPress }: SystemStatusIndicatorProps) {
-  const [systemCheck, setSystemCheck] = useState<SystemCheckResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [systemCheck, setSystemCheck] = useState<SystemCheckResult | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
   useEffect(() => {
     runCheck();
     
-    // Set up periodic checks every 2 minutes
-    const interval = setInterval(runQuickCheck, 2 * 60 * 1000);
-    
+    // Run periodic checks every 30 seconds
+    const interval = setInterval(runQuickCheck, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const runCheck = async () => {
+    setIsLoading(true);
     try {
+      console.log('🔍 Running full system check...');
       const result = await performSystemCheck();
       setSystemCheck(result);
       setLastChecked(new Date());
+      console.log('✅ System check completed:', result.criticalIssues.length === 0 ? 'Healthy' : 'Issues found');
     } catch (error) {
-      console.error('System status check failed:', error);
+      console.log('❌ System check failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -43,178 +96,117 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
 
   const runQuickCheck = async () => {
     try {
-      const healthCheck = await quickHealthCheck();
-      
-      // If health status changed, run full check
-      if (systemCheck && (
-        (healthCheck.healthy && systemCheck.errors.length > 0) ||
-        (!healthCheck.healthy && systemCheck.errors.length === 0)
-      )) {
-        await runCheck();
+      const health = await quickHealthCheck();
+      if (systemCheck) {
+        setSystemCheck({
+          ...systemCheck,
+          criticalIssues: health.criticalIssues,
+          timestamp: new Date().toISOString(),
+        });
       }
+      setLastChecked(new Date());
     } catch (error) {
-      console.error('Quick health check failed:', error);
+      console.log('Quick health check failed:', error);
     }
   };
 
   const getStatusInfo = () => {
     if (isLoading) {
       return {
-        icon: 'hourglass-outline' as const,
-        color: colors.textSecondary,
+        icon: 'sync' as keyof typeof Ionicons.glyphMap,
         text: 'Checking...',
-        subtitle: 'Running system diagnostics',
-        pulse: true
+        subText: 'System status',
+        style: styles.loading,
+        textStyle: styles.loadingText,
+        iconColor: colors.text,
       };
     }
 
     if (!systemCheck) {
       return {
-        icon: 'help-circle-outline' as const,
-        color: colors.textSecondary,
-        text: 'Unknown',
-        subtitle: 'Unable to determine system status',
-        pulse: false
+        icon: 'alert-circle' as keyof typeof Ionicons.glyphMap,
+        text: 'Check Failed',
+        subText: 'Tap to retry',
+        style: styles.unhealthy,
+        textStyle: styles.unhealthyText,
+        iconColor: '#DC2626',
       };
     }
 
-    const criticalErrors = systemCheck.errors.filter(error => 
-      error.includes('API key') || 
-      error.includes('polyfill') || 
-      error.includes('placeholder')
-    );
+    const hasCriticalIssues = systemCheck.criticalIssues.length > 0;
+    const hasErrors = systemCheck.errors.length > 0;
+    const hasWarnings = systemCheck.warnings.length > 0;
 
-    if (criticalErrors.length > 0) {
+    if (hasCriticalIssues || hasErrors) {
+      const apiKeyIssue = systemCheck.criticalIssues.some(issue => 
+        issue.includes('OpenAI API key') || issue.includes('placeholder')
+      );
+      
       return {
-        icon: 'alert-circle' as const,
-        color: '#ef4444',
-        text: 'Critical Issues',
-        subtitle: `${criticalErrors.length} critical error${criticalErrors.length !== 1 ? 's' : ''} - AI features disabled`,
-        pulse: true
+        icon: 'warning' as keyof typeof Ionicons.glyphMap,
+        text: apiKeyIssue ? 'API Key Required' : 'Configuration Error',
+        subText: apiKeyIssue ? 'OpenAI not configured' : `${systemCheck.criticalIssues.length + systemCheck.errors.length} issue(s)`,
+        style: styles.unhealthy,
+        textStyle: styles.unhealthyText,
+        iconColor: '#DC2626',
       };
     }
 
-    if (systemCheck.errors.length > 0) {
+    if (hasWarnings) {
       return {
-        icon: 'warning-outline' as const,
-        color: '#f59e0b',
-        text: 'Issues Found',
-        subtitle: `${systemCheck.errors.length} error${systemCheck.errors.length !== 1 ? 's' : ''} detected`,
-        pulse: false
-      };
-    }
-
-    if (systemCheck.warnings.length > 0) {
-      return {
-        icon: 'alert-circle-outline' as const,
-        color: '#f59e0b',
+        icon: 'alert' as keyof typeof Ionicons.glyphMap,
         text: 'Minor Issues',
-        subtitle: `${systemCheck.warnings.length} warning${systemCheck.warnings.length !== 1 ? 's' : ''} found`,
-        pulse: false
+        subText: `${systemCheck.warnings.length} warning(s)`,
+        style: styles.warning,
+        textStyle: styles.warningText,
+        iconColor: '#D97706',
       };
     }
 
     return {
-      icon: 'checkmark-circle' as const,
-      color: colors.accent,
-      text: 'All Good',
-      subtitle: 'System is properly configured',
-      pulse: false
+      icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
+      text: 'All Systems OK',
+      subText: 'AI ready',
+      style: styles.healthy,
+      textStyle: styles.healthyText,
+      iconColor: '#22C55E',
     };
   };
 
   const formatLastChecked = () => {
     if (!lastChecked) return '';
-    
     const now = new Date();
-    const diffMs = now.getTime() - lastChecked.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
+    const diff = Math.floor((now.getTime() - lastChecked.getTime()) / 1000);
     
-    if (diffMins < 1) return 'Just now';
-    if (diffMins === 1) return '1 minute ago';
-    if (diffMins < 60) return `${diffMins} minutes ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours === 1) return '1 hour ago';
-    return `${diffHours} hours ago`;
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
   };
 
-  const status = getStatusInfo();
+  const statusInfo = getStatusInfo();
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
-      <View style={styles.iconContainer}>
-        {isLoading ? (
-          <ActivityIndicator size={24} color={status.color} />
-        ) : (
-          <Ionicons 
-            name={status.icon} 
-            size={24} 
-            color={status.color}
-            style={status.pulse ? styles.pulseIcon : undefined}
-          />
-        )}
+    <TouchableOpacity
+      style={[styles.container, statusInfo.style]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {isLoading ? (
+        <ActivityIndicator size="small" color={colors.text} />
+      ) : (
+        <Ionicons name={statusInfo.icon} size={16} color={statusInfo.iconColor} />
+      )}
+      
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.text, statusInfo.textStyle]}>
+          {statusInfo.text}
+        </Text>
+        <Text style={[styles.subText, statusInfo.textStyle]}>
+          {statusInfo.subText} {lastChecked && `• ${formatLastChecked()}`}
+        </Text>
       </View>
-      <View style={styles.textContainer}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>System Status</Text>
-          {lastChecked && (
-            <Text style={styles.timestamp}>{formatLastChecked()}</Text>
-          )}
-        </View>
-        <Text style={[styles.status, { color: status.color }]}>{status.text}</Text>
-        <Text style={styles.subtitle}>{status.subtitle}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+      
+      <Ionicons name="chevron-forward" size={12} color={statusInfo.textStyle.color} />
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  iconContainer: {
-    marginRight: 16,
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textContainer: {
-    flex: 1,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  timestamp: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  status: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    lineHeight: 16,
-  },
-  pulseIcon: {
-    opacity: 0.8,
-  },
-});
