@@ -142,6 +142,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ visible, onClose, onSuccess }) => {
             'We\'ve sent you a verification email. Please check your inbox and click the verification link to complete your registration.',
             [{ text: 'OK' }]
           );
+          // Don't call onSuccess for sign up since email needs to be verified
         } else {
           showToast('Welcome back!', 'success');
           onSuccess();

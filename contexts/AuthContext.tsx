@@ -137,12 +137,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
 
       if (event === 'SIGNED_IN' && session?.user) {
+        console.log('User signed in successfully');
         // First sync local data to remote, then load any additional remote data
         await syncLocalDataToRemote(session.user.id);
         await loadRemoteDataToLocal(session.user.id);
       } else if (event === 'SIGNED_OUT') {
-        // Optionally clear local data on sign out
-        console.log('User signed out');
+        // Clear local data on sign out to ensure clean state
+        console.log('User signed out - clearing local data');
+        try {
+          await storage.clearAll();
+        } catch (clearError) {
+          console.error('Error clearing local data on auth state change:', clearError);
+        }
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed for user:', session?.user?.email);
       }
     });
 
@@ -210,6 +218,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) {
       console.error('Error signing out:', error);
       throw error;
+    }
+    
+    // Clear local data on sign out to ensure clean state
+    try {
+      await storage.clearAll();
+      console.log('Local data cleared on sign out');
+    } catch (clearError) {
+      console.error('Error clearing local data on sign out:', clearError);
     }
   };
 

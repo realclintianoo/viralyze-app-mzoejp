@@ -329,6 +329,8 @@ export default function SettingsScreen() {
     try {
       setShowLogoutModal(false);
       await signOut();
+      // Navigate back to the index page which will show the auth flow
+      router.replace('/');
       Alert.alert('Success', 'You have been signed out');
     } catch (error) {
       console.error('Sign out error:', error);

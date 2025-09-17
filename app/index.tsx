@@ -33,12 +33,18 @@ export default function Index() {
       
       setHasCompletedOnboarding(hasOnboarding);
       
-      // If no onboarding data, show auth flow first (unless already authenticated)
-      if (!hasOnboarding && !user) {
+      // If no user, always show auth flow first regardless of onboarding data
+      if (!user) {
         setShowAuthFlow(true);
+        setShowOnboardingFlow(false);
       } else if (!hasOnboarding && user) {
         // User is authenticated but hasn't completed onboarding
+        setShowAuthFlow(false);
         setShowOnboardingFlow(true);
+      } else {
+        // User is authenticated and has completed onboarding
+        setShowAuthFlow(false);
+        setShowOnboardingFlow(false);
       }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
@@ -49,7 +55,8 @@ export default function Index() {
 
   const handleAuthSuccess = () => {
     setShowAuthFlow(false);
-    setShowOnboardingFlow(true);
+    // Check if user needs onboarding after successful auth
+    checkOnboardingStatus();
   };
 
   const handleOnboardingComplete = () => {
@@ -68,7 +75,8 @@ export default function Index() {
     );
   }
 
-  if (hasCompletedOnboarding) {
+  // Only redirect to dashboard if user is authenticated AND has completed onboarding
+  if (user && hasCompletedOnboarding) {
     return <Redirect href="/tabs/chat" />;
   }
 
