@@ -15,14 +15,11 @@ import { commonStyles, colors } from '../../styles/commonStyles';
 import * as Haptics from 'expo-haptics';
 import React, { useState, useEffect } from 'react';
 import { OnboardingData, QuotaUsage } from '../../types';
-import OpenAIDebug from '../../components/OpenAIDebug';
-import SystemStatusIndicator from '../../components/SystemStatusIndicator';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function SettingsScreen() {
   const [profile, setProfile] = useState<OnboardingData | null>(null);
   const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
-  const [showDebug, setShowDebug] = useState(false);
   const { user, signOut } = useAuth();
 
   useEffect(() => {
@@ -176,14 +173,6 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        {/* System Status */}
-        <View style={{ marginBottom: 32 }}>
-          <Text style={[commonStyles.text, { fontSize: 18, fontWeight: '600', marginBottom: 16 }]}>
-            System
-          </Text>
-          <SystemStatusIndicator onPress={() => setShowDebug(true)} />
-        </View>
-
         {/* Profile Section */}
         {renderSection('Profile', (
           <>
@@ -244,20 +233,6 @@ export default function SettingsScreen() {
           </>
         ))}
 
-        {/* Debug Section */}
-        {renderSection('Debug', (
-          <>
-            {renderSettingItem(
-              'bug-outline',
-              'Advanced Debug Tools',
-              'Detailed system diagnostics and testing',
-              () => setShowDebug(true),
-              undefined,
-              true
-            )}
-          </>
-        ))}
-
         {/* Account Section */}
         {renderSection('Account', (
           <>
@@ -274,11 +249,6 @@ export default function SettingsScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
-
-      <OpenAIDebug
-        visible={showDebug}
-        onClose={() => setShowDebug(false)}
-      />
     </SafeAreaView>
   );
 }
