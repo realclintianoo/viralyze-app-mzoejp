@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -35,20 +35,7 @@ export default function SavedScreen() {
     loadSavedItems();
   }, []);
 
-  useEffect(() => {
-    filterItems();
-  }, [savedItems, selectedCategory, searchQuery]);
-
-  const loadSavedItems = async () => {
-    try {
-      const items = await storage.getSavedItems();
-      setSavedItems(items);
-    } catch (error) {
-      console.log('Error loading saved items:', error);
-    }
-  };
-
-  const filterItems = () => {
+  const filterItems = useCallback(() => {
     let filtered = savedItems;
 
     if (selectedCategory !== 'all') {
@@ -64,6 +51,19 @@ export default function SavedScreen() {
     }
 
     setFilteredItems(filtered);
+  }, [savedItems, selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    filterItems();
+  }, [filterItems]);
+
+  const loadSavedItems = async () => {
+    try {
+      const items = await storage.getSavedItems();
+      setSavedItems(items);
+    } catch (error) {
+      console.log('Error loading saved items:', error);
+    }
   };
 
   const handleCategoryPress = (categoryId: string) => {

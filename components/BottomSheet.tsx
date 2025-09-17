@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -39,7 +40,7 @@ const SimpleBottomSheet: React.FC<SimpleBottomSheetProps> = ({
   const lastGestureY = useRef(0);
   const startPositionY = useRef(0);
 
-  useEffect(() => {
+  const animateSheet = useCallback(() => {
     if (isVisible) {
       setCurrentSnapPoint(SNAP_POINTS.HALF);
       gestureTranslateY.setValue(0);
@@ -71,7 +72,11 @@ const SimpleBottomSheet: React.FC<SimpleBottomSheetProps> = ({
         }),
       ]).start();
     }
-  }, [isVisible, translateY, backdropOpacity]);
+  }, [isVisible, translateY, backdropOpacity, gestureTranslateY]);
+
+  useEffect(() => {
+    animateSheet();
+  }, [animateSheet]);
 
   const handleBackdropPress = () => {
     onClose?.();
