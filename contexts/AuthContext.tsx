@@ -63,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -80,12 +81,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await syncLocalDataToRemote(session.user.id);
       }
 
-      // Clear local data when user signs out
+      // Clear local data when user signs out - this is crucial for proper logout
       if (event === 'SIGNED_OUT') {
-        console.log('Auth state changed to SIGNED_OUT, clearing local data');
+        console.log('Auth state changed to SIGNED_OUT, clearing all local data');
         try {
           await storage.clearAll();
-          console.log('Local data cleared after sign out');
+          console.log('All local data cleared after sign out');
         } catch (error) {
           console.error('Error clearing data on sign out:', error);
         }
@@ -151,27 +152,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      console.log('Starting logout process...');
+      console.log('Starting complete logout process...');
       
-      // Clear all local storage data first - this is crucial
+      // Step 1: Clear all local storage data FIRST - this is the most important step
+      console.log('Clearing all local storage data...');
       await storage.clearAll();
-      console.log('All local storage cleared during logout');
+      console.log('✅ All local storage cleared successfully');
       
-      // Sign out from Supabase
+      // Step 2: Sign out from Supabase
+      console.log('Signing out from Supabase...');
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out from Supabase:', error);
+        console.error('❌ Error signing out from Supabase:', error);
         throw error;
       } else {
-        console.log('Successfully signed out from Supabase');
+        console.log('✅ Successfully signed out from Supabase');
       }
       
-      // Force clear session state immediately
+      // Step 3: Force clear session state immediately to ensure UI updates
+      console.log('Clearing session state...');
       setSession(null);
       setUser(null);
+      console.log('✅ Session state cleared');
+      
+      console.log('🎉 Complete logout process finished successfully');
       
     } catch (error) {
-      console.error('Error during logout process:', error);
+      console.error('❌ Error during logout process:', error);
+      // Even if there's an error, try to clear local state
+      setSession(null);
+      setUser(null);
       throw error;
     }
   };

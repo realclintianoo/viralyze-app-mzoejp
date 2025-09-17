@@ -455,3 +455,42 @@ export const commonStyles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 });
+
+// Animation configurations
+export const animations = {
+  // Spring animation config
+  spring: {
+    tension: 300,
+    friction: 20,
+    mass: 1,
+  },
+  
+  // Timing durations
+  fast: 150,
+  normal: 250,
+  slow: 400,
+  
+  // Easing curves
+  easeInOut: 'easeInOut',
+  easeIn: 'easeIn',
+  easeOut: 'easeOut',
+  
+  // Common animation presets
+  bounce: {
+    tension: 400,
+    friction: 8,
+    mass: 1,
+  },
+  
+  gentle: {
+    tension: 200,
+    friction: 25,
+    mass: 1,
+  },
+  
+  snappy: {
+    tension: 500,
+    friction: 15,
+    mass: 0.8,
+  },
+};

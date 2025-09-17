@@ -10,42 +10,33 @@ import { useCallback } from 'react';
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const { user, loading: authLoading, session } = useAuth();
 
-  // Check onboarding status whenever the screen comes into focus
+  // Always redirect to onboarding first - this ensures the welcome screen is shown immediately
   useFocusEffect(
     useCallback(() => {
       if (!authLoading) {
-        checkOnboardingStatus();
+        initializeApp();
       }
-    }, [authLoading, session]) // Add session as dependency to re-check when auth state changes
+    }, [authLoading])
   );
 
   useEffect(() => {
     if (!authLoading) {
-      checkOnboardingStatus();
+      initializeApp();
     }
-  }, [authLoading, session]); // Add session as dependency
+  }, [authLoading]);
 
-  const checkOnboardingStatus = async () => {
+  const initializeApp = async () => {
     try {
       setIsLoading(true);
       
       // Perform system check
       logSystemCheck();
       
-      // Check if user has completed onboarding
-      const onboardingData = await storage.getOnboardingData();
-      console.log('Onboarding data found:', !!onboardingData);
-      console.log('User session:', !!session);
-      console.log('Auth loading:', authLoading);
-      
-      // Only set onboarding as completed if we have the data
-      setHasCompletedOnboarding(!!onboardingData);
+      console.log('App initialized, redirecting to onboarding/welcome screen');
     } catch (error) {
-      console.error('Error checking onboarding status:', error);
-      setHasCompletedOnboarding(false);
+      console.error('Error initializing app:', error);
     } finally {
       setIsLoading(false);
     }
@@ -62,11 +53,7 @@ export default function Index() {
     );
   }
 
-  // If user has completed onboarding, go to dashboard
-  if (hasCompletedOnboarding) {
-    return <Redirect href="/tabs/chat" />;
-  }
-
-  // Otherwise, go to onboarding
+  // Always redirect to onboarding first - the onboarding screen will handle the logic
+  // of whether to show welcome screen or go directly to the app
   return <Redirect href="/onboarding" />;
 }

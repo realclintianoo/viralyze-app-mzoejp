@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -16,6 +17,7 @@ import { storage } from '../utils/storage';
 import { OnboardingData } from '../types';
 import AuthSheet from '../components/AuthSheet';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
 
 const PLATFORMS = [
   'TikTok',
@@ -40,6 +42,7 @@ const NICHES = [
 ];
 
 export default function Onboarding() {
+  const [isInitializing, setIsInitializing] = useState(true);
   const [step, setStep] = useState(0); // Start with step 0 for auth
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectedNiche, setSelectedNiche] = useState('');
@@ -47,21 +50,53 @@ export default function Onboarding() {
   const [followers, setFollowers] = useState(1000);
   const [goal, setGoal] = useState('');
   const [showAuthSheet, setShowAuthSheet] = useState(false);
+  const { user, session, loading: authLoading } = useAuth();
 
-  // Clear any existing data when onboarding starts (fresh start)
-  React.useEffect(() => {
-    const clearExistingData = async () => {
+  // Check if user should skip onboarding on component mount
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      if (authLoading) return;
+      
       try {
-        // Clear all local storage to ensure fresh start
-        await storage.clearAll();
-        console.log('Cleared existing data for fresh onboarding start');
+        setIsInitializing(true);
+        
+        // Check if user has completed onboarding and is logged in
+        const onboardingData = await storage.getOnboardingData();
+        console.log('Checking onboarding status:', {
+          hasOnboardingData: !!onboardingData,
+          hasSession: !!session,
+          hasUser: !!user
+        });
+        
+        // If user has completed onboarding and has a session, skip to main app
+        if (onboardingData && (session || user)) {
+          console.log('User has completed onboarding and is logged in, redirecting to main app');
+          router.replace('/tabs/chat');
+          return;
+        }
+        
+        // If user has onboarding data but no session (guest mode), also skip to main app
+        if (onboardingData) {
+          console.log('User has completed onboarding in guest mode, redirecting to main app');
+          router.replace('/tabs/chat');
+          return;
+        }
+        
+        // Otherwise, show the welcome screen (step 0)
+        console.log('Showing welcome screen for new user');
+        setStep(0);
+        
       } catch (error) {
-        console.error('Error clearing existing data:', error);
+        console.error('Error checking onboarding status:', error);
+        // On error, show welcome screen
+        setStep(0);
+      } finally {
+        setIsInitializing(false);
       }
     };
-    
-    clearExistingData();
-  }, []);
+
+    checkOnboardingStatus();
+  }, [authLoading, session, user]);
 
   const formatFollowers = (value: number): string => {
     if (value >= 1000000) {
@@ -122,10 +157,12 @@ export default function Onboarding() {
   };
 
   const handleContinueAsGuest = () => {
+    console.log('User chose to continue as guest');
     setStep(1); // Move to platform selection
   };
 
   const handleAuthSuccess = () => {
+    console.log('Authentication successful');
     setShowAuthSheet(false);
     setStep(1); // Move to platform selection after successful auth
   };
@@ -183,7 +220,7 @@ export default function Onboarding() {
           onPress={handleSignIn}
         >
           <Text style={[commonStyles.buttonText, { color: colors.white }]}>
-            Sign In / Create Account
+            SIGN IN / CREATE ACCOUNT
           </Text>
         </TouchableOpacity>
 
@@ -311,6 +348,18 @@ export default function Onboarding() {
       />
     </View>
   );
+
+  // Show loading screen while initializing
+  if (isInitializing || authLoading) {
+    return (
+      <SafeAreaView style={[commonStyles.safeArea, commonStyles.centered]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={[commonStyles.text, { marginTop: 16 }]}>
+          Loading VIRALYZE...
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={commonStyles.safeArea}>
