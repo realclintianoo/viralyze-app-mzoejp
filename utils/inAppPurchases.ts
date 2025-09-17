@@ -6,22 +6,29 @@ import Constants from 'expo-constants';
 let InAppPurchases: any = null;
 let isModuleAvailable = false;
 
-try {
-  // Try to import the module
-  InAppPurchases = require('expo-in-app-purchases');
-  
-  // Check if the module actually loaded properly
-  if (InAppPurchases && typeof InAppPurchases.connectAsync === 'function') {
-    isModuleAvailable = true;
-    console.log('✅ expo-in-app-purchases loaded successfully');
-  } else {
-    console.warn('⚠️ expo-in-app-purchases module loaded but missing expected functions');
+// Check if we're in a development environment or on web
+const isDevelopmentEnvironment = __DEV__ || Platform.OS === 'web' || !Constants.isDevice;
+
+if (!isDevelopmentEnvironment) {
+  try {
+    // Dynamic import to avoid build-time issues
+    InAppPurchases = require('expo-in-app-purchases');
+    
+    // Verify the module has the expected API
+    if (InAppPurchases && typeof InAppPurchases.connectAsync === 'function') {
+      isModuleAvailable = true;
+      console.log('✅ expo-in-app-purchases loaded successfully');
+    } else {
+      console.warn('⚠️ expo-in-app-purchases module loaded but missing expected functions');
+      isModuleAvailable = false;
+    }
+  } catch (error: any) {
+    console.warn('⚠️ expo-in-app-purchases not available, using mock implementation:', error.message);
     isModuleAvailable = false;
+    InAppPurchases = null;
   }
-} catch (error: any) {
-  console.warn('⚠️ expo-in-app-purchases not available, using mock implementation:', error.message);
-  isModuleAvailable = false;
-  InAppPurchases = null;
+} else {
+  console.log('📱 Development environment detected - using mock in-app purchases');
 }
 
 export interface PurchaseResult {
@@ -39,7 +46,7 @@ export interface Product {
 
 class InAppPurchaseManager {
   private isInitialized = false;
-  private isDevelopment = __DEV__ || !Constants.isDevice || !isModuleAvailable;
+  private useMockImplementation = isDevelopmentEnvironment || !isModuleAvailable;
 
   async initialize(): Promise<boolean> {
     try {
@@ -47,14 +54,15 @@ class InAppPurchaseManager {
         return true;
       }
 
-      if (this.isDevelopment) {
-        console.log('📱 In-app purchases: Development mode or module unavailable - using mock implementation');
+      if (this.useMockImplementation) {
+        console.log('📱 In-app purchases: Using mock implementation');
         this.isInitialized = true;
         return true;
       }
 
       if (!isModuleAvailable || !InAppPurchases) {
-        console.log('📱 In-app purchases: Module not available - using mock implementation');
+        console.log('📱 In-app purchases: Module not available - falling back to mock');
+        this.useMockImplementation = true;
         this.isInitialized = true;
         return true;
       }
@@ -66,7 +74,7 @@ class InAppPurchaseManager {
     } catch (error: any) {
       console.error('❌ Failed to initialize in-app purchases:', error.message);
       // Fall back to mock mode if initialization fails
-      this.isDevelopment = true;
+      this.useMockImplementation = true;
       this.isInitialized = true;
       return true;
     }
@@ -81,7 +89,7 @@ class InAppPurchaseManager {
         }
       }
 
-      if (this.isDevelopment) {
+      if (this.useMockImplementation) {
         // Return mock products for development or when module is unavailable
         return productIds.map(productId => ({
           productId,
@@ -93,7 +101,7 @@ class InAppPurchaseManager {
 
       const { results } = await InAppPurchases.getProductsAsync(productIds);
       
-      return results.map(product => ({
+      return results.map((product: any) => ({
         productId: product.productId,
         price: product.price || '$0.00',
         title: product.title || product.productId,
@@ -117,9 +125,9 @@ class InAppPurchaseManager {
         }
       }
 
-      if (this.isDevelopment) {
+      if (this.useMockImplementation) {
         // Mock purchase for development or when module is unavailable
-        console.log(`Mock purchase: ${productId}`);
+        console.log(`🛒 Mock purchase: ${productId}`);
         return new Promise((resolve) => {
           setTimeout(() => {
             resolve({
@@ -174,9 +182,9 @@ class InAppPurchaseManager {
         }
       }
 
-      if (this.isDevelopment) {
+      if (this.useMockImplementation) {
         // Mock restore for development or when module is unavailable
-        console.log('Mock restore purchases');
+        console.log('🔄 Mock restore purchases');
         return new Promise((resolve) => {
           setTimeout(() => {
             // Randomly succeed or fail for testing
@@ -194,7 +202,7 @@ class InAppPurchaseManager {
       
       if (results.length > 0) {
         // Process restored purchases
-        const activePurchases = results.filter(purchase => 
+        const activePurchases = results.filter((purchase: any) => 
           purchase.acknowledged === false || purchase.purchaseState === InAppPurchases.IAPPurchaseState.PURCHASED
         );
 
@@ -228,38 +236,42 @@ class InAppPurchaseManager {
       return 'Purchase service unavailable';
     }
 
-    switch (responseCode) {
-      case InAppPurchases.IAPResponseCode.USER_CANCELED:
-        return 'Purchase was cancelled';
-      case InAppPurchases.IAPResponseCode.PAYMENT_INVALID:
-        return 'Payment method is invalid';
-      case InAppPurchases.IAPResponseCode.PAYMENT_NOT_ALLOWED:
-        return 'Payment not allowed';
-      case InAppPurchases.IAPResponseCode.ITEM_UNAVAILABLE:
-        return 'Item is not available';
-      case InAppPurchases.IAPResponseCode.UNKNOWN:
-        return 'Unknown error occurred';
-      case InAppPurchases.IAPResponseCode.SERVICE_UNAVAILABLE:
-        return 'Service is unavailable';
-      case InAppPurchases.IAPResponseCode.BILLING_UNAVAILABLE:
-        return 'Billing is unavailable';
-      case InAppPurchases.IAPResponseCode.ITEM_ALREADY_OWNED:
-        return 'Item is already owned';
-      case InAppPurchases.IAPResponseCode.ITEM_NOT_OWNED:
-        return 'Item is not owned';
-      case InAppPurchases.IAPResponseCode.ERROR:
-      default:
-        return 'An error occurred during purchase';
+    try {
+      switch (responseCode) {
+        case InAppPurchases.IAPResponseCode.USER_CANCELED:
+          return 'Purchase was cancelled';
+        case InAppPurchases.IAPResponseCode.PAYMENT_INVALID:
+          return 'Payment method is invalid';
+        case InAppPurchases.IAPResponseCode.PAYMENT_NOT_ALLOWED:
+          return 'Payment not allowed';
+        case InAppPurchases.IAPResponseCode.ITEM_UNAVAILABLE:
+          return 'Item is not available';
+        case InAppPurchases.IAPResponseCode.UNKNOWN:
+          return 'Unknown error occurred';
+        case InAppPurchases.IAPResponseCode.SERVICE_UNAVAILABLE:
+          return 'Service is unavailable';
+        case InAppPurchases.IAPResponseCode.BILLING_UNAVAILABLE:
+          return 'Billing is unavailable';
+        case InAppPurchases.IAPResponseCode.ITEM_ALREADY_OWNED:
+          return 'Item is already owned';
+        case InAppPurchases.IAPResponseCode.ITEM_NOT_OWNED:
+          return 'Item is not owned';
+        case InAppPurchases.IAPResponseCode.ERROR:
+        default:
+          return 'An error occurred during purchase';
+      }
+    } catch (error) {
+      return 'Purchase service error';
     }
   }
 
   async disconnect(): Promise<void> {
     try {
-      if (!this.isDevelopment && isModuleAvailable) {
+      if (!this.useMockImplementation && isModuleAvailable && InAppPurchases) {
         await InAppPurchases.disconnectAsync();
       }
       this.isInitialized = false;
-      console.log('In-app purchases disconnected');
+      console.log('📱 In-app purchases disconnected');
     } catch (error) {
       console.error('Failed to disconnect in-app purchases:', error);
     }
