@@ -60,12 +60,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const loadRemoteDataToLocal = useCallback(async (userId: string) => {
+    try {
+      console.log('Loading remote data to local for user:', userId);
+      
+      // Load profile data
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profileData) {
+        const onboardingData: OnboardingData = {
+          platforms: profileData.platforms || [],
+          niche: profileData.niche || '',
+          followers: profileData.followers || 0,
+          goal: profileData.goal || '',
+        };
+        await storage.saveOnboardingData(onboardingData);
+      }
+
+      // Load saved items
+      const { data: savedItemsData } = await supabase
+        .from('saved_items')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (savedItemsData && savedItemsData.length > 0) {
+        const localSavedItems: SavedItem[] = savedItemsData.map(item => ({
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          payload: item.payload,
+          created_at: item.created_at,
+        }));
+        
+        // Merge with local items (avoid duplicates)
+        const existingLocalItems = await storage.getSavedItems();
+        const mergedItems = [...localSavedItems];
+        
+        existingLocalItems.forEach(localItem => {
+          if (!mergedItems.find(item => item.id === localItem.id)) {
+            mergedItems.push(localItem);
+          }
+        });
+        
+        await storage.setSavedItems(mergedItems);
+      }
+
+      console.log('Remote data loading completed');
+    } catch (error) {
+      console.error('Error loading remote data:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // Load remote data when user is already authenticated
+      if (session?.user) {
+        loadRemoteDataToLocal(session.user.id);
+      }
     });
 
     // Listen for auth changes
@@ -75,20 +136,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Sync local data to remote when user signs in
       if (event === 'SIGNED_IN' && session?.user) {
+        // First sync local data to remote, then load any additional remote data
         await syncLocalDataToRemote(session.user.id);
+        await loadRemoteDataToLocal(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        // Optionally clear local data on sign out
+        console.log('User signed out');
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [syncLocalDataToRemote]);
+  }, [syncLocalDataToRemote, loadRemoteDataToLocal]);
 
   const upsertProfile = async (userId: string, profile: OnboardingData) => {
     const { error } = await supabase
       .from('profiles')
       .upsert({
         id: userId,
+        user_id: userId,
         platforms: profile.platforms,
         niche: profile.niche,
         followers: profile.followers,
@@ -103,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const syncSavedItems = async (userId: string, items: SavedItem[]) => {
     const itemsToSync = items.map(item => ({
+      id: item.id,
       user_id: userId,
       type: item.type,
       title: item.title,
@@ -142,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Error signing out:', error);
+      throw error;
     }
   };
 
