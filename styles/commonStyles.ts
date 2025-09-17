@@ -456,41 +456,55 @@ export const commonStyles = StyleSheet.create({
   },
 });
 
-// Animation configurations
+// Animation configurations - Clean and separate
 export const animations = {
-  // Spring animation config
-  spring: {
-    tension: 300,
-    friction: 20,
-    mass: 1,
-  },
-  
   // Timing durations
   fast: 150,
   normal: 250,
   slow: 400,
   
-  // Easing curves
-  easeInOut: 'easeInOut',
-  easeIn: 'easeIn',
-  easeOut: 'easeOut',
+  // Spring animation configs (tension/friction based)
+  spring: {
+    tension: 300,
+    friction: 20,
+  },
   
-  // Common animation presets
   bounce: {
     tension: 400,
     friction: 8,
-    mass: 1,
   },
   
   gentle: {
     tension: 200,
     friction: 25,
-    mass: 1,
   },
   
   snappy: {
     tension: 500,
     friction: 15,
-    mass: 0.8,
   },
+  
+  // Alternative spring configs (stiffness/damping based)
+  springStiffness: {
+    stiffness: 300,
+    damping: 20,
+    mass: 1,
+  },
+  
+  bounceStiffness: {
+    stiffness: 400,
+    damping: 8,
+    mass: 1,
+  },
+  
+  gentleStiffness: {
+    stiffness: 200,
+    damping: 25,
+    mass: 1,
+  },
+  
+  // Easing curves for timing animations
+  easeInOut: 'easeInOut',
+  easeIn: 'easeIn',
+  easeOut: 'easeOut',
 };

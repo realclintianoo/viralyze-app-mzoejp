@@ -46,7 +46,8 @@ export default function AnimatedButton({
       Animated.spring(scaleAnim, {
         toValue: 0.95,
         useNativeDriver: true,
-        ...animations.spring,
+        tension: 300,
+        friction: 20,
       }),
       glow && Animated.timing(glowAnim, {
         toValue: 1,
@@ -61,7 +62,8 @@ export default function AnimatedButton({
       Animated.spring(scaleAnim, {
         toValue: 1,
         useNativeDriver: true,
-        ...animations.spring,
+        tension: 300,
+        friction: 20,
       }),
       glow && Animated.timing(glowAnim, {
         toValue: 0,
