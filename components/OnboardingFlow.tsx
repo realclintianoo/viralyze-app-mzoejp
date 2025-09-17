@@ -37,14 +37,16 @@ interface OnboardingFlowProps {
 
 const QUESTIONS = [
   {
-    id: 'followers',
-    title: 'How many followers do you have?',
-    icon: 'people-outline' as keyof typeof Ionicons.glyphMap,
+    id: 'platforms',
+    title: 'Which platforms do you create for?',
+    icon: 'apps-outline' as keyof typeof Ionicons.glyphMap,
     options: [
-      { label: '0-1K', value: '0-1k' },
-      { label: '1K-10K', value: '1k-10k' },
-      { label: '10K-100K', value: '10k-100k' },
-      { label: '100K+', value: '100k+' },
+      { label: 'TikTok', value: 'tiktok' },
+      { label: 'Instagram', value: 'instagram' },
+      { label: 'YouTube', value: 'youtube' },
+      { label: 'X (Twitter)', value: 'twitter' },
+      { label: 'LinkedIn', value: 'linkedin' },
+      { label: 'All Platforms', value: 'all' },
     ],
   },
   {
@@ -52,10 +54,10 @@ const QUESTIONS = [
     title: 'What\'s your niche?',
     icon: 'pricetag-outline' as keyof typeof Ionicons.glyphMap,
     options: [
-      { label: 'Fitness', value: 'fitness' },
+      { label: 'Business', value: 'business' },
+      { label: 'Lifestyle', value: 'lifestyle' },
       { label: 'Tech', value: 'tech' },
-      { label: 'Fashion', value: 'fashion' },
-      { label: 'Music', value: 'music' },
+      { label: 'Fitness', value: 'fitness' },
       { label: 'Food', value: 'food' },
       { label: 'Other', value: 'other' },
     ],
@@ -190,9 +192,9 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
 
       // Save onboarding data
       const onboardingData: OnboardingData = {
-        platforms: ['All Platforms'], // Default for now
+        platforms: finalAnswers.platforms ? [finalAnswers.platforms] : ['All Platforms'],
         niche: finalAnswers.niche || 'other',
-        followers: getFollowerCount(finalAnswers.followers),
+        followers: 1000, // Default follower count
         goal: finalAnswers.goal || 'grow_followers',
       };
 

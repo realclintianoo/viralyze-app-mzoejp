@@ -15,6 +15,14 @@ import { commonStyles, colors } from '../styles/commonStyles';
 import { storage } from '../utils/storage';
 import { OnboardingData } from '../types';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+  interpolate,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 const PLATFORMS = [
   'TikTok',
@@ -46,14 +54,62 @@ export default function Onboarding() {
   const [followers, setFollowers] = useState(1000);
   const [goal, setGoal] = useState('');
 
+  // Animation values
+  const sliderScale = useSharedValue(1);
+  const followerDisplayScale = useSharedValue(1);
+
   const formatFollowers = (value: number): string => {
     if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
+      const millions = value / 1000000;
+      return millions >= 10 ? `${millions.toFixed(0)}M` : `${millions.toFixed(1)}M`;
+    } else if (value >= 100000) {
       return `${(value / 1000).toFixed(0)}K`;
+    } else if (value >= 10000) {
+      return `${(value / 1000).toFixed(1)}K`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}K`;
+    } else if (value >= 100) {
+      return value.toString();
+    } else {
+      return value.toString();
     }
-    return value.toString();
   };
+
+  const handleSliderChange = (value: number) => {
+    setFollowers(Math.round(value));
+    
+    // Haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Animate follower display
+    followerDisplayScale.value = withSpring(1.1, { damping: 15, stiffness: 300 }, () => {
+      followerDisplayScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    });
+  };
+
+  const handleQuickSelect = (value: number) => {
+    setFollowers(value);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    // Animate slider
+    sliderScale.value = withSpring(1.05, { damping: 15, stiffness: 300 }, () => {
+      sliderScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    });
+    
+    // Animate follower display
+    followerDisplayScale.value = withSpring(1.2, { damping: 15, stiffness: 300 }, () => {
+      followerDisplayScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    });
+  };
+
+  // Animated styles
+  const sliderAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: sliderScale.value }],
+  }));
+
+  const followerDisplayAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: followerDisplayScale.value }],
+  }));
 
   const togglePlatform = (platform: string) => {
     if (platform === 'All Platforms') {
@@ -82,8 +138,10 @@ export default function Onboarding() {
       case 1:
         return selectedPlatforms.length > 0;
       case 2:
-        return selectedNiche && (selectedNiche !== 'Other' || customNiche.trim());
+        return true; // Always allow proceeding from follower selection
       case 3:
+        return selectedNiche && (selectedNiche !== 'Other' || customNiche.trim());
+      case 4:
         return goal.trim().length > 0;
       default:
         return false;
@@ -91,7 +149,7 @@ export default function Onboarding() {
   };
 
   const handleNext = () => {
-    if (step < 3) {
+    if (step < 4) {
       setStep(step + 1);
     } else {
       handleComplete();
@@ -146,6 +204,106 @@ export default function Onboarding() {
 
   const renderStep2 = () => (
     <View style={{ flex: 1 }}>
+      <Text style={styles.title}>How many followers do you have?</Text>
+      <Text style={styles.subtitle}>Drag to select your exact follower count</Text>
+      
+      <View style={styles.premiumSliderContainer}>
+        <Animated.View style={[styles.followerDisplayContainer, followerDisplayAnimatedStyle]}>
+          <LinearGradient
+            colors={['rgba(34, 197, 94, 0.2)', 'rgba(16, 185, 129, 0.1)']}
+            style={styles.followerDisplayBackground}
+          >
+            <Text style={styles.followerCountText}>{formatFollowers(followers)}</Text>
+            <Text style={styles.followerLabelText}>followers</Text>
+          </LinearGradient>
+        </Animated.View>
+
+        <Animated.View style={[styles.customSliderContainer, sliderAnimatedStyle]}>
+          <View style={styles.sliderTrack}>
+            <LinearGradient
+              colors={['#22C55E', '#10B981']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.sliderProgress,
+                { width: `${(followers / 10000000) * 100}%` }
+              ]}
+            />
+            <Slider
+              style={styles.premiumSlider}
+              minimumValue={0}
+              maximumValue={10000000}
+              value={followers}
+              onValueChange={handleSliderChange}
+              minimumTrackTintColor="transparent"
+              maximumTrackTintColor="transparent"
+              thumbStyle={styles.sliderThumb}
+            />
+          </View>
+          
+          <View style={styles.sliderMilestones}>
+            {[
+              { label: '0', value: 0 },
+              { label: '1K', value: 1000 },
+              { label: '10K', value: 10000 },
+              { label: '100K', value: 100000 },
+              { label: '1M+', value: 1000000 },
+            ].map((milestone, index) => {
+              const isActive = followers >= milestone.value;
+              return (
+                <View key={index} style={styles.milestone}>
+                  <View style={[
+                    styles.milestoneMarker,
+                    isActive && styles.milestoneMarkerActive
+                  ]} />
+                  <Text style={[
+                    styles.milestoneText,
+                    isActive && styles.milestoneTextActive
+                  ]}>
+                    {milestone.label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </Animated.View>
+
+        <View style={styles.quickSelectContainer}>
+          <Text style={styles.quickSelectTitle}>Quick select:</Text>
+          <View style={styles.quickSelectButtons}>
+            {[
+              { label: '0-1K', value: 500, range: [0, 1000] },
+              { label: '1K-10K', value: 5000, range: [1000, 10000] },
+              { label: '10K-100K', value: 50000, range: [10000, 100000] },
+              { label: '100K+', value: 500000, range: [100000, 10000000] },
+            ].map((option) => {
+              const isInRange = followers >= option.range[0] && followers < option.range[1];
+              return (
+                <TouchableOpacity
+                  key={option.label}
+                  style={[
+                    styles.quickSelectButton,
+                    isInRange && styles.quickSelectButtonActive
+                  ]}
+                  onPress={() => handleQuickSelect(option.value)}
+                >
+                  <Text style={[
+                    styles.quickSelectButtonText,
+                    isInRange && styles.quickSelectButtonTextActive
+                  ]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderStep3 = () => (
+    <View style={{ flex: 1 }}>
       <Text style={styles.title}>What&apos;s your niche?</Text>
       <Text style={styles.subtitle}>This helps us personalize your content</Text>
       
@@ -180,28 +338,10 @@ export default function Onboarding() {
           onChangeText={setCustomNiche}
         />
       )}
-
-      <View style={styles.sliderContainer}>
-        <Text style={styles.sliderTitle}>Current followers: {formatFollowers(followers)}</Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={10000000}
-          value={followers}
-          onValueChange={setFollowers}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbStyle={{ backgroundColor: colors.primary }}
-        />
-        <View style={styles.sliderLabels}>
-          <Text style={styles.sliderLabel}>0</Text>
-          <Text style={styles.sliderLabel}>10M+</Text>
-        </View>
-      </View>
     </View>
   );
 
-  const renderStep3 = () => (
+  const renderStep4 = () => (
     <View style={{ flex: 1 }}>
       <Text style={styles.title}>What&apos;s your main goal?</Text>
       <Text style={styles.subtitle}>Tell us what you want to achieve</Text>
@@ -228,10 +368,10 @@ export default function Onboarding() {
             <View style={styles.innerContent}>
               <View style={styles.progressContainer}>
                 <Text style={styles.progressText}>
-                  Step {step} of 3
+                  Step {step} of 4
                 </Text>
                 <View style={styles.progressDots}>
-                  {[1, 2, 3].map(i => (
+                  {[1, 2, 3, 4].map(i => (
                     <View
                       key={i}
                       style={[
@@ -246,6 +386,7 @@ export default function Onboarding() {
               {step === 1 && renderStep1()}
               {step === 2 && renderStep2()}
               {step === 3 && renderStep3()}
+              {step === 4 && renderStep4()}
             </View>
           </ScrollView>
 
@@ -273,7 +414,7 @@ export default function Onboarding() {
                   style={styles.primaryButtonGradient}
                 >
                   <Text style={styles.primaryButtonText}>
-                    {step === 3 ? 'Get Started' : 'Next'}
+                    {step === 4 ? 'Get Started' : 'Next'}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -404,6 +545,151 @@ const styles = {
   sliderLabel: {
     fontSize: 12,
     color: '#94A3B8',
+  },
+  premiumSliderContainer: {
+    marginTop: 32,
+    alignItems: 'center',
+  },
+  followerDisplayContainer: {
+    marginBottom: 40,
+  },
+  followerDisplayBackground: {
+    paddingHorizontal: 32,
+    paddingVertical: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+    alignItems: 'center',
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 15,
+  },
+  followerCountText: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#22C55E',
+    textAlign: 'center',
+  },
+  followerLabelText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  customSliderContainer: {
+    width: '100%',
+    marginBottom: 32,
+  },
+  sliderTrack: {
+    height: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 4,
+    position: 'relative',
+    marginBottom: 20,
+  },
+  sliderProgress: {
+    height: '100%',
+    borderRadius: 4,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  premiumSlider: {
+    width: '100%',
+    height: 40,
+    position: 'absolute',
+    top: -16,
+  },
+  sliderThumb: {
+    backgroundColor: '#22C55E',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 16,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+  },
+  sliderMilestones: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+  },
+  milestone: {
+    alignItems: 'center',
+  },
+  milestoneMarker: {
+    width: 2,
+    height: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 1,
+    marginBottom: 8,
+  },
+  milestoneMarkerActive: {
+    backgroundColor: '#22C55E',
+    width: 3,
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  milestoneText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  milestoneTextActive: {
+    color: '#22C55E',
+    fontWeight: '600',
+  },
+  quickSelectContainer: {
+    width: '100%',
+    marginTop: 20,
+  },
+  quickSelectTitle: {
+    fontSize: 16,
+    color: '#E6EAF0',
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  quickSelectButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  quickSelectButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  quickSelectButtonActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderColor: '#22C55E',
+  },
+  quickSelectButtonText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  quickSelectButtonTextActive: {
+    color: '#22C55E',
+    fontWeight: '600',
   },
   bottomContainer: {
     position: 'absolute',
