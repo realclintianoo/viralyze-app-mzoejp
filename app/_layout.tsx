@@ -38,6 +38,13 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding" />
             <Stack.Screen name="tabs" />
             <Stack.Screen name="tool/[id]" />
+            <Stack.Screen 
+              name="paywall" 
+              options={{
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+              }}
+            />
           </Stack>
         </ToastProvider>
       </AuthProvider>

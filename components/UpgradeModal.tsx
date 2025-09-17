@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, commonStyles } from '../styles/commonStyles';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -47,11 +48,10 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ visible, onClose, type }) =
     opacity: opacity.value,
   }));
 
-  const handleUpgrade = (plan: 'monthly' | 'yearly') => {
+  const handleUpgrade = () => {
     runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
-    // TODO: Implement actual upgrade flow
-    console.log(`Upgrade to Pro - ${plan} plan`);
     onClose();
+    router.push('/paywall');
   };
 
   return (
@@ -138,15 +138,13 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ visible, onClose, type }) =
                   </Text>
                 </View>
 
-                {/* Features */}
+                {/* Quick Benefits Preview */}
                 <View style={{ marginBottom: 32 }}>
                   {[
-                    'Unlimited AI text generation',
-                    'Unlimited AI image creation',
-                    'Guideline Guardian tool',
-                    'Priority support',
+                    'Unlimited AI text & images',
+                    'Priority speed',
+                    'Guideline Guardian',
                     'Advanced analytics',
-                    'Custom templates',
                   ].map((feature, index) => (
                     <View
                       key={index}
@@ -167,105 +165,29 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ visible, onClose, type }) =
                   ))}
                 </View>
 
-                {/* Pricing Plans */}
-                <View style={{ gap: 16 }}>
-                  {/* Monthly Plan */}
-                  <TouchableOpacity
-                    onPress={() => handleUpgrade('monthly')}
+                {/* Upgrade Button */}
+                <TouchableOpacity onPress={handleUpgrade}>
+                  <LinearGradient
+                    colors={[colors.primary, colors.gradientEnd]}
                     style={{
-                      backgroundColor: colors.glassBackground,
                       borderRadius: 16,
                       padding: 20,
-                      borderWidth: 1,
-                      borderColor: colors.glassBorder,
+                      alignItems: 'center',
+                      shadowColor: colors.glowPrimary,
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: 0.8,
+                      shadowRadius: 16,
+                      elevation: 12,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View>
-                        <Text style={[commonStyles.textBold, { fontSize: 18 }]}>Monthly</Text>
-                        <Text style={[commonStyles.textSmall, { opacity: 0.8 }]}>
-                          Cancel anytime
-                        </Text>
-                      </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={[commonStyles.title, { fontSize: 24, color: colors.primary }]}>
-                          $9.99
-                        </Text>
-                        <Text style={[commonStyles.textSmall, { opacity: 0.6 }]}>
-                          per month
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
+                    <Text style={[commonStyles.textBold, { fontSize: 18, color: colors.white }]}>
+                      See All Pro Features
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
 
-                  {/* Yearly Plan */}
-                  <TouchableOpacity
-                    onPress={() => handleUpgrade('yearly')}
-                    style={{
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <LinearGradient
-                      colors={[colors.primary, colors.gradientEnd]}
-                      style={{
-                        borderRadius: 16,
-                        padding: 1,
-                      }}
-                    >
-                      <View
-                        style={{
-                          backgroundColor: colors.glassBackgroundStrong,
-                          borderRadius: 16,
-                          padding: 20,
-                        }}
-                      >
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <View>
-                            <Text style={[commonStyles.textBold, { fontSize: 18, color: colors.primary }]}>
-                              Yearly
-                            </Text>
-                            <Text style={[commonStyles.textSmall, { opacity: 0.8 }]}>
-                              Save 40% • Best value
-                            </Text>
-                          </View>
-                          <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={[commonStyles.title, { fontSize: 24, color: colors.primary }]}>
-                              $59.99
-                            </Text>
-                            <Text style={[commonStyles.textSmall, { opacity: 0.6 }]}>
-                              per year
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    </LinearGradient>
-
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: -8,
-                        right: 16,
-                        backgroundColor: colors.warning,
-                        borderRadius: 12,
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        shadowColor: colors.warning,
-                        shadowOffset: { width: 0, height: 0 },
-                        shadowOpacity: 0.6,
-                        shadowRadius: 8,
-                        elevation: 8,
-                      }}
-                    >
-                      <Text style={{ color: colors.white, fontSize: 12, fontWeight: '800' }}>
-                        POPULAR
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={[commonStyles.textSmall, { textAlign: 'center', marginTop: 20, opacity: 0.6 }]}>
-                  Secure payment • Cancel anytime • 7-day free trial
+                <Text style={[commonStyles.textSmall, { textAlign: 'center', marginTop: 16, opacity: 0.6 }]}>
+                  7-day free trial • Cancel anytime
                 </Text>
               </View>
             </BlurView>
