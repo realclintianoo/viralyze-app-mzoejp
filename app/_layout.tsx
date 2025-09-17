@@ -9,7 +9,7 @@ import StartupNotification from '../components/StartupNotification';
 import { logSystemCheck } from '../utils/systemCheck';
 
 export default function RootLayout() {
-  const [showStartupNotification, setShowStartupNotification] = useState(true);
+  const [showStartupNotification, setShowStartupNotification] = useState(false); // Disabled for now
 
   useEffect(() => {
     // Run system check on app startup

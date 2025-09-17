@@ -34,6 +34,8 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('🔐 AuthProvider initialized');
+  
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,12 +74,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.email);
+      
+      // Update state immediately
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Sync local data to remote when user signs in
+      // Handle different auth events
       if (event === 'SIGNED_IN' && session?.user) {
+        console.log('User signed in successfully, syncing data...');
         await syncLocalDataToRemote(session.user.id);
       }
 

@@ -42,6 +42,8 @@ const NICHES = [
 ];
 
 export default function Onboarding() {
+  console.log('🚀 Onboarding component rendered');
+  
   const [isInitializing, setIsInitializing] = useState(true);
   const [step, setStep] = useState(0); // Start with step 0 for auth
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -52,13 +54,27 @@ export default function Onboarding() {
   const [showAuthSheet, setShowAuthSheet] = useState(false);
   const { user, session, loading: authLoading } = useAuth();
 
+  // Debug step changes
+  useEffect(() => {
+    console.log('Step changed to:', step);
+  }, [step]);
+
+  // Debug auth sheet visibility changes
+  useEffect(() => {
+    console.log('Auth sheet visibility changed to:', showAuthSheet);
+  }, [showAuthSheet]);
+
   // Check if user should skip onboarding on component mount
   useEffect(() => {
     const checkOnboardingStatus = async () => {
-      if (authLoading) return;
+      if (authLoading) {
+        console.log('Auth still loading, waiting...');
+        return;
+      }
       
       try {
         setIsInitializing(true);
+        console.log('Checking onboarding status...');
         
         // Check if user has completed onboarding and is logged in
         const onboardingData = await storage.getOnboardingData();
@@ -97,6 +113,17 @@ export default function Onboarding() {
 
     checkOnboardingStatus();
   }, [authLoading, session, user]);
+
+  // Listen for successful authentication to automatically proceed
+  useEffect(() => {
+    // If user just logged in and we're on the welcome screen, move to step 1
+    if (!authLoading && session && user && step === 0 && !showAuthSheet) {
+      console.log('User authenticated successfully, moving to step 1');
+      setTimeout(() => {
+        setStep(1);
+      }, 1000); // Give time for the "Welcome back!" toast to show
+    }
+  }, [session, user, authLoading, step, showAuthSheet]);
 
   const formatFollowers = (value: number): string => {
     if (value >= 1000000) {
@@ -145,6 +172,7 @@ export default function Onboarding() {
   };
 
   const handleNext = () => {
+    console.log(`Moving from step ${step} to step ${step + 1}`);
     if (step < 3) {
       setStep(step + 1);
     } else {
@@ -153,22 +181,30 @@ export default function Onboarding() {
   };
 
   const handleSignIn = () => {
+    console.log('Opening auth sheet for sign in');
     setShowAuthSheet(true);
   };
 
   const handleContinueAsGuest = () => {
-    console.log('User chose to continue as guest');
+    console.log('User chose to continue as guest, moving to step 1');
     setStep(1); // Move to platform selection
   };
 
   const handleAuthSuccess = () => {
-    console.log('Authentication successful');
+    console.log('Authentication successful, closing auth sheet');
     setShowAuthSheet(false);
-    setStep(1); // Move to platform selection after successful auth
+    // Don't set step here - let the useEffect handle it based on auth state
   };
 
   const handleComplete = async () => {
     try {
+      console.log('Completing onboarding with data:', {
+        platforms: selectedPlatforms,
+        niche: selectedNiche === 'Other' ? customNiche : selectedNiche,
+        followers,
+        goal,
+      });
+
       const onboardingData: OnboardingData = {
         platforms: selectedPlatforms,
         niche: selectedNiche === 'Other' ? customNiche : selectedNiche,
@@ -177,12 +213,12 @@ export default function Onboarding() {
       };
 
       await storage.saveOnboardingData(onboardingData);
-      console.log('Onboarding data saved successfully:', onboardingData);
+      console.log('Onboarding data saved successfully, navigating to main app');
       
       // Navigate to tabs with replace to prevent going back to onboarding
       router.replace('/tabs/chat');
     } catch (error) {
-      console.log('Error saving onboarding data:', error);
+      console.error('Error saving onboarding data:', error);
       Alert.alert('Error', 'Failed to save your information. Please try again.');
     }
   };
@@ -351,20 +387,23 @@ export default function Onboarding() {
 
   // Show loading screen while initializing
   if (isInitializing || authLoading) {
+    console.log('Showing loading screen - isInitializing:', isInitializing, 'authLoading:', authLoading);
     return (
-      <SafeAreaView style={[commonStyles.safeArea, commonStyles.centered]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={[commonStyles.text, { marginTop: 16 }]}>
+        <Text style={{ color: colors.text, fontSize: 16, marginTop: 16 }}>
           Loading VIRALYZE...
         </Text>
       </SafeAreaView>
     );
   }
 
+  console.log('Rendering onboarding step:', step);
+
   return (
-    <SafeAreaView style={commonStyles.safeArea}>
-      <View style={commonStyles.container}>
-        <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>
           <View style={{ paddingTop: 40, paddingBottom: 120 }}>
             {step > 0 && (
               <View style={[commonStyles.row, commonStyles.spaceBetween, { marginBottom: 32 }]}>
@@ -433,7 +472,10 @@ export default function Onboarding() {
       {/* Auth Sheet */}
       <AuthSheet
         visible={showAuthSheet}
-        onClose={() => setShowAuthSheet(false)}
+        onClose={() => {
+          console.log('Auth sheet closed');
+          setShowAuthSheet(false);
+        }}
         onContinueAsGuest={handleAuthSuccess}
       />
     </SafeAreaView>

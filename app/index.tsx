@@ -9,6 +9,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCallback } from 'react';
 
 export default function Index() {
+  console.log('🏠 Index component rendered');
+  
   const [isLoading, setIsLoading] = useState(true);
   const { user, loading: authLoading, session } = useAuth();
 

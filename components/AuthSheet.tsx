@@ -73,8 +73,12 @@ const AuthSheet: React.FC<AuthSheetProps> = ({ visible, onClose, onContinueAsGue
             [{ text: 'OK' }]
           );
         } else {
+          console.log('Login successful, showing welcome message and closing sheet');
           showToast('Welcome back!', 'success');
-          onContinueAsGuest(); // This will trigger the success callback
+          
+          // Close the sheet immediately and trigger success callback
+          handleClose();
+          onContinueAsGuest();
         }
       }
     } catch (error: any) {
@@ -86,9 +90,10 @@ const AuthSheet: React.FC<AuthSheetProps> = ({ visible, onClose, onContinueAsGue
   };
 
   const handleContinueAsGuest = () => {
+    console.log('User chose to continue as guest');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    handleClose();
     onContinueAsGuest();
-    onClose();
   };
 
   const resetForm = () => {
@@ -98,6 +103,7 @@ const AuthSheet: React.FC<AuthSheetProps> = ({ visible, onClose, onContinueAsGue
   };
 
   const handleClose = () => {
+    console.log('Closing auth sheet');
     resetForm();
     onClose();
   };
