@@ -10,19 +10,36 @@ const openaiApiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 
 // Initialize OpenAI client with proper configuration for React Native
 let openai: OpenAI | null = null;
-if (openaiApiKey && openaiApiKey !== 'your_openai_api_key_here') {
+let initializationError: string | null = null;
+
+const PLACEHOLDER_VALUES = [
+  'your_openai_api_key_here',
+  'REPLACE_WITH_YOUR_ACTUAL_OPENAI_API_KEY',
+  'sk-your-api-key-here',
+  'your-api-key-here'
+];
+
+if (!openaiApiKey) {
+  initializationError = 'OpenAI API key not found in environment variables';
+  console.log('❌ OpenAI API key not found in environment variables');
+} else if (PLACEHOLDER_VALUES.includes(openaiApiKey)) {
+  initializationError = 'OpenAI API key is still set to placeholder value';
+  console.log('❌ OpenAI API key is still set to placeholder value:', openaiApiKey);
+} else if (!openaiApiKey.startsWith('sk-')) {
+  initializationError = 'OpenAI API key format appears invalid (should start with sk-)';
+  console.log('❌ OpenAI API key format appears invalid:', openaiApiKey.substring(0, 10) + '...');
+} else {
   try {
     openai = new OpenAI({
       apiKey: openaiApiKey,
       dangerouslyAllowBrowser: true, // Required for React Native
       baseURL: 'https://api.openai.com/v1', // Explicit base URL
     });
-    console.log('✅ OpenAI client initialized successfully');
+    console.log('✅ OpenAI client initialized successfully with key:', openaiApiKey.substring(0, 7) + '...');
   } catch (error) {
+    initializationError = `Failed to initialize OpenAI client: ${error}`;
     console.error('❌ Failed to initialize OpenAI client:', error);
   }
-} else {
-  console.log('⚠️ OpenAI client not initialized - API key missing or placeholder');
 }
 
 export interface AICompletionOptions {
@@ -42,28 +59,27 @@ export const aiComplete = async (options: AICompletionOptions): Promise<string[]
     kind, 
     input: input.substring(0, 100) + '...', 
     hasApiKey: !!openaiApiKey,
-    apiKeyValid: openaiApiKey !== 'your_openai_api_key_here',
+    apiKeyValid: !PLACEHOLDER_VALUES.includes(openaiApiKey || ''),
     platform: Platform.OS,
-    clientInitialized: !!openai
+    clientInitialized: !!openai,
+    initializationError
   });
   
-  // Enhanced validation
-  if (!openaiApiKey) {
-    const error = 'OpenAI API key not found. Please add EXPO_PUBLIC_OPENAI_API_KEY to your .env file.';
-    console.error('❌', error);
-    throw new Error(error);
-  }
-  
-  if (openaiApiKey === 'your_openai_api_key_here') {
-    const error = 'OpenAI API key is still set to placeholder value. Please replace with your actual API key from https://platform.openai.com/api-keys';
-    console.error('❌', error);
-    throw new Error(error);
+  // Enhanced validation with specific error messages
+  if (initializationError) {
+    console.error('❌ OpenAI initialization error:', initializationError);
+    
+    if (!openaiApiKey) {
+      throw new Error('OpenAI API key not found. Please add EXPO_PUBLIC_OPENAI_API_KEY to your .env file.\n\nSteps to fix:\n1. Go to https://platform.openai.com/api-keys\n2. Create a new API key\n3. Add it to your .env file\n4. Restart the app');
+    } else if (PLACEHOLDER_VALUES.includes(openaiApiKey)) {
+      throw new Error('OpenAI API key is still set to placeholder value. Please replace it with your actual API key from https://platform.openai.com/api-keys\n\nCurrent value: ' + openaiApiKey + '\n\nSteps to fix:\n1. Go to https://platform.openai.com/api-keys\n2. Create a new API key\n3. Replace the placeholder in your .env file\n4. Restart the app');
+    } else {
+      throw new Error(initializationError);
+    }
   }
   
   if (!openai) {
-    const error = 'OpenAI client not initialized. Please check your API key and restart the app.';
-    console.error('❌', error);
-    throw new Error(error);
+    throw new Error('OpenAI client not initialized. Please check your API key and restart the app.');
   }
 
   const systemPrompt = `You are an expert social media growth coach. Tailor your outputs to the user's profile and create engaging, platform-appropriate content.
@@ -154,9 +170,9 @@ Guidelines:
     
     // Handle specific OpenAI errors with user-friendly messages
     if (error.status === 401) {
-      throw new Error('Invalid OpenAI API key. Please check your API key in the .env file and ensure it\'s correct.');
+      throw new Error('Invalid OpenAI API key. Please check your API key in the .env file and ensure it\'s correct.\n\nSteps to fix:\n1. Go to https://platform.openai.com/api-keys\n2. Verify your API key is correct\n3. Make sure billing is set up\n4. Replace the key in your .env file\n5. Restart the app');
     } else if (error.status === 429) {
-      throw new Error('OpenAI API rate limit exceeded. Please try again later or upgrade your OpenAI plan.');
+      throw new Error('OpenAI API rate limit exceeded. Please try again later or upgrade your OpenAI plan.\n\nThis could mean:\n- You\'ve exceeded your free tier limits\n- You need to add billing to your OpenAI account\n- You\'re making requests too quickly');
     } else if (error.status === 500) {
       throw new Error('OpenAI API server error. Please try again later.');
     } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
@@ -164,7 +180,7 @@ Guidelines:
     } else if (error.message?.includes('browser-like environment')) {
       throw new Error('OpenAI configuration error. Please restart the app and try again.');
     } else if (error.message?.includes('insufficient_quota')) {
-      throw new Error('OpenAI API quota exceeded. Please add billing information to your OpenAI account.');
+      throw new Error('OpenAI API quota exceeded. Please add billing information to your OpenAI account at https://platform.openai.com/account/billing');
     } else {
       throw new Error(`Failed to generate content: ${error.message || 'Unknown error'}. Please try again.`);
     }
@@ -178,28 +194,27 @@ export const aiImage = async (options: { prompt: string; size?: '1024x1024' | '1
     prompt: prompt.substring(0, 100) + '...', 
     size, 
     hasApiKey: !!openaiApiKey,
-    apiKeyValid: openaiApiKey !== 'your_openai_api_key_here',
+    apiKeyValid: !PLACEHOLDER_VALUES.includes(openaiApiKey || ''),
     platform: Platform.OS,
-    clientInitialized: !!openai
+    clientInitialized: !!openai,
+    initializationError
   });
   
-  // Enhanced validation
-  if (!openaiApiKey) {
-    const error = 'OpenAI API key not found. Please add EXPO_PUBLIC_OPENAI_API_KEY to your .env file.';
-    console.error('❌', error);
-    throw new Error(error);
-  }
-  
-  if (openaiApiKey === 'your_openai_api_key_here') {
-    const error = 'OpenAI API key is still set to placeholder value. Please replace with your actual API key from https://platform.openai.com/api-keys';
-    console.error('❌', error);
-    throw new Error(error);
+  // Enhanced validation with specific error messages
+  if (initializationError) {
+    console.error('❌ OpenAI initialization error:', initializationError);
+    
+    if (!openaiApiKey) {
+      throw new Error('OpenAI API key not found. Please add EXPO_PUBLIC_OPENAI_API_KEY to your .env file.\n\nSteps to fix:\n1. Go to https://platform.openai.com/api-keys\n2. Create a new API key\n3. Add it to your .env file\n4. Restart the app');
+    } else if (PLACEHOLDER_VALUES.includes(openaiApiKey)) {
+      throw new Error('OpenAI API key is still set to placeholder value. Please replace it with your actual API key from https://platform.openai.com/api-keys\n\nCurrent value: ' + openaiApiKey + '\n\nSteps to fix:\n1. Go to https://platform.openai.com/api-keys\n2. Create a new API key\n3. Replace the placeholder in your .env file\n4. Restart the app');
+    } else {
+      throw new Error(initializationError);
+    }
   }
   
   if (!openai) {
-    const error = 'OpenAI client not initialized. Please check your API key and restart the app.';
-    console.error('❌', error);
-    throw new Error(error);
+    throw new Error('OpenAI client not initialized. Please check your API key and restart the app.');
   }
 
   try {
@@ -229,15 +244,15 @@ export const aiImage = async (options: { prompt: string; size?: '1024x1024' | '1
     
     // Handle specific OpenAI errors with user-friendly messages
     if (error.status === 401) {
-      throw new Error('Invalid OpenAI API key. Please check your API key in the .env file and ensure it\'s correct.');
+      throw new Error('Invalid OpenAI API key. Please check your API key in the .env file and ensure it\'s correct.\n\nSteps to fix:\n1. Go to https://platform.openai.com/api-keys\n2. Verify your API key is correct\n3. Make sure billing is set up\n4. Replace the key in your .env file\n5. Restart the app');
     } else if (error.status === 429) {
-      throw new Error('OpenAI API rate limit exceeded. Please try again later or upgrade your OpenAI plan.');
+      throw new Error('OpenAI API rate limit exceeded. Please try again later or upgrade your OpenAI plan.\n\nThis could mean:\n- You\'ve exceeded your free tier limits\n- You need to add billing to your OpenAI account\n- You\'re making requests too quickly');
     } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
       throw new Error('Network error. Please check your internet connection and try again.');
     } else if (error.message?.includes('browser-like environment')) {
       throw new Error('OpenAI configuration error. Please restart the app and try again.');
     } else if (error.message?.includes('insufficient_quota')) {
-      throw new Error('OpenAI API quota exceeded. Please add billing information to your OpenAI account.');
+      throw new Error('OpenAI API quota exceeded. Please add billing information to your OpenAI account at https://platform.openai.com/account/billing');
     } else if (error.message?.includes('content_policy_violation')) {
       throw new Error('Image prompt violates OpenAI content policy. Please try a different prompt.');
     } else {
@@ -249,21 +264,23 @@ export const aiImage = async (options: { prompt: string; size?: '1024x1024' | '1
 // Check if OpenAI is configured
 export const checkOpenAIConfig = () => {
   const hasApiKey = !!openaiApiKey;
-  const isValidKey = openaiApiKey !== 'your_openai_api_key_here';
-  const isConfigured = hasApiKey && isValidKey && !!openai;
+  const isValidKey = !PLACEHOLDER_VALUES.includes(openaiApiKey || '');
+  const isConfigured = hasApiKey && isValidKey && !!openai && !initializationError;
   
   console.log('🔍 OpenAI Config Check:', {
     hasApiKey,
     isValidKey,
     isConfigured,
     platform: Platform.OS,
-    keyPreview: openaiApiKey ? `${openaiApiKey.substring(0, 7)}...` : 'none'
+    keyPreview: openaiApiKey ? `${openaiApiKey.substring(0, 7)}...` : 'none',
+    initializationError
   });
   
   return {
     hasApiKey,
     isValidKey,
     isConfigured,
-    platform: Platform.OS
+    platform: Platform.OS,
+    initializationError
   };
 };

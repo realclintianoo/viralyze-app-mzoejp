@@ -20,6 +20,13 @@ export interface SystemCheckResult {
   criticalIssues: string[];
 }
 
+const PLACEHOLDER_VALUES = [
+  'your_openai_api_key_here',
+  'REPLACE_WITH_YOUR_ACTUAL_OPENAI_API_KEY',
+  'sk-your-api-key-here',
+  'your-api-key-here'
+];
+
 export const performSystemCheck = async (): Promise<SystemCheckResult> => {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -80,8 +87,8 @@ export const performSystemCheck = async (): Promise<SystemCheckResult> => {
   if (!envVars.openaiKey) {
     errors.push('EXPO_PUBLIC_OPENAI_API_KEY not set in environment');
     criticalIssues.push('OpenAI API key missing');
-  } else if (envVars.openaiKey === 'your_openai_api_key_here') {
-    errors.push('OpenAI API key is still set to placeholder value - please replace with your actual API key');
+  } else if (PLACEHOLDER_VALUES.includes(envVars.openaiKey)) {
+    errors.push(`OpenAI API key is still set to placeholder value: "${envVars.openaiKey}". Please replace with your actual API key from https://platform.openai.com/api-keys`);
     criticalIssues.push('OpenAI API key is placeholder');
   } else if (!envVars.openaiKey.startsWith('sk-')) {
     warnings.push('OpenAI API key format appears invalid (should start with sk-)');
@@ -122,6 +129,14 @@ export const performSystemCheck = async (): Promise<SystemCheckResult> => {
     console.log('ℹ️ Running in development mode');
   } else {
     warnings.push('Running in production mode - ensure all environment variables are properly set');
+  }
+  
+  // Add initialization error if present
+  if (openaiConfig.initializationError) {
+    errors.push(`OpenAI initialization failed: ${openaiConfig.initializationError}`);
+    if (!criticalIssues.some(issue => issue.includes('OpenAI'))) {
+      criticalIssues.push('OpenAI initialization failed');
+    }
   }
   
   const result = {
@@ -191,18 +206,30 @@ export const checkOpenAIConnection = async (): Promise<{ success: boolean; messa
     
     const openaiConfig = checkOpenAIConfig();
     if (!openaiConfig.isConfigured) {
+      let message = 'OpenAI not configured';
+      
+      if (openaiConfig.initializationError) {
+        message += ` - ${openaiConfig.initializationError}`;
+      } else if (!openaiConfig.hasApiKey) {
+        message += ' - missing API key';
+      } else if (!openaiConfig.isValidKey) {
+        message += ' - API key is placeholder value';
+      } else {
+        message += ' - client initialization failed';
+      }
+      
       return {
         success: false,
-        message: 'OpenAI not configured - missing API key or client initialization failed'
+        message
       };
     }
     
     // Check if API key is still placeholder
     const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
-    if (apiKey === 'your_openai_api_key_here') {
+    if (PLACEHOLDER_VALUES.includes(apiKey || '')) {
       return {
         success: false,
-        message: 'OpenAI API key is still set to placeholder value. Please replace with your actual API key from https://platform.openai.com/api-keys'
+        message: `OpenAI API key is still set to placeholder value: "${apiKey}". Please replace with your actual API key from https://platform.openai.com/api-keys`
       };
     }
     
@@ -265,6 +292,9 @@ export const checkOpenAIConnection = async (): Promise<{ success: boolean; messa
     } else if (error.message?.includes('browser-like environment')) {
       errorCategory = 'Configuration';
       userFriendlyMessage = 'OpenAI configuration error. Please restart the app.';
+    } else if (error.message?.includes('placeholder')) {
+      errorCategory = 'Configuration';
+      userFriendlyMessage = 'OpenAI API key is still set to placeholder value. Please replace with your actual key.';
     }
     
     return {
@@ -282,6 +312,9 @@ export const checkOpenAIConnection = async (): Promise<{ success: boolean; messa
 export const generateSystemReport = async (): Promise<string> => {
   const systemCheck = await performSystemCheck();
   const connectionTest = await checkOpenAIConnection();
+  
+  const apiKey = systemCheck.environmentVariables.openaiKey;
+  const isPlaceholder = PLACEHOLDER_VALUES.includes(apiKey);
   
   const report = `
 VIRALYZE System Diagnostic Report
@@ -305,11 +338,9 @@ Test Message: ${connectionTest.message}
 ${connectionTest.details ? `Details: ${JSON.stringify(connectionTest.details, null, 2)}` : ''}
 
 === ENVIRONMENT VARIABLES ===
-OpenAI Key: ${systemCheck.environmentVariables.openaiKey ? 
-  (systemCheck.environmentVariables.openaiKey === 'your_openai_api_key_here' ? 
-    '❌ PLACEHOLDER VALUE' : 
-    `✅ ${systemCheck.environmentVariables.openaiKey.substring(0, 7)}...`) : 
-  '❌ Not set'}
+OpenAI Key: ${!apiKey ? '❌ Not set' : 
+  isPlaceholder ? `❌ PLACEHOLDER VALUE: "${apiKey}"` : 
+  `✅ ${apiKey.substring(0, 7)}...`}
 Supabase URL: ${systemCheck.environmentVariables.supabaseUrl || 'Not set'}
 Supabase Key: ${systemCheck.environmentVariables.supabaseKey ? 
   (systemCheck.environmentVariables.supabaseKey === 'your_supabase_anon_key_here' ? 
@@ -328,16 +359,18 @@ ${systemCheck.errors.length > 0 ? `ERRORS (${systemCheck.errors.length}):\n${sys
 ${systemCheck.warnings.length > 0 ? `WARNINGS (${systemCheck.warnings.length}):\n${systemCheck.warnings.map(w => `- ${w}`).join('\n')}` : 'No warnings ✅'}
 
 === QUICK FIX GUIDE ===
-${systemCheck.environmentVariables.openaiKey === 'your_openai_api_key_here' ? 
+${isPlaceholder ? 
 `🔧 TO FIX AI GENERATION:
 1. Go to https://platform.openai.com/api-keys
 2. Create a new API key (or copy an existing one)
 3. Open the .env file in your project root
-4. Replace "your_openai_api_key_here" with your actual API key
+4. Replace "${apiKey}" with your actual API key
 5. Restart the development server (stop and run 'npm run dev' again)
 6. Test the AI generation again
 
-Your API key should look like: sk-proj-1234567890abcdef...` : ''}
+Your API key should look like: sk-proj-1234567890abcdef...
+
+IMPORTANT: Make sure you have billing set up in your OpenAI account!` : ''}
 
 === TROUBLESHOOTING ===
 If you're still experiencing issues:

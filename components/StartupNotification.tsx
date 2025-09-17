@@ -124,9 +124,11 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
     );
 
     if (hasApiKeyIssue) {
+      const currentApiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY || 'not set';
+      
       Alert.alert(
         'OpenAI API Key Required',
-        'To use AI features, you need to:\n\n1. Go to https://platform.openai.com/api-keys\n2. Create a new API key\n3. Open the .env file in your project\n4. Replace "your_openai_api_key_here" with your actual key\n5. Restart the app\n\nWould you like to open the OpenAI website?',
+        `To use AI features, you need to replace the placeholder API key with your actual OpenAI API key.\n\nCurrent value: "${currentApiKey}"\n\nSteps to fix:\n1. Go to https://platform.openai.com/api-keys\n2. Create a new API key\n3. Open the .env file in your project\n4. Replace the placeholder with your actual key\n5. Restart the app\n6. Make sure billing is set up in OpenAI\n\nWould you like to open the OpenAI website?`,
         [
           { text: 'Not Now', style: 'cancel' },
           { 

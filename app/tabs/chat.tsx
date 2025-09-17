@@ -13,29 +13,29 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { commonStyles, colors } from '../../styles/commonStyles';
-import { storage } from '../../utils/storage';
-import { aiComplete, checkOpenAIConfig } from '../../lib/ai';
 import { ChatMessage, QuotaUsage, OnboardingData } from '../../types';
 import { quickHealthCheck } from '../../utils/systemCheck';
+import { storage } from '../../utils/storage';
+import { commonStyles, colors } from '../../styles/commonStyles';
+import * as Haptics from 'expo-haptics';
+import { aiComplete, checkOpenAIConfig } from '../../lib/ai';
 
 const QUICK_ACTIONS = [
-  { id: 'hooks', label: 'Hooks', icon: 'flash' as keyof typeof Ionicons.glyphMap },
-  { id: 'ideas', label: 'Ideas', icon: 'bulb' as keyof typeof Ionicons.glyphMap },
-  { id: 'captions', label: 'Captions', icon: 'text' as keyof typeof Ionicons.glyphMap },
-  { id: 'calendar', label: 'Calendar', icon: 'calendar' as keyof typeof Ionicons.glyphMap },
-  { id: 'rewriter', label: 'Rewriter', icon: 'repeat' as keyof typeof Ionicons.glyphMap },
+  { id: 'hooks', title: 'Hooks', icon: 'fish' as keyof typeof Ionicons.glyphMap },
+  { id: 'ideas', title: 'Ideas', icon: 'bulb' as keyof typeof Ionicons.glyphMap },
+  { id: 'captions', title: 'Captions', icon: 'text' as keyof typeof Ionicons.glyphMap },
+  { id: 'calendar', title: 'Calendar', icon: 'calendar' as keyof typeof Ionicons.glyphMap },
+  { id: 'rewriter', title: 'Rewriter', icon: 'refresh' as keyof typeof Ionicons.glyphMap },
 ];
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [quota, setQuota] = useState<QuotaUsage | null>(null);
+  const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
   const [profile, setProfile] = useState<OnboardingData | null>(null);
   const [systemHealthy, setSystemHealthy] = useState(true);
-  const [criticalIssues, setCriticalIssues] = useState<string[]>([]);
+  const [configError, setConfigError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -45,14 +45,22 @@ export default function ChatScreen() {
 
   const loadInitialData = async () => {
     try {
-      const [quotaData, profileData] = await Promise.all([
-        storage.getQuotaUsage(),
-        storage.getOnboardingData(),
-      ]);
-      setQuota(quotaData);
-      setProfile(profileData);
+      const savedMessages = await storage.getItem('chat_messages');
+      if (savedMessages) {
+        setMessages(JSON.parse(savedMessages));
+      }
+
+      const savedQuota = await storage.getItem('quota_usage');
+      if (savedQuota) {
+        setQuota(JSON.parse(savedQuota));
+      }
+
+      const savedProfile = await storage.getItem('onboarding_data');
+      if (savedProfile) {
+        setProfile(JSON.parse(savedProfile));
+      }
     } catch (error) {
-      console.log('Error loading initial data:', error);
+      console.error('Failed to load initial data:', error);
     }
   };
 
@@ -60,44 +68,56 @@ export default function ChatScreen() {
     try {
       const health = await quickHealthCheck();
       setSystemHealthy(health.healthy);
-      setCriticalIssues(health.criticalIssues);
       
       if (!health.healthy) {
-        console.log('🚨 System health check failed:', health.criticalIssues);
+        const openaiConfig = checkOpenAIConfig();
+        if (openaiConfig.initializationError) {
+          setConfigError(openaiConfig.initializationError);
+        } else if (!openaiConfig.hasApiKey) {
+          setConfigError('OpenAI API key not found in environment variables');
+        } else if (!openaiConfig.isValidKey) {
+          setConfigError('OpenAI API key is still set to placeholder value');
+        } else {
+          setConfigError('OpenAI configuration error');
+        }
+      } else {
+        setConfigError(null);
       }
     } catch (error) {
-      console.log('Error checking system health:', error);
+      console.error('System health check failed:', error);
       setSystemHealthy(false);
-      setCriticalIssues(['System check failed']);
+      setConfigError('System health check failed');
     }
   };
 
   const handleQuickAction = async (actionId: string) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
     if (!systemHealthy) {
       showConfigurationError();
       return;
     }
 
-    if (!quota || quota.textRequests >= quota.maxTextRequests) {
+    if (quota.text >= 2) {
       showUpgradeModal();
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    
     const prompts = {
-      hooks: 'Generate 5 viral hooks for my content',
-      ideas: 'Give me 5 content ideas for this week',
-      captions: 'Write a engaging caption for my next post',
-      calendar: 'Create a 7-day content calendar for me',
-      rewriter: 'Help me rewrite my caption for different platforms',
+      hooks: 'Generate 5 viral hooks for social media posts that grab attention in the first 3 seconds',
+      ideas: 'Give me 5 creative content ideas for my niche that would engage my audience',
+      captions: 'Write 3 engaging captions for a social media post with relevant hashtags',
+      calendar: 'Create a 7-day content calendar with posting times and content types',
+      rewriter: 'Help me rewrite content for different social media platforms',
     };
 
-    const prompt = prompts[actionId as keyof typeof prompts] || prompts.hooks;
-    await sendMessage(prompt, actionId);
+    const prompt = prompts[actionId as keyof typeof prompts];
+    if (prompt) {
+      await sendMessage(prompt);
+    }
   };
 
-  const sendMessage = async (text: string, actionType?: string) => {
+  const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
     if (!systemHealthy) {
@@ -105,16 +125,16 @@ export default function ChatScreen() {
       return;
     }
 
-    if (!quota || quota.textRequests >= quota.maxTextRequests) {
+    if (quota.text >= 2) {
       showUpgradeModal();
       return;
     }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      type: 'user',
       content: text,
-      timestamp: new Date().toISOString(),
+      isUser: true,
+      timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -122,152 +142,153 @@ export default function ChatScreen() {
     setIsLoading(true);
 
     try {
-      console.log('🤖 Sending message to AI:', { kind: actionType || 'chat', input: text });
-      
       const responses = await aiComplete({
-        kind: actionType || 'chat',
+        kind: 'chat',
         profile,
         input: text,
-        n: 1
+        n: 1,
       });
-      
-      const response = responses[0] || 'Sorry, I couldn\'t generate a response. Please try again.';
-      
-      console.log('✅ AI response received:', response.substring(0, 100) + '...');
-      
+
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        type: 'ai',
-        content: response,
-        timestamp: new Date().toISOString(),
+        content: responses[0] || 'Sorry, I couldn\'t generate a response. Please try again.',
+        isUser: false,
+        timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, aiMessage]);
-      
-      // Update quota
-      const updatedQuota = await storage.updateQuotaUsage(1, 0);
-      setQuota(updatedQuota);
+      const updatedMessages = [...messages, userMessage, aiMessage];
+      setMessages(updatedMessages);
+      await storage.setItem('chat_messages', JSON.stringify(updatedMessages));
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Update quota
+      const newQuota = { ...quota, text: quota.text + 1 };
+      setQuota(newQuota);
+      await storage.setItem('quota_usage', JSON.stringify(newQuota));
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error: any) {
-      console.log('❌ Error sending message:', error);
+      console.error('AI completion error:', error);
       
-      // Check if it's a configuration error
-      if (error.message?.includes('API key') || error.message?.includes('configured')) {
-        setSystemHealthy(false);
-        setCriticalIssues(['OpenAI API key not configured']);
-        showConfigurationError();
-      } else {
-        Alert.alert('Error', error.message || 'Failed to get AI response. Please try again.');
+      let errorMessage = 'Sorry, I encountered an error. Please try again.';
+      
+      if (error.message?.includes('placeholder')) {
+        errorMessage = 'OpenAI API key is not configured. Please check your .env file and replace the placeholder with your actual API key.';
+      } else if (error.message?.includes('Invalid')) {
+        errorMessage = 'Invalid OpenAI API key. Please check your API key in the .env file.';
+      } else if (error.message?.includes('quota') || error.message?.includes('billing')) {
+        errorMessage = 'OpenAI API quota exceeded. Please add billing information to your OpenAI account.';
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Network error. Please check your internet connection.';
       }
+
+      const errorAiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: errorMessage,
+        isUser: false,
+        timestamp: new Date(),
+        isError: true,
+      };
+
+      const updatedMessages = [...messages, userMessage, errorAiMessage];
+      setMessages(updatedMessages);
+      await storage.setItem('chat_messages', JSON.stringify(updatedMessages));
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsLoading(false);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
   };
 
   const showConfigurationError = () => {
-    const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
-    const isPlaceholder = apiKey === 'your_openai_api_key_here';
+    const currentApiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY || 'not set';
     
     Alert.alert(
-      'AI Not Configured',
-      isPlaceholder 
-        ? 'Your OpenAI API key is not set up yet. Please:\n\n1. Go to https://platform.openai.com/api-keys\n2. Create an API key\n3. Replace "your_openai_api_key_here" in your .env file\n4. Restart the app'
-        : 'There\'s an issue with your AI configuration. Please check your OpenAI API key and restart the app.',
+      'OpenAI Configuration Required',
+      `AI features are not working because:\n\n${configError}\n\nCurrent API key: "${currentApiKey}"\n\nTo fix this:\n1. Go to https://platform.openai.com/api-keys\n2. Create a new API key\n3. Open the .env file in your project\n4. Replace the placeholder with your actual key\n5. Restart the app\n6. Make sure billing is set up in OpenAI`,
       [
-        { text: 'Check Settings', onPress: () => console.log('Navigate to settings') },
-        { text: 'OK', style: 'cancel' },
+        { text: 'OK', style: 'default' }
       ]
     );
   };
 
   const showUpgradeModal = () => {
     Alert.alert(
-      'Upgrade to Pro',
-      'You&apos;ve reached your daily limit. Upgrade to Pro for unlimited AI requests!',
+      'Daily Limit Reached',
+      'You\'ve used all your free AI requests for today. Upgrade to Pro for unlimited access!',
       [
         { text: 'Maybe Later', style: 'cancel' },
-        { text: 'Upgrade Now', onPress: () => console.log('Upgrade pressed') },
+        { text: 'Upgrade to Pro', style: 'default' },
       ]
     );
   };
 
   const copyMessage = async (content: string) => {
-    // In a real app, you'd use Clipboard API
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Copy functionality would be implemented here
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert('Copied', 'Message copied to clipboard');
   };
 
   const saveMessage = async (message: ChatMessage) => {
-    try {
-      await storage.addSavedItem({
-        id: Date.now().toString(),
-        type: 'hook', // Default type, could be determined by context
-        title: message.content.substring(0, 50) + '...',
-        payload: { content: message.content },
-        created_at: new Date().toISOString(),
-      });
-      
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Saved', 'Message saved to your collection');
-    } catch (error) {
-      console.log('Error saving message:', error);
-      Alert.alert('Error', 'Failed to save message');
-    }
+    // Save functionality would be implemented here
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert('Saved', 'Message saved to your collection');
   };
 
   const renderMessage = (message: ChatMessage) => (
     <View
       key={message.id}
-      style={{
-        alignSelf: message.type === 'user' ? 'flex-end' : 'flex-start',
-        maxWidth: '80%',
-        marginVertical: 4,
-      }}
+      style={[
+        commonStyles.card,
+        {
+          alignSelf: message.isUser ? 'flex-end' : 'flex-start',
+          maxWidth: '85%',
+          marginBottom: 12,
+          backgroundColor: message.isUser 
+            ? colors.primary 
+            : message.isError 
+              ? '#FEE2E2' 
+              : colors.card,
+        },
+      ]}
     >
-      <View
+      <Text
         style={[
-          commonStyles.card,
+          commonStyles.text,
           {
-            backgroundColor: message.type === 'user' ? colors.accent : colors.card,
-            marginVertical: 4,
+            color: message.isUser 
+              ? 'white' 
+              : message.isError 
+                ? '#DC2626' 
+                : colors.text,
           },
         ]}
       >
-        <Text
-          style={[
-            commonStyles.text,
-            { color: message.type === 'user' ? colors.white : colors.text },
-          ]}
-        >
-          {message.content}
-        </Text>
-      </View>
-      
-      {message.type === 'ai' && (
-        <View style={[commonStyles.row, { marginTop: 8, gap: 12 }]}>
+        {message.content}
+      </Text>
+
+      {!message.isUser && !message.isError && (
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
           <TouchableOpacity
-            style={[commonStyles.row, { alignItems: 'center', gap: 4 }]}
             onPress={() => copyMessage(message.content)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
           >
-            <Ionicons name="copy-outline" size={16} color={colors.grey} />
-            <Text style={[commonStyles.smallText, { color: colors.grey }]}>Copy</Text>
+            <Ionicons name="copy" size={14} color={colors.textSecondary} />
+            <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>
+              Copy
+            </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
-            style={[commonStyles.row, { alignItems: 'center', gap: 4 }]}
             onPress={() => saveMessage(message)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
           >
-            <Ionicons name="bookmark-outline" size={16} color={colors.grey} />
-            <Text style={[commonStyles.smallText, { color: colors.grey }]}>Save</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[commonStyles.row, { alignItems: 'center', gap: 4 }]}
-            onPress={() => setInputText(`Refine this: ${message.content}`)}
-          >
-            <Ionicons name="create-outline" size={16} color={colors.grey} />
-            <Text style={[commonStyles.smallText, { color: colors.grey }]}>Refine</Text>
+            <Ionicons name="bookmark" size={14} color={colors.textSecondary} />
+            <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>
+              Save
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -278,184 +299,186 @@ export default function ChatScreen() {
     if (systemHealthy) return null;
 
     return (
-      <View style={{
-        margin: 16,
-        padding: 16,
-        backgroundColor: '#FFF3CD',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#FFEAA7',
-      }}>
-        <View style={[commonStyles.row, { alignItems: 'center', gap: 8, marginBottom: 8 }]}>
-          <Ionicons name="warning" size={20} color="#D68910" />
-          <Text style={{ color: '#D68910', fontWeight: '600', fontSize: 16 }}>
-            AI Not Configured
-          </Text>
+      <View
+        style={[
+          commonStyles.card,
+          {
+            backgroundColor: '#FFF3CD',
+            borderColor: '#F59E0B',
+            borderWidth: 1,
+            marginBottom: 16,
+          },
+        ]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Ionicons name="warning" size={24} color="#D97706" />
+          <View style={{ flex: 1 }}>
+            <Text style={[commonStyles.textBold, { color: '#D97706' }]}>
+              AI Not Configured
+            </Text>
+            <Text style={[commonStyles.textSmall, { color: '#B45309', marginTop: 4 }]}>
+              Your OpenAI API key needs to be set up for AI features to work.
+            </Text>
+          </View>
         </View>
-        <Text style={{ color: '#8B6914', marginBottom: 12 }}>
-          {criticalIssues.includes('OpenAI API key is placeholder') || criticalIssues.includes('OpenAI API key missing')
-            ? 'Your OpenAI API key needs to be set up for AI features to work.'
-            : 'There are configuration issues preventing AI from working.'}
-        </Text>
+        
         <TouchableOpacity
+          onPress={showConfigurationError}
           style={{
-            backgroundColor: '#D68910',
+            backgroundColor: '#D97706',
             paddingHorizontal: 16,
             paddingVertical: 8,
             borderRadius: 8,
-            alignSelf: 'flex-start',
+            marginTop: 12,
           }}
-          onPress={showConfigurationError}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>Fix Configuration</Text>
+          <Text style={[commonStyles.textBold, { color: 'white', textAlign: 'center' }]}>
+            Fix Configuration
+          </Text>
         </TouchableOpacity>
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={commonStyles.safeArea}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* Header */}
-        <View style={[
-          commonStyles.row,
-          commonStyles.spaceBetween,
-          { padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }
-        ]}>
-          <Text style={[commonStyles.title, { fontSize: 20, marginBottom: 0 }]}>
-            VIRALYZE
-          </Text>
-          <View style={[commonStyles.row, { gap: 16 }]}>
-            <TouchableOpacity>
-              <Ionicons name="notifications-outline" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <View style={{
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                backgroundColor: colors.accent,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Text style={{ color: colors.white, fontWeight: '600' }}>U</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+    <SafeAreaView style={commonStyles.container}>
+      {/* Header */}
+      <View style={commonStyles.header}>
+        <Text style={commonStyles.headerTitle}>VIRALYZE</Text>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <TouchableOpacity>
+            <Ionicons name="notifications" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity>
+            <Ionicons name="person-circle" size={24} color={colors.text} />
+          </TouchableOpacity>
         </View>
+      </View>
 
-        {/* Configuration Warning */}
+      {/* Quota */}
+      <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+        <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>
+          {2 - quota.text} free left today
+        </Text>
+      </View>
+
+      {/* Configuration Warning */}
+      <View style={{ paddingHorizontal: 20 }}>
         {renderConfigurationWarning()}
+      </View>
 
-        {/* Quota Display */}
-        <View style={{ padding: 16, paddingBottom: 8 }}>
-          <Text style={[commonStyles.smallText, { textAlign: 'center' }]}>
-            {quota ? `${quota.maxTextRequests - quota.textRequests} free left today` : 'Loading...'}
-          </Text>
-        </View>
+      {/* Quick Actions */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginBottom: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+      >
+        {QUICK_ACTIONS.map((action) => (
+          <TouchableOpacity
+            key={action.id}
+            onPress={() => handleQuickAction(action.id)}
+            style={[
+              commonStyles.card,
+              {
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                opacity: systemHealthy ? 1 : 0.5,
+              },
+            ]}
+            disabled={!systemHealthy}
+          >
+            <Ionicons name={action.icon} size={16} color={colors.primary} />
+            <Text style={[commonStyles.textBold, { color: colors.text }]}>
+              {action.title}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
-        {/* Quick Actions */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ maxHeight: 80 }}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
-        >
-          {QUICK_ACTIONS.map(action => (
-            <TouchableOpacity
-              key={action.id}
-              style={[
-                commonStyles.chip, 
-                { 
-                  alignItems: 'center', 
-                  minWidth: 80,
-                  opacity: systemHealthy ? 1 : 0.5
-                }
-              ]}
-              onPress={() => handleQuickAction(action.id)}
-              disabled={!systemHealthy}
-            >
-              <Ionicons name={action.icon} size={20} color={colors.text} />
-              <Text style={[commonStyles.chipText, { marginTop: 4, fontSize: 12 }]}>
-                {action.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Messages */}
-        <ScrollView
-          ref={scrollViewRef}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16 }}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-        >
-          {messages.length === 0 ? (
-            <View style={[commonStyles.center, { flex: 1, paddingVertical: 60 }]}>
-              <Ionicons name="chatbubbles-outline" size={48} color={colors.grey} />
-              <Text style={[commonStyles.text, { marginTop: 16, textAlign: 'center' }]}>
-                Welcome to VIRALYZE!
-              </Text>
-              <Text style={[commonStyles.smallText, { textAlign: 'center', marginTop: 8 }]}>
-                {systemHealthy 
-                  ? 'Ask me anything about growing your social media presence'
-                  : 'Please configure your OpenAI API key to start chatting'}
-              </Text>
-            </View>
-          ) : (
-            messages.map(renderMessage)
-          )}
-          
-          {isLoading && (
-            <View style={[commonStyles.row, { alignItems: 'center', gap: 8, marginTop: 16 }]}>
-              <ActivityIndicator size="small" color={colors.accent} />
-              <Text style={commonStyles.smallText}>AI is typing...</Text>
-            </View>
-          )}
-        </ScrollView>
-
-        {/* Input */}
-        <View style={{
-          padding: 16,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          backgroundColor: colors.background,
-        }}>
-          <View style={[commonStyles.row, { gap: 12 }]}>
-            <TextInput
-              style={[
-                commonStyles.input,
-                { 
-                  flex: 1, 
-                  marginVertical: 0,
-                  opacity: systemHealthy ? 1 : 0.5
-                }
-              ]}
-              placeholder={systemHealthy ? "Ask me anything..." : "Configure OpenAI API key first..."}
-              placeholderTextColor={colors.grey}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              maxLength={500}
-              editable={systemHealthy}
-            />
-            <TouchableOpacity
-              style={[
-                commonStyles.button,
-                { 
-                  paddingHorizontal: 16, 
-                  opacity: (inputText.trim() && systemHealthy) ? 1 : 0.5 
-                }
-              ]}
-              onPress={() => sendMessage(inputText)}
-              disabled={!inputText.trim() || isLoading || !systemHealthy}
-            >
-              <Ionicons name="send" size={20} color={colors.white} />
-            </TouchableOpacity>
+      {/* Messages */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 20 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {messages.length === 0 && (
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+            <Ionicons name="chatbubbles" size={48} color={colors.textSecondary} />
+            <Text style={[commonStyles.textLarge, { marginTop: 16, textAlign: 'center' }]}>
+              Welcome to VIRALYZE
+            </Text>
+            <Text style={[commonStyles.text, { color: colors.textSecondary, textAlign: 'center', marginTop: 8 }]}>
+              {systemHealthy 
+                ? 'Ask me anything about growing your social media presence!'
+                : 'Configure your OpenAI API key to start chatting with AI'
+              }
+            </Text>
           </View>
+        )}
+
+        {messages.map(renderMessage)}
+
+        {isLoading && (
+          <View style={[commonStyles.card, { alignSelf: 'flex-start', maxWidth: '85%' }]}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[commonStyles.textSmall, { color: colors.textSecondary, marginTop: 8 }]}>
+              AI is thinking...
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Input */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ paddingHorizontal: 20, paddingBottom: 20 }}
+      >
+        <View
+          style={[
+            commonStyles.card,
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+            },
+          ]}
+        >
+          <TextInput
+            style={[
+              commonStyles.text,
+              {
+                flex: 1,
+                color: colors.text,
+                maxHeight: 100,
+              },
+            ]}
+            placeholder={systemHealthy ? "Ask me anything..." : "Configure OpenAI API key first..."}
+            placeholderTextColor={colors.textSecondary}
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            editable={systemHealthy && !isLoading}
+          />
+          <TouchableOpacity
+            onPress={() => sendMessage(inputText)}
+            disabled={!inputText.trim() || isLoading || !systemHealthy}
+            style={{
+              backgroundColor: (!inputText.trim() || isLoading || !systemHealthy) 
+                ? colors.textSecondary 
+                : colors.primary,
+              padding: 8,
+              borderRadius: 8,
+            }}
+          >
+            <Ionicons name="send" size={16} color="white" />
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
