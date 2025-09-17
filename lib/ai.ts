@@ -1,14 +1,20 @@
 
 import OpenAI from 'openai';
+import { Platform } from 'react-native';
 import { OnboardingData } from '../types';
+
+// Import polyfills for React Native
+import 'react-native-url-polyfill/auto';
 
 const openaiApiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 
-// Initialize OpenAI client
+// Initialize OpenAI client with proper configuration for React Native
 let openai: OpenAI | null = null;
 if (openaiApiKey) {
   openai = new OpenAI({
     apiKey: openaiApiKey,
+    dangerouslyAllowBrowser: true, // Required for React Native
+    baseURL: 'https://api.openai.com/v1', // Explicit base URL
   });
 }
 
@@ -25,7 +31,7 @@ export interface AICompletionOptions {
 export const aiComplete = async (options: AICompletionOptions): Promise<string[]> => {
   const { kind, profile, input, n = 3, stream = false, onChunk, signal } = options;
   
-  console.log('AI Complete called with:', { kind, input, hasApiKey: !!openaiApiKey });
+  console.log('AI Complete called with:', { kind, input, hasApiKey: !!openaiApiKey, platform: Platform.OS });
   
   if (!openaiApiKey || !openai) {
     console.error('OpenAI API key not configured. Please add EXPO_PUBLIC_OPENAI_API_KEY to your .env file');
@@ -68,6 +74,10 @@ Guidelines:
 
       let fullContent = '';
       for await (const chunk of stream) {
+        if (signal?.aborted) {
+          throw new Error('Request was cancelled');
+        }
+        
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
           fullContent += content;
@@ -95,7 +105,7 @@ Guidelines:
   } catch (error: any) {
     console.error('AI completion error:', error);
     
-    if (error.name === 'AbortError') {
+    if (error.name === 'AbortError' || error.message?.includes('cancelled')) {
       throw error;
     }
     
@@ -108,6 +118,8 @@ Guidelines:
       throw new Error('OpenAI API server error. Please try again later.');
     } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
       throw new Error('Network error. Please check your internet connection and try again.');
+    } else if (error.message?.includes('browser-like environment')) {
+      throw new Error('OpenAI configuration error. Please restart the app and try again.');
     } else {
       throw new Error('Failed to generate content. Please try again.');
     }
@@ -117,7 +129,7 @@ Guidelines:
 export const aiImage = async (options: { prompt: string; size?: '1024x1024' | '1792x1024' | '1024x1792' }): Promise<string> => {
   const { prompt, size = '1024x1024' } = options;
   
-  console.log('AI Image called with:', { prompt, size, hasApiKey: !!openaiApiKey });
+  console.log('AI Image called with:', { prompt, size, hasApiKey: !!openaiApiKey, platform: Platform.OS });
   
   if (!openaiApiKey || !openai) {
     console.error('OpenAI API key not configured. Please add EXPO_PUBLIC_OPENAI_API_KEY to your .env file');
@@ -147,6 +159,8 @@ export const aiImage = async (options: { prompt: string; size?: '1024x1024' | '1
       throw new Error('OpenAI API rate limit exceeded. Please try again later or upgrade your OpenAI plan.');
     } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
       throw new Error('Network error. Please check your internet connection and try again.');
+    } else if (error.message?.includes('browser-like environment')) {
+      throw new Error('OpenAI configuration error. Please restart the app and try again.');
     } else {
       throw new Error('Failed to generate image. Please try again.');
     }
@@ -157,6 +171,7 @@ export const aiImage = async (options: { prompt: string; size?: '1024x1024' | '1
 export const checkOpenAIConfig = () => {
   return {
     hasApiKey: !!openaiApiKey,
-    isConfigured: !!openaiApiKey && !!openai
+    isConfigured: !!openaiApiKey && !!openai,
+    platform: Platform.OS
   };
 };
