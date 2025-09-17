@@ -100,7 +100,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel 
               
               {/* Message */}
               <Text style={styles.message}>
-                You'll need to sign in again to access your account and saved content.
+                This will sign you out completely and clear all local data. You&apos;ll need to sign in again or choose guest mode to continue using the app.
               </Text>
 
               {/* Buttons */}

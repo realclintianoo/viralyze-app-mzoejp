@@ -82,9 +82,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Clear local data when user signs out
       if (event === 'SIGNED_OUT') {
-        console.log('User signed out, clearing local data');
+        console.log('Auth state changed to SIGNED_OUT, clearing local data');
         try {
           await storage.clearAll();
+          console.log('Local data cleared after sign out');
         } catch (error) {
           console.error('Error clearing data on sign out:', error);
         }
@@ -150,19 +151,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      // Clear all local storage data first
+      console.log('Starting logout process...');
+      
+      // Clear all local storage data first - this is crucial
       await storage.clearAll();
-      console.log('Local storage cleared during logout');
+      console.log('All local storage cleared during logout');
       
       // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out:', error);
+        console.error('Error signing out from Supabase:', error);
+        throw error;
       } else {
-        console.log('Successfully signed out');
+        console.log('Successfully signed out from Supabase');
       }
+      
+      // Force clear session state immediately
+      setSession(null);
+      setUser(null);
+      
     } catch (error) {
       console.error('Error during logout process:', error);
+      throw error;
     }
   };
 

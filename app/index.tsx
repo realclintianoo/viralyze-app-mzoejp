@@ -11,7 +11,7 @@ import { useCallback } from 'react';
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, session } = useAuth();
 
   // Check onboarding status whenever the screen comes into focus
   useFocusEffect(
@@ -19,14 +19,14 @@ export default function Index() {
       if (!authLoading) {
         checkOnboardingStatus();
       }
-    }, [authLoading])
+    }, [authLoading, session]) // Add session as dependency to re-check when auth state changes
   );
 
   useEffect(() => {
     if (!authLoading) {
       checkOnboardingStatus();
     }
-  }, [authLoading]);
+  }, [authLoading, session]); // Add session as dependency
 
   const checkOnboardingStatus = async () => {
     try {
@@ -38,6 +38,10 @@ export default function Index() {
       // Check if user has completed onboarding
       const onboardingData = await storage.getOnboardingData();
       console.log('Onboarding data found:', !!onboardingData);
+      console.log('User session:', !!session);
+      console.log('Auth loading:', authLoading);
+      
+      // Only set onboarding as completed if we have the data
       setHasCompletedOnboarding(!!onboardingData);
     } catch (error) {
       console.error('Error checking onboarding status:', error);
@@ -58,9 +62,11 @@ export default function Index() {
     );
   }
 
+  // If user has completed onboarding, go to dashboard
   if (hasCompletedOnboarding) {
     return <Redirect href="/tabs/chat" />;
   }
 
+  // Otherwise, go to onboarding
   return <Redirect href="/onboarding" />;
 }

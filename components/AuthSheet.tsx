@@ -74,7 +74,7 @@ const AuthSheet: React.FC<AuthSheetProps> = ({ visible, onClose, onContinueAsGue
           );
         } else {
           showToast('Welcome back!', 'success');
-          onClose();
+          onContinueAsGuest(); // This will trigger the success callback
         }
       }
     } catch (error: any) {

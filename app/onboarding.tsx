@@ -14,6 +14,8 @@ import Slider from '@react-native-community/slider';
 import { commonStyles, colors } from '../styles/commonStyles';
 import { storage } from '../utils/storage';
 import { OnboardingData } from '../types';
+import AuthSheet from '../components/AuthSheet';
+import { Ionicons } from '@expo/vector-icons';
 
 const PLATFORMS = [
   'TikTok',
@@ -38,12 +40,13 @@ const NICHES = [
 ];
 
 export default function Onboarding() {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0); // Start with step 0 for auth
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectedNiche, setSelectedNiche] = useState('');
   const [customNiche, setCustomNiche] = useState('');
   const [followers, setFollowers] = useState(1000);
   const [goal, setGoal] = useState('');
+  const [showAuthSheet, setShowAuthSheet] = useState(false);
 
   // Clear any existing data when onboarding starts (fresh start)
   React.useEffect(() => {
@@ -93,6 +96,8 @@ export default function Onboarding() {
 
   const canProceed = () => {
     switch (step) {
+      case 0:
+        return true; // Auth step always allows proceeding
       case 1:
         return selectedPlatforms.length > 0;
       case 2:
@@ -110,6 +115,19 @@ export default function Onboarding() {
     } else {
       handleComplete();
     }
+  };
+
+  const handleSignIn = () => {
+    setShowAuthSheet(true);
+  };
+
+  const handleContinueAsGuest = () => {
+    setStep(1); // Move to platform selection
+  };
+
+  const handleAuthSuccess = () => {
+    setShowAuthSheet(false);
+    setStep(1); // Move to platform selection after successful auth
   };
 
   const handleComplete = async () => {
@@ -131,6 +149,66 @@ export default function Onboarding() {
       Alert.alert('Error', 'Failed to save your information. Please try again.');
     }
   };
+
+  const renderStep0 = () => (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ 
+        width: 120, 
+        height: 120, 
+        borderRadius: 30, 
+        backgroundColor: colors.accent, 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        marginBottom: 32,
+        shadowColor: colors.accent,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 16,
+      }}>
+        <Ionicons name="trending-up" size={60} color={colors.white} />
+      </View>
+      
+      <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 16 }]}>
+        Welcome to VIRALYZE
+      </Text>
+      <Text style={[commonStyles.smallText, { textAlign: 'center', marginBottom: 48, lineHeight: 20 }]}>
+        Your AI growth coach for social media success.{'\n'}
+        Let&apos;s get you set up in just a few steps.
+      </Text>
+
+      <View style={{ width: '100%', gap: 16 }}>
+        <TouchableOpacity
+          style={[commonStyles.button, { backgroundColor: colors.accent }]}
+          onPress={handleSignIn}
+        >
+          <Text style={[commonStyles.buttonText, { color: colors.white }]}>
+            Sign In / Create Account
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[commonStyles.secondaryButton]}
+          onPress={handleContinueAsGuest}
+        >
+          <Text style={commonStyles.secondaryButtonText}>
+            Continue as Guest
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={[commonStyles.smallText, { 
+        textAlign: 'center', 
+        marginTop: 24, 
+        opacity: 0.7,
+        fontSize: 12,
+        lineHeight: 16 
+      }]}>
+        Guest mode stores data locally only.{'\n'}
+        Sign in to sync across devices.
+      </Text>
+    </View>
+  );
 
   const renderStep1 = () => (
     <View style={{ flex: 1 }}>
@@ -239,64 +317,76 @@ export default function Onboarding() {
       <View style={commonStyles.container}>
         <ScrollView style={commonStyles.content} showsVerticalScrollIndicator={false}>
           <View style={{ paddingTop: 40, paddingBottom: 120 }}>
-            <View style={[commonStyles.row, commonStyles.spaceBetween, { marginBottom: 32 }]}>
-              <Text style={[commonStyles.text, { color: colors.accent }]}>
-                Step {step} of 3
-              </Text>
-              <View style={[commonStyles.row, { gap: 8 }]}>
-                {[1, 2, 3].map(i => (
-                  <View
-                    key={i}
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      backgroundColor: i <= step ? colors.accent : colors.border,
-                    }}
-                  />
-                ))}
+            {step > 0 && (
+              <View style={[commonStyles.row, commonStyles.spaceBetween, { marginBottom: 32 }]}>
+                <Text style={[commonStyles.text, { color: colors.accent }]}>
+                  Step {step} of 3
+                </Text>
+                <View style={[commonStyles.row, { gap: 8 }]}>
+                  {[1, 2, 3].map(i => (
+                    <View
+                      key={i}
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: i <= step ? colors.accent : colors.border,
+                      }}
+                    />
+                  ))}
+                </View>
               </View>
-            </View>
+            )}
 
+            {step === 0 && renderStep0()}
             {step === 1 && renderStep1()}
             {step === 2 && renderStep2()}
             {step === 3 && renderStep3()}
           </View>
         </ScrollView>
 
-        <View style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: colors.background,
-          padding: 16,
-          paddingBottom: 32,
-        }}>
-          <View style={[commonStyles.row, { gap: 12 }]}>
-            {step > 1 && (
+        {step > 0 && (
+          <View style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: colors.background,
+            padding: 16,
+            paddingBottom: 32,
+          }}>
+            <View style={[commonStyles.row, { gap: 12 }]}>
+              {step > 1 && (
+                <TouchableOpacity
+                  style={[commonStyles.secondaryButton, { flex: 1 }]}
+                  onPress={() => setStep(step - 1)}
+                >
+                  <Text style={commonStyles.secondaryButtonText}>Back</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
-                style={[commonStyles.secondaryButton, { flex: 1 }]}
-                onPress={() => setStep(step - 1)}
+                style={[
+                  commonStyles.button,
+                  { flex: 1, opacity: canProceed() ? 1 : 0.5 },
+                ]}
+                onPress={handleNext}
+                disabled={!canProceed()}
               >
-                <Text style={commonStyles.secondaryButtonText}>Back</Text>
+                <Text style={commonStyles.buttonText}>
+                  {step === 3 ? 'Get Started' : 'Next'}
+                </Text>
               </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[
-                commonStyles.button,
-                { flex: 1, opacity: canProceed() ? 1 : 0.5 },
-              ]}
-              onPress={handleNext}
-              disabled={!canProceed()}
-            >
-              <Text style={commonStyles.buttonText}>
-                {step === 3 ? 'Get Started' : 'Next'}
-              </Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
       </View>
+
+      {/* Auth Sheet */}
+      <AuthSheet
+        visible={showAuthSheet}
+        onClose={() => setShowAuthSheet(false)}
+        onContinueAsGuest={handleAuthSuccess}
+      />
     </SafeAreaView>
   );
 }

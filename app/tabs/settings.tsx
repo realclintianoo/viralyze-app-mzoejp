@@ -309,7 +309,17 @@ export default function SettingsScreen() {
   const handleLogoutConfirm = async () => {
     try {
       setShowLogoutModal(false);
+      console.log('User confirmed logout, starting logout process...');
+      
+      // Sign out and clear all data
       await signOut();
+      
+      // Clear local state
+      setProfile(null);
+      setQuota({ text: 0, image: 0 });
+      
+      console.log('Logout completed, navigating to root...');
+      
       // Navigate back to the root to trigger the index screen check
       router.replace('/');
     } catch (error) {
@@ -413,34 +423,6 @@ export default function SettingsScreen() {
               subtitle={user ? user.email : 'Using as guest'}
               onPress={user ? handleSignOut : undefined}
               index={6}
-            />
-            
-            {/* Debug: Test Logout (for development) */}
-            <PremiumSettingCard
-              icon="bug-outline"
-              title="Test Logout Flow"
-              subtitle="Clear data and restart onboarding"
-              onPress={() => {
-                Alert.alert(
-                  'Test Logout',
-                  'This will clear all data and restart the onboarding flow.',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { 
-                      text: 'Test', 
-                      onPress: async () => {
-                        try {
-                          await storage.clearAll();
-                          router.replace('/');
-                        } catch (error) {
-                          console.error('Error during test logout:', error);
-                        }
-                      }
-                    },
-                  ]
-                );
-              }}
-              index={7}
             />
           </View>
         </ScrollView>

@@ -159,14 +159,29 @@ export const storage = {
   // Clear all data
   async clearAll(): Promise<void> {
     try {
+      console.log('Clearing all storage data...');
+      
+      // Get all keys and remove them to ensure complete cleanup
+      const allKeys = await AsyncStorage.getAllKeys();
+      console.log('Found storage keys:', allKeys);
+      
+      if (allKeys.length > 0) {
+        await AsyncStorage.multiRemove(allKeys);
+        console.log('All storage keys cleared');
+      }
+      
+      // Also explicitly clear our known keys as backup
       await AsyncStorage.multiRemove([
         KEYS.SAVED_ITEMS,
         KEYS.QUOTA_USAGE,
         KEYS.ONBOARDING_DATA,
         KEYS.CHAT_MESSAGES,
       ]);
+      
+      console.log('Storage cleared successfully');
     } catch (error) {
       console.log('Error clearing storage:', error);
+      throw error;
     }
   },
 
