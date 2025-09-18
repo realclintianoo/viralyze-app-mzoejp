@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { OnboardingData } from '../types';
 import { storage } from '../utils/storage';
-import { useAuth } from './AuthContext';
 import { 
   getPersonalizationTheme, 
   getFollowerTier, 
@@ -57,9 +56,6 @@ export const PersonalizationProvider: React.FC<{ children: React.ReactNode }> = 
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [chatContext, setChatContext] = useState('');
 
-  // Get auth context to listen for sign out events
-  const { user, session } = useAuth();
-
   const updatePersonalization = useCallback((newProfile: OnboardingData | null, username?: string) => {
     console.log('🎨 Updating personalization with profile:', newProfile);
     
@@ -107,17 +103,9 @@ export const PersonalizationProvider: React.FC<{ children: React.ReactNode }> = 
     }
   }, [updatePersonalization]);
 
-  // Listen for auth state changes to clear personalization on sign out
   useEffect(() => {
-    if (!user && !session) {
-      // User has signed out, clear personalization immediately
-      console.log('🎨 User signed out, clearing personalization state');
-      updatePersonalization(null);
-    } else if (user || session) {
-      // User is signed in or session exists, load personalization
-      loadPersonalization();
-    }
-  }, [user, session, updatePersonalization, loadPersonalization]);
+    loadPersonalization();
+  }, [loadPersonalization]);
 
   const updateProfile = async (newProfile: OnboardingData) => {
     try {
@@ -133,15 +121,10 @@ export const PersonalizationProvider: React.FC<{ children: React.ReactNode }> = 
   const clearPersonalization = async () => {
     try {
       console.log('🎨 Clearing personalization...');
-      // Clear state first for immediate UI update
-      updatePersonalization(null);
-      // Then clear storage
       await storage.clearOnboardingData();
-      console.log('✅ Personalization cleared successfully');
+      updatePersonalization(null);
     } catch (error) {
       console.error('❌ Error clearing personalization:', error);
-      // Ensure state is cleared even if storage fails
-      updatePersonalization(null);
       throw error;
     }
   };

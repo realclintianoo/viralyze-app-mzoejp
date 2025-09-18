@@ -111,7 +111,7 @@ function PremiumResultCard({ result, index, type, onCopy, onSave, onRefine, grad
     opacity.value = withDelay(delay, withTiming(1, { duration: 600 }));
     scale.value = withDelay(delay, withSpring(1, { damping: 12, stiffness: 120 }));
     translateY.value = withDelay(delay, withSpring(0, { damping: 15, stiffness: 100 }));
-  }, [index, opacity, scale, translateY]);
+  }, [index]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -209,15 +209,15 @@ function PremiumResultCard({ result, index, type, onCopy, onSave, onRefine, grad
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 8,
-                backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                backgroundColor: colors.glassBackground,
                 paddingHorizontal: 16,
                 paddingVertical: 10,
                 borderRadius: 12,
                 borderWidth: 1,
-                borderColor: 'rgba(34, 197, 94, 0.4)',
-                shadowColor: colors.success,
+                borderColor: colors.glassBorder,
+                shadowColor: colors.neuDark,
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
+                shadowOpacity: 0.2,
                 shadowRadius: 8,
                 elevation: 6,
               }}
@@ -289,7 +289,7 @@ export default function ToolScreen() {
     
     contentOpacity.value = withDelay(200, withTiming(1, { duration: 800 }));
     contentTranslateY.value = withDelay(200, withSpring(0, { damping: 12, stiffness: 120 }));
-  }, [headerOpacity, headerTranslateY, contentOpacity, contentTranslateY]);
+  }, []);
 
   const loadProfile = async () => {
     try {
@@ -355,54 +355,19 @@ export default function ToolScreen() {
 
   const handleSave = async (content: string, index: number) => {
     try {
-      // Determine the correct type based on the tool
-      const toolTypeMap: Record<string, any> = {
-        'script-generator': 'script',
-        'hook-generator': 'hook',
-        'caption-generator': 'caption',
-        'calendar': 'calendar',
-        'rewriter': 'rewrite',
-        'image-maker': 'image',
-      };
-
-      const itemType = toolTypeMap[id as string] || 'caption';
-
       await storage.addSavedItem({
         id: Date.now().toString() + index,
-        type: itemType,
-        title: config.type === 'image' 
-          ? `Generated Image ${index + 1}` 
-          : content.substring(0, 50) + (content.length > 50 ? '...' : ''),
-        payload: { 
-          content, 
-          imageUrl: config.type === 'image' ? content : undefined 
-        },
+        type: config.type === 'image' ? 'image' : (id as any) || 'hook',
+        title: config.type === 'image' ? `Generated Image ${index + 1}` : content.substring(0, 50) + '...',
+        payload: { content, imageUrl: config.type === 'image' ? content : undefined },
         created_at: new Date().toISOString(),
       });
       
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      // Show success alert with option to view saved items
-      Alert.alert(
-        '💾 Saved Successfully!',
-        'Your content has been saved to your collection.',
-        [
-          { text: 'Generate More', style: 'cancel' },
-          { 
-            text: 'View Saved Items', 
-            onPress: () => {
-              // Navigate to the Saved tab using the correct path
-              router.push('/tabs/saved');
-            }
-          },
-        ]
-      );
-      
-      console.log('✅ Content saved successfully:', content.substring(0, 50));
+      Alert.alert('💾 Saved', 'Content saved to your collection');
     } catch (error) {
-      console.log('❌ Error saving content:', error);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Failed to save content. Please try again.');
+      console.log('Error saving content:', error);
+      Alert.alert('Error', 'Failed to save content');
     }
   };
 

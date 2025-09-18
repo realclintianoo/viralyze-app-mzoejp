@@ -11,7 +11,6 @@ import { usePersonalization } from '../../contexts/PersonalizationContext';
 import { useConversations } from '../../contexts/ConversationsContext';
 import { getPersonalizedQuickActions } from '../../utils/personalization';
 import PremiumSidebar from '../../components/PremiumSidebar';
-import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
@@ -99,7 +98,7 @@ const PremiumQuotaPill: React.FC<PremiumQuotaPillProps> = ({ remaining, total })
         true
       );
     }
-  }, [remaining, glowAnim, pulseAnim]);
+  }, [remaining]);
 
   const getColor = () => {
     if (remaining === 0) return '#EF4444';
@@ -154,7 +153,7 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({ visible, profile, welcomeMe
       fadeAnim.value = withTiming(0, { duration: 400 });
       slideAnim.value = withTiming(-30, { duration: 400 });
     }
-  }, [visible, fadeAnim, slideAnim]);
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -251,7 +250,7 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({ action, i
         false
       )
     );
-  }, [index, scale, shimmerAnim]);
+  }, [index]);
 
   const handlePressIn = () => {
     if (!disabled) {
@@ -352,7 +351,7 @@ const SuggestionTiles: React.FC<SuggestionTilesProps> = ({ visible, actions, onA
       fadeAnim.value = withTiming(0, { duration: 300 });
       slideAnim.value = withTiming(20, { duration: 300 });
     }
-  }, [visible, fadeAnim, slideAnim]);
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -444,7 +443,7 @@ export default function ChatScreen() {
         clearTimeout(idleTimer);
       }
     };
-  }, [fadeAnim]);
+  }, []);
 
   useEffect(() => {
     // Show/hide welcome based on conversation state
@@ -586,42 +585,8 @@ export default function ChatScreen() {
 
   const saveMessage = async (messageContent: string) => {
     resetIdleTimer();
-    
-    try {
-      // Save the message content
-      await storage.addSavedItem({
-        id: Date.now().toString(),
-        type: 'caption', // Default to caption for chat messages
-        title: messageContent.substring(0, 50) + (messageContent.length > 50 ? '...' : ''),
-        payload: { content: messageContent },
-        created_at: new Date().toISOString(),
-      });
-      
-      // Provide haptic feedback
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      // Show success alert with option to view saved items
-      Alert.alert(
-        '💾 Saved Successfully!',
-        'Your content has been saved to your collection.',
-        [
-          { text: 'Continue Chatting', style: 'cancel' },
-          { 
-            text: 'View Saved Items', 
-            onPress: () => {
-              // Navigate to the Saved tab using the correct path
-              router.push('/tabs/saved');
-            }
-          },
-        ]
-      );
-      
-      console.log('✅ Message saved successfully:', messageContent.substring(0, 50));
-    } catch (error) {
-      console.error('❌ Error saving message:', error);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Failed to save content. Please try again.');
-    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    console.log('Save message:', messageContent);
   };
 
   const getNicheEmoji = (niche?: string): string => {
@@ -705,16 +670,16 @@ export default function ChatScreen() {
           
           <TouchableOpacity
             style={{
-              backgroundColor: 'rgba(34, 197, 94, 0.2)',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
               borderRadius: 12,
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderWidth: 1,
-              borderColor: 'rgba(34, 197, 94, 0.4)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
             }}
             onPress={() => saveMessage(message.content)}
           >
-            <Text style={[commonStyles.textSmall, { color: colors.success }]}>Save</Text>
+            <Text style={[commonStyles.textSmall, { color: colors.text }]}>Save</Text>
           </TouchableOpacity>
         </View>
       )}
