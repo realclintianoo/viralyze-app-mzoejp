@@ -157,6 +157,7 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
       gaming: '🎮',
       business: '💼',
       lifestyle: '🌟',
+      comedy: '😂',
     };
     
     for (const [key, emoji] of Object.entries(emojiMap)) {
@@ -172,9 +173,9 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
       {
         margin: 16,
         marginTop: 100,
-        padding: 24,
+        padding: 20,
         backgroundColor: colors.glassBackground,
-        borderRadius: 24,
+        borderRadius: 20,
         borderWidth: 1,
         borderColor: colors.glassBorder,
       },
@@ -186,27 +187,27 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        borderRadius: 24,
+        borderRadius: 20,
       }} />
       
       <View style={{ alignItems: 'center', marginBottom: 16 }}>
-        <Text style={{ fontSize: 32, marginBottom: 8 }}>
+        <Text style={{ fontSize: 28, marginBottom: 8 }}>
           {getNicheEmoji()}
         </Text>
-        <Text style={[commonStyles.title, { textAlign: 'center', fontSize: 20 }]}>
+        <Text style={[commonStyles.title, { textAlign: 'center', fontSize: 18, lineHeight: 24 }]}>
           {welcomeMessage}
         </Text>
       </View>
       
       {recommendations.length > 0 && (
         <View>
-          <Text style={[commonStyles.textBold, { marginBottom: 12, color: colors.accent }]}>
+          <Text style={[commonStyles.textBold, { marginBottom: 12, color: colors.accent, fontSize: 14 }]}>
             Personalized for you:
           </Text>
           {recommendations.slice(0, 3).map((rec, index) => (
             <Text key={index} style={[
               commonStyles.textSmall,
-              { marginBottom: 4, color: colors.textSecondary }
+              { marginBottom: 4, color: colors.textSecondary, fontSize: 13 }
             ]}>
               • {rec}
             </Text>
@@ -225,14 +226,25 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
 }) => {
   const scaleAnim = useSharedValue(1);
   const fadeAnim = useSharedValue(0);
+  const glowAnim = useSharedValue(0);
   
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scaleAnim.value }],
     opacity: fadeAnim.value,
+    shadowOpacity: 0.2 + glowAnim.value * 0.3,
+    shadowRadius: 8 + glowAnim.value * 4,
   }));
 
   useEffect(() => {
     fadeAnim.value = withDelay(index * 100, withTiming(1, { duration: 400 }));
+    glowAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 2000 }),
+        withTiming(0, { duration: 2000 })
+      ),
+      -1,
+      true
+    );
   }, [index]);
 
   const handlePressIn = () => {
@@ -250,18 +262,35 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
     }
   };
 
+  // Map action IDs to proper Ionicons
+  const getIconName = (actionId: string): keyof typeof Ionicons.glyphMap => {
+    const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+      hooks: 'fish-outline',
+      ideas: 'bulb-outline',
+      captions: 'create-outline',
+      calendar: 'calendar-outline',
+      rewriter: 'refresh-outline',
+    };
+    return iconMap[actionId] || 'star-outline';
+  };
+
   return (
-    <Animated.View style={[{ flex: 1, margin: 4 }, animatedStyle]}>
+    <Animated.View style={[{ flex: 1, margin: 3 }, animatedStyle]}>
       <TouchableOpacity
         style={[
           {
             backgroundColor: disabled ? colors.backgroundSecondary : colors.glassBackgroundStrong,
-            borderRadius: 16,
-            padding: 16,
+            borderRadius: 12,
+            padding: 12,
             alignItems: 'center',
             borderWidth: 1,
             borderColor: disabled ? colors.backgroundTertiary : colors.glassBorderStrong,
             opacity: disabled ? 0.5 : 1,
+            minHeight: 70,
+            justifyContent: 'center',
+            shadowColor: colors.accent,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 8,
           }
         ]}
         onPressIn={handlePressIn}
@@ -270,21 +299,35 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
         disabled={disabled}
         activeOpacity={0.8}
       >
+        <LinearGradient
+          colors={disabled ? [colors.backgroundSecondary, colors.backgroundSecondary] : [colors.gradientStart, colors.gradientEnd]}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: 12,
+            opacity: 0.1,
+          }}
+        />
+        
         <Ionicons 
-          name={action.icon} 
-          size={20} 
+          name={getIconName(action.id)} 
+          size={18} 
           color={disabled ? colors.textTertiary : colors.accent} 
-          style={{ marginBottom: 8 }}
+          style={{ marginBottom: 6 }}
         />
         <Text style={[
           commonStyles.textBold,
           { 
-            fontSize: 12, 
+            fontSize: 11, 
             textAlign: 'center',
-            color: disabled ? colors.textTertiary : colors.text
+            color: disabled ? colors.textTertiary : colors.text,
+            lineHeight: 14,
           }
         ]}>
-          {action.label}
+          {action.title}
         </Text>
       </TouchableOpacity>
     </Animated.View>
@@ -547,6 +590,7 @@ export default function ChatScreen() {
       gaming: '🎮',
       business: '💼',
       lifestyle: '🌟',
+      comedy: '😂',
     };
     
     for (const [key, emoji] of Object.entries(emojiMap)) {
@@ -562,41 +606,81 @@ export default function ChatScreen() {
       <View
         key={message.id}
         style={[
-          commonStyles.messageContainer,
-          isUser ? commonStyles.userMessage : commonStyles.assistantMessage,
+          {
+            flexDirection: 'row',
+            marginVertical: 8,
+            marginHorizontal: 16,
+            alignItems: 'flex-end',
+          },
+          isUser && { justifyContent: 'flex-end' }
         ]}
       >
         {!isUser && (
-          <View style={commonStyles.messageAvatar}>
-            <Text style={{ fontSize: 16 }}>{getNicheEmoji()}</Text>
+          <View style={{
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            backgroundColor: colors.glassBackgroundStrong,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 8,
+            borderWidth: 1,
+            borderColor: colors.glassBorderStrong,
+          }}>
+            <Text style={{ fontSize: 14 }}>{getNicheEmoji()}</Text>
           </View>
         )}
         
         <View style={[
-          commonStyles.messageBubble,
-          isUser ? commonStyles.userBubble : commonStyles.assistantBubble,
+          {
+            maxWidth: '75%',
+            backgroundColor: isUser ? colors.accent : colors.glassBackgroundStrong,
+            borderRadius: 16,
+            padding: 12,
+            borderWidth: 1,
+            borderColor: isUser ? colors.accent : colors.glassBorderStrong,
+          },
+          isUser && {
+            borderTopRightRadius: 4,
+          },
+          !isUser && {
+            borderTopLeftRadius: 4,
+          }
         ]}>
           <Text style={[
-            commonStyles.messageText,
-            isUser ? commonStyles.userMessageText : commonStyles.assistantMessageText,
+            {
+              fontSize: 15,
+              lineHeight: 20,
+              color: isUser ? colors.white : colors.text,
+            }
           ]}>
             {message.content}
           </Text>
           
           {!isUser && (
-            <View style={commonStyles.messageActions}>
+            <View style={{
+              flexDirection: 'row',
+              marginTop: 8,
+              justifyContent: 'flex-end',
+            }}>
               <TouchableOpacity
-                style={commonStyles.messageAction}
+                style={{
+                  padding: 4,
+                  marginLeft: 8,
+                }}
                 onPress={() => copyMessage(message.content)}
               >
-                <Ionicons name="copy-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="copy-outline" size={14} color={colors.textSecondary} />
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={commonStyles.messageAction}
+                style={{
+                  padding: 4,
+                  marginLeft: 8,
+                }}
                 onPress={() => saveMessage(message.content)}
               >
-                <Ionicons name="bookmark-outline" size={16} color={colors.textSecondary} />
+                <Ionicons name="bookmark-outline" size={14} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
           )}
@@ -615,20 +699,39 @@ export default function ChatScreen() {
         {/* Header */}
         <View style={commonStyles.header}>
           <TouchableOpacity
-            style={commonStyles.headerButton}
+            style={{
+              padding: 8,
+              borderRadius: 12,
+              backgroundColor: colors.glassBackgroundStrong,
+              borderWidth: 1,
+              borderColor: colors.glassBorderStrong,
+            }}
             onPress={() => setSidebarVisible(true)}
           >
-            <Ionicons name="menu" size={24} color={colors.text} />
+            <Ionicons name="menu" size={20} color={colors.text} />
           </TouchableOpacity>
           
-          <Text style={commonStyles.headerTitle}>VIRALYZE</Text>
+          <Text style={[commonStyles.headerTitle, { fontSize: 24 }]}>VIRALYZE</Text>
           
-          <View style={commonStyles.headerRight}>
-            <TouchableOpacity style={commonStyles.headerButton}>
-              <Ionicons name="notifications-outline" size={24} color={colors.text} />
+          <View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity style={{
+              padding: 8,
+              borderRadius: 12,
+              backgroundColor: colors.glassBackgroundStrong,
+              borderWidth: 1,
+              borderColor: colors.glassBorderStrong,
+              marginRight: 8,
+            }}>
+              <Ionicons name="notifications-outline" size={20} color={colors.text} />
             </TouchableOpacity>
-            <TouchableOpacity style={commonStyles.headerButton}>
-              <Ionicons name="person-circle-outline" size={24} color={colors.text} />
+            <TouchableOpacity style={{
+              padding: 8,
+              borderRadius: 12,
+              backgroundColor: colors.glassBackgroundStrong,
+              borderWidth: 1,
+              borderColor: colors.glassBorderStrong,
+            }}>
+              <Ionicons name="person-circle-outline" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -660,13 +763,41 @@ export default function ChatScreen() {
 
             {/* Loading Indicator */}
             {isLoading && (
-              <View style={commonStyles.messageContainer}>
-                <View style={commonStyles.messageAvatar}>
-                  <Text style={{ fontSize: 16 }}>{getNicheEmoji()}</Text>
+              <View style={{
+                flexDirection: 'row',
+                marginVertical: 8,
+                marginHorizontal: 16,
+                alignItems: 'flex-end',
+              }}>
+                <View style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: colors.glassBackgroundStrong,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 8,
+                  borderWidth: 1,
+                  borderColor: colors.glassBorderStrong,
+                }}>
+                  <Text style={{ fontSize: 14 }}>{getNicheEmoji()}</Text>
                 </View>
-                <View style={[commonStyles.messageBubble, commonStyles.assistantBubble]}>
+                <View style={{
+                  backgroundColor: colors.glassBackgroundStrong,
+                  borderRadius: 16,
+                  borderTopLeftRadius: 4,
+                  padding: 12,
+                  borderWidth: 1,
+                  borderColor: colors.glassBorderStrong,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}>
                   <ActivityIndicator size="small" color={colors.accent} />
-                  <Text style={[commonStyles.messageText, { marginLeft: 8 }]}>
+                  <Text style={{
+                    marginLeft: 8,
+                    fontSize: 15,
+                    color: colors.text,
+                  }}>
                     Thinking...
                   </Text>
                 </View>
@@ -683,10 +814,29 @@ export default function ChatScreen() {
           />
 
           {/* Input Area */}
-          <View style={commonStyles.inputContainer}>
-            <View style={commonStyles.inputWrapper}>
+          <View style={{
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            backgroundColor: colors.background,
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'flex-end',
+              backgroundColor: colors.glassBackgroundStrong,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: colors.glassBorderStrong,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+            }}>
               <TextInput
-                style={commonStyles.textInput}
+                style={{
+                  flex: 1,
+                  fontSize: 16,
+                  color: colors.text,
+                  maxHeight: 100,
+                  paddingVertical: 0,
+                }}
                 placeholder={`Ask me anything about ${profile?.niche || 'content creation'}...`}
                 placeholderTextColor={colors.textSecondary}
                 value={inputText}
@@ -697,18 +847,24 @@ export default function ChatScreen() {
               />
               
               <TouchableOpacity
-                style={[
-                  commonStyles.sendButton,
-                  (!inputText.trim() || isLoading || isQuotaExceeded) && { opacity: 0.5 }
-                ]}
+                style={{
+                  marginLeft: 12,
+                  opacity: (!inputText.trim() || isLoading || isQuotaExceeded) ? 0.5 : 1,
+                }}
                 onPress={() => sendMessage(inputText)}
                 disabled={!inputText.trim() || isLoading || isQuotaExceeded}
               >
                 <LinearGradient
                   colors={[colors.gradientStart, colors.gradientEnd]}
-                  style={commonStyles.sendButtonGradient}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
                 >
-                  <Ionicons name="arrow-up" size={20} color={colors.white} />
+                  <Ionicons name="arrow-up" size={18} color={colors.white} />
                 </LinearGradient>
               </TouchableOpacity>
             </View>

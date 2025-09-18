@@ -19,6 +19,13 @@ export interface FollowerTier {
   color: string;
 }
 
+export interface QuickAction {
+  id: string;
+  title: string;
+  icon: string;
+  gradient: string[];
+}
+
 export const NICHE_THEMES: Record<string, PersonalizationTheme> = {
   fitness: {
     primary: '#22C55E',
@@ -89,6 +96,13 @@ export const NICHE_THEMES: Record<string, PersonalizationTheme> = {
     glow: 'rgba(249, 115, 22, 0.6)',
     gradient: ['#F97316', '#EA580C'],
     emoji: '🌟',
+  },
+  comedy: {
+    primary: '#FBBF24',
+    secondary: '#F59E0B',
+    glow: 'rgba(251, 191, 36, 0.6)',
+    gradient: ['#FBBF24', '#F59E0B'],
+    emoji: '😂',
   },
   default: {
     primary: colors.accent,
@@ -236,6 +250,12 @@ export const getPersonalizedRecommendations = (profile: OnboardingData | null): 
       'Create hooks about music trends',
       'Plan music discovery content'
     );
+  } else if (niche.includes('comedy')) {
+    recommendations.push(
+      'Create Comedy content that resonates',
+      'Generate hooks for Comedy audience',
+      'Plan consistent Comedy content calendar'
+    );
   } else {
     recommendations.push(
       `Create ${profile.niche} content that resonates`,
@@ -282,65 +302,222 @@ export const getNicheEmoji = (niche?: string): string => {
   return theme.emoji;
 };
 
-export const getPersonalizedQuickActions = (profile: OnboardingData | null) => {
-  const baseActions = [
-    { id: 'hooks', title: 'Hooks', icon: '🎣' },
-    { id: 'ideas', title: 'Ideas', icon: '💡' },
-    { id: 'captions', title: 'Captions', icon: '✍️' },
+export const getPersonalizedQuickActions = (profile: OnboardingData | null): QuickAction[] => {
+  const baseActions: QuickAction[] = [
+    { 
+      id: 'hooks', 
+      title: 'Hooks', 
+      icon: 'fish-outline',
+      gradient: [colors.gradientStart, colors.gradientEnd]
+    },
+    { 
+      id: 'ideas', 
+      title: 'Ideas', 
+      icon: 'bulb-outline',
+      gradient: [colors.gradientStart, colors.gradientEnd]
+    },
+    { 
+      id: 'captions', 
+      title: 'Captions', 
+      icon: 'create-outline',
+      gradient: [colors.gradientStart, colors.gradientEnd]
+    },
   ];
   
   if (!profile) return baseActions;
   
   const niche = profile.niche?.toLowerCase() || '';
+  const theme = getPersonalizationTheme(profile.niche);
   
   // Customize actions based on niche
   if (niche.includes('fitness')) {
     return [
-      { id: 'hooks', title: 'Workout Hooks', icon: '💪' },
-      { id: 'ideas', title: 'Fitness Ideas', icon: '🏋️' },
-      { id: 'captions', title: 'Motivation', icon: '🔥' },
+      { 
+        id: 'hooks', 
+        title: 'Workout Hooks', 
+        icon: 'fitness-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'ideas', 
+        title: 'Fitness Ideas', 
+        icon: 'barbell-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'captions', 
+        title: 'Motivation', 
+        icon: 'flame-outline',
+        gradient: theme.gradient
+      },
     ];
   } else if (niche.includes('tech')) {
     return [
-      { id: 'hooks', title: 'Tech Hooks', icon: '💻' },
-      { id: 'ideas', title: 'Tech Reviews', icon: '📱' },
-      { id: 'captions', title: 'Tutorials', icon: '🛠️' },
+      { 
+        id: 'hooks', 
+        title: 'Tech Hooks', 
+        icon: 'laptop-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'ideas', 
+        title: 'Tech Reviews', 
+        icon: 'phone-portrait-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'captions', 
+        title: 'Tutorials', 
+        icon: 'construct-outline',
+        gradient: theme.gradient
+      },
     ];
   } else if (niche.includes('food')) {
     return [
-      { id: 'hooks', title: 'Recipe Hooks', icon: '🍳' },
-      { id: 'ideas', title: 'Food Ideas', icon: '🍕' },
-      { id: 'captions', title: 'Food Captions', icon: '📸' },
+      { 
+        id: 'hooks', 
+        title: 'Recipe Hooks', 
+        icon: 'restaurant-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'ideas', 
+        title: 'Food Ideas', 
+        icon: 'pizza-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'captions', 
+        title: 'Food Captions', 
+        icon: 'camera-outline',
+        gradient: theme.gradient
+      },
     ];
   } else if (niche.includes('fashion')) {
     return [
-      { id: 'hooks', title: 'Style Hooks', icon: '👗' },
-      { id: 'ideas', title: 'Fashion Ideas', icon: '✨' },
-      { id: 'captions', title: 'Outfit Posts', icon: '📷' },
+      { 
+        id: 'hooks', 
+        title: 'Style Hooks', 
+        icon: 'shirt-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'ideas', 
+        title: 'Fashion Ideas', 
+        icon: 'sparkles-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'captions', 
+        title: 'Outfit Posts', 
+        icon: 'camera-outline',
+        gradient: theme.gradient
+      },
     ];
   } else if (niche.includes('music')) {
     return [
-      { id: 'hooks', title: 'Music Hooks', icon: '🎵' },
-      { id: 'ideas', title: 'Song Reviews', icon: '🎧' },
-      { id: 'captions', title: 'Music Posts', icon: '🎤' },
+      { 
+        id: 'hooks', 
+        title: 'Music Hooks', 
+        icon: 'musical-notes-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'ideas', 
+        title: 'Song Reviews', 
+        icon: 'headset-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'captions', 
+        title: 'Music Posts', 
+        icon: 'mic-outline',
+        gradient: theme.gradient
+      },
     ];
   } else if (niche.includes('travel')) {
     return [
-      { id: 'hooks', title: 'Travel Hooks', icon: '✈️' },
-      { id: 'ideas', title: 'Trip Ideas', icon: '🗺️' },
-      { id: 'captions', title: 'Travel Posts', icon: '📍' },
+      { 
+        id: 'hooks', 
+        title: 'Travel Hooks', 
+        icon: 'airplane-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'ideas', 
+        title: 'Trip Ideas', 
+        icon: 'map-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'captions', 
+        title: 'Travel Posts', 
+        icon: 'location-outline',
+        gradient: theme.gradient
+      },
     ];
   } else if (niche.includes('business')) {
     return [
-      { id: 'hooks', title: 'Biz Hooks', icon: '💼' },
-      { id: 'ideas', title: 'Growth Tips', icon: '📈' },
-      { id: 'captions', title: 'Pro Content', icon: '🎯' },
+      { 
+        id: 'hooks', 
+        title: 'Biz Hooks', 
+        icon: 'briefcase-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'ideas', 
+        title: 'Growth Tips', 
+        icon: 'trending-up-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'captions', 
+        title: 'Pro Content', 
+        icon: 'target-outline',
+        gradient: theme.gradient
+      },
     ];
   } else if (niche.includes('lifestyle')) {
     return [
-      { id: 'hooks', title: 'Life Hooks', icon: '🌟' },
-      { id: 'ideas', title: 'Daily Ideas', icon: '☀️' },
-      { id: 'captions', title: 'Life Posts', icon: '💫' },
+      { 
+        id: 'hooks', 
+        title: 'Life Hooks', 
+        icon: 'star-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'ideas', 
+        title: 'Daily Ideas', 
+        icon: 'sunny-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'captions', 
+        title: 'Life Posts', 
+        icon: 'sparkles-outline',
+        gradient: theme.gradient
+      },
+    ];
+  } else if (niche.includes('comedy')) {
+    return [
+      { 
+        id: 'hooks', 
+        title: 'Comedy Hooks', 
+        icon: 'happy-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'ideas', 
+        title: 'Funny Ideas', 
+        icon: 'chatbubble-ellipses-outline',
+        gradient: theme.gradient
+      },
+      { 
+        id: 'captions', 
+        title: 'Humor Posts', 
+        icon: 'thumbs-up-outline',
+        gradient: theme.gradient
+      },
     ];
   }
   
