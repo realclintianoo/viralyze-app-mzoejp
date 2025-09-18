@@ -63,7 +63,7 @@ const PremiumConfirmModal: React.FC<PremiumConfirmModalProps> = ({
       fadeAnim.value = withTiming(0, { duration: 200 });
       scaleAnim.value = withTiming(0.8, { duration: 200 });
     }
-  }, [visible, fadeAnim, scaleAnim]);
+  }, [visible]);
 
   const handleConfirm = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

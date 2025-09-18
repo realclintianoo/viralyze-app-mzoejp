@@ -72,7 +72,7 @@ const BenefitItem: React.FC<BenefitItemProps> = ({ icon, text, index }) => {
         true
       )
     );
-  }, [index, slideAnim, fadeAnim, glowAnim]);
+  }, [index]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: slideAnim.value }],
@@ -166,7 +166,7 @@ const ToggleOption: React.FC<ToggleOptionProps> = ({
     } else {
       glowAnim.value = withTiming(0, { duration: 300 });
     }
-  }, [isSelected, glowAnim]);
+  }, [isSelected]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scaleAnim.value }],
@@ -352,7 +352,7 @@ export default function PaywallScreen() {
     );
     
     initializeInAppPurchases();
-  }, [fadeAnim, slideAnim, logoGlowAnim]);
+  }, []);
 
   const initializeInAppPurchases = async () => {
     try {

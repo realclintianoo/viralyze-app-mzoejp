@@ -3,7 +3,7 @@ import { useConversations } from '../../contexts/ConversationsContext';
 import { usePersonalization } from '../../contexts/PersonalizationContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { BlurView } from 'expo-blur';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as Haptics from 'expo-haptics';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import Animated, {
@@ -121,7 +121,7 @@ const InputModeToggle: React.FC<InputModeToggleProps> = ({ modes, activeMode, on
       -1,
       true
     );
-  }, [activeMode, slideAnim, glowAnim]);
+  }, [activeMode]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: interpolate(slideAnim.value, [0, 1], [0, 60]) }],
@@ -248,7 +248,7 @@ const PresetPrompts: React.FC<PresetPromptsProps> = ({ visible, prompts, onPromp
       fadeAnim.value = withTiming(0, { duration: 200 });
       slideAnim.value = withTiming(20, { duration: 200 });
     }
-  }, [visible, fadeAnim, slideAnim]);
+  }, [visible]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
@@ -339,7 +339,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
       fadeAnim.value = withTiming(0, { duration: 200 });
       slideAnim.value = withTiming(-50, { duration: 200 });
     }
-  }, [visible, fadeAnim, slideAnim]);
+  }, [visible]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
@@ -780,7 +780,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose }) => {
     } else {
       slideAnim.value = withTiming(100, { duration: 200 });
     }
-  }, [visible, slideAnim]);
+  }, [visible]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: slideAnim.value }],
@@ -927,7 +927,7 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
       fadeAnim.value = withTiming(0, { duration: 300 });
       slideAnim.value = withTiming(-20, { duration: 300 });
     }
-  }, [visible, fadeAnim, slideAnim]);
+  }, [visible]);
 
   const getNicheEmoji = () => {
     if (!profile?.niche) return '👋';
@@ -1060,7 +1060,7 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
       -1,
       true
     );
-  }, [index, fadeAnim, glowAnim, pulseAnim]);
+  }, [index]);
 
   const handlePressIn = () => {
     scaleAnim.value = withSpring(0.92);
@@ -1225,7 +1225,7 @@ const SuggestionTiles: React.FC<SuggestionTilesProps> = ({
       slideAnim.value = withTiming(30, { duration: 300 });
       fadeAnim.value = withTiming(0, { duration: 300 });
     }
-  }, [visible, slideAnim, fadeAnim]);
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -1393,10 +1393,10 @@ export default function ChatScreen() {
     loadInitialData();
     checkSystemHealth();
     checkDailyStreak();
-  }, [fadeAnim, checkDailyStreak]);
+  }, []);
 
   // Check if user has already seen streak popup today
-  const checkDailyStreak = useCallback(async () => {
+  const checkDailyStreak = async () => {
     if (!user) return;
     
     try {
@@ -1438,7 +1438,7 @@ export default function ChatScreen() {
     } catch (error) {
       console.error('❌ Error checking daily streak:', error);
     }
-  }, [user]);
+  };
 
   useEffect(() => {
     if (currentConversation && conversationMessages.length > 0) {
@@ -1446,7 +1446,7 @@ export default function ChatScreen() {
       setShowWelcome(false);
       setShowSuggestions(false);
     }
-  }, [currentConversation, conversationMessages]);
+  }, [currentConversation, conversationMessages.length]);
 
   const resetIdleTimer = () => {
     if (idleTimerRef.current) {
