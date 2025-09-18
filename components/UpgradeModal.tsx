@@ -134,17 +134,19 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ visible, onClose, type }) =
                     Upgrade to Pro
                   </Text>
                   <Text style={[commonStyles.textSmall, { textAlign: 'center', opacity: 0.8 }]}>
-                    You&apos;ve reached your daily limit for {type === 'text' ? 'AI text generation' : 'AI image generation'}
+                    You&apos;ve reached your daily limit of {type === 'text' ? '10 AI text requests' : '1 AI image generation'}
                   </Text>
                 </View>
 
                 {/* Quick Benefits Preview */}
                 <View style={{ marginBottom: 32 }}>
                   {[
-                    'Unlimited AI text & images',
-                    'Priority speed',
+                    'Unlimited AI requests (10 → ∞)',
+                    'All premium tools unlocked',
+                    'Content Calendar & Scheduler',
+                    'Cross-Platform Rewriter',
                     'Guideline Guardian',
-                    'Advanced analytics',
+                    'Advanced Analytics',
                   ].map((feature, index) => (
                     <View
                       key={index}

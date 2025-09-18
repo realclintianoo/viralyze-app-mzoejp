@@ -294,11 +294,14 @@ export default function PaywallScreen() {
   };
 
   const benefits = [
-    { icon: 'infinite-outline' as const, text: 'Unlimited AI text & images' },
-    { icon: 'flash-outline' as const, text: 'Priority speed' },
+    { icon: 'infinite-outline' as const, text: 'Unlimited AI requests (10 → ∞)' },
+    { icon: 'image-outline' as const, text: 'Unlimited AI image generation' },
+    { icon: 'calendar-outline' as const, text: 'Content Calendar & Scheduler' },
+    { icon: 'repeat-outline' as const, text: 'Cross-Platform Rewriter' },
     { icon: 'shield-checkmark-outline' as const, text: 'Guideline Guardian' },
-    { icon: 'analytics-outline' as const, text: 'Advanced analytics' },
-    { icon: 'document-text-outline' as const, text: 'Custom templates' },
+    { icon: 'analytics-outline' as const, text: 'Advanced Analytics & Insights' },
+    { icon: 'flash-outline' as const, text: 'Priority Processing Speed' },
+    { icon: 'cloud-download-outline' as const, text: 'Export to All Platforms' },
   ];
 
   return (

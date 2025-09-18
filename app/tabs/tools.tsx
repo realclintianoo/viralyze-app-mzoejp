@@ -74,6 +74,7 @@ const TOOLS = [
     icon: 'calendar',
     gradient: ['#06B6D4', '#22C55E'],
     type: 'text' as const,
+    isPro: true,
   },
   {
     id: 'rewriter',
@@ -82,6 +83,7 @@ const TOOLS = [
     icon: 'refresh',
     gradient: ['#EC4899', '#06B6D4'],
     type: 'text' as const,
+    isPro: true,
   },
   {
     id: 'guardian',
@@ -99,6 +101,25 @@ const TOOLS = [
     icon: 'image',
     gradient: ['#10B981', '#06B6D4'],
     type: 'image' as const,
+    isPro: true,
+  },
+  {
+    id: 'analytics',
+    title: 'Content Analytics',
+    description: 'Performance insights',
+    icon: 'analytics',
+    gradient: ['#8B5CF6', '#EC4899'],
+    type: 'text' as const,
+    isPro: true,
+  },
+  {
+    id: 'scheduler',
+    title: 'Auto Scheduler',
+    description: 'Smart posting times',
+    icon: 'time',
+    gradient: ['#06B6D4', '#8B5CF6'],
+    type: 'text' as const,
+    isPro: true,
   },
 ];
 
@@ -132,23 +153,23 @@ const PremiumToolCard: React.FC<PremiumToolCardProps> = ({ tool, index, onPress,
 
   const isLowQuota = () => {
     if (!quota) return false;
-    if (tool.type === 'text') return quota.text >= 2;
+    if (tool.type === 'text') return quota.text >= 10;
     if (tool.type === 'image') return quota.image >= 1;
     return false;
   };
 
   const getRemainingUses = () => {
     if (!quota) return 'N/A';
-    if (tool.type === 'text') return `${2 - quota.text}/2`;
+    if (tool.type === 'text') return `${10 - quota.text}/10`;
     if (tool.type === 'image') return `${1 - quota.image}/1`;
     return 'N/A';
   };
 
   const getUsageColor = () => {
     if (!quota) return colors.textSecondary;
-    const remaining = tool.type === 'text' ? 2 - quota.text : 1 - quota.image;
+    const remaining = tool.type === 'text' ? 10 - quota.text : 1 - quota.image;
     if (remaining === 0) return colors.error;
-    if (remaining === 1 && tool.type === 'text') return colors.warning;
+    if (remaining <= 2 && tool.type === 'text') return colors.warning;
     return colors.accent;
   };
 
@@ -263,7 +284,7 @@ const PremiumStatsCard: React.FC<PremiumStatsCardProps> = ({ quota }) => {
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 600 });
     
-    if (quota && (quota.text >= 2 || quota.image >= 1)) {
+    if (quota && (quota.text >= 10 || quota.image >= 1)) {
       pulseAnim.value = withRepeat(
         withSequence(
           withTiming(1.02, { duration: 1000 }),
@@ -311,7 +332,7 @@ const PremiumStatsCard: React.FC<PremiumStatsCardProps> = ({ quota }) => {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <View style={{ flex: 1, marginRight: 8 }}>
           <Text style={[commonStyles.textBold, { color: colors.accent }]}>
-            {quota?.text || 0}/2
+            {quota?.text || 0}/10
           </Text>
           <Text style={[commonStyles.textSmall, { fontSize: 11 }]}>
             Text Requests
@@ -372,7 +393,7 @@ export default function ToolsScreen() {
 
   const handleToolPress = (tool: typeof TOOLS[0]) => {
     // Check quota before proceeding
-    if (tool.type === 'text' && quota && quota.text >= 2) {
+    if (tool.type === 'text' && quota && quota.text >= 10) {
       showUpgradeModal('text');
       return;
     }
@@ -403,7 +424,7 @@ export default function ToolsScreen() {
 
   const showUpgradeModal = (type: 'text' | 'image') => {
     const message = type === 'text' 
-      ? 'You\'ve used all your free AI text requests for today.'
+      ? 'You\'ve used all 10 of your free AI text requests for today.'
       : 'You\'ve used your free AI image request for today.';
       
     Alert.alert(

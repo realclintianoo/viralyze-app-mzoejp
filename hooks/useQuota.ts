@@ -17,7 +17,7 @@ export const useQuota = () => {
   const [quota, setQuota] = useState<QuotaLimits>({
     textRequests: 0,
     imageRequests: 0,
-    maxTextRequests: 2,
+    maxTextRequests: 10,
     maxImageRequests: 1,
     isPro: false,
   });
@@ -31,7 +31,7 @@ export const useQuota = () => {
         setQuota({
           textRequests: localQuota.textRequests,
           imageRequests: localQuota.imageRequests,
-          maxTextRequests: 2,
+          maxTextRequests: 10,
           maxImageRequests: 1,
           isPro: false,
         });
@@ -54,7 +54,7 @@ export const useQuota = () => {
         setQuota({
           textRequests: textUsage,
           imageRequests: imageUsage,
-          maxTextRequests: isPro ? 999999 : 2,
+          maxTextRequests: isPro ? 999999 : 10,
           maxImageRequests: isPro ? 999999 : 1,
           isPro,
         });

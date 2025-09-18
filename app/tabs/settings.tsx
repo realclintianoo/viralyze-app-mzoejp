@@ -344,7 +344,7 @@ const PremiumStatsRow: React.FC<PremiumStatsRowProps> = ({ profile, quota }) => 
       
       <StatCard
         title="AI Requests"
-        value={`${quota.text}/2`}
+        value={`${quota.text}/10`}
         subtitle="Today"
         icon="flash"
         gradient={['rgba(245, 158, 11, 0.15)', 'rgba(251, 191, 36, 0.15)']}
@@ -688,11 +688,11 @@ export default function SettingsScreen() {
             <PremiumActionCard
               icon="flash"
               title="AI Requests"
-              subtitle={`${quota.text}/2 used today`}
+              subtitle={`${quota.text}/10 used today`}
               index={0}
               rightElement={
                 <Text style={[commonStyles.textBold, { color: colors.warning }]}>
-                  {2 - quota.text} left
+                  {10 - quota.text} left
                 </Text>
               }
             />

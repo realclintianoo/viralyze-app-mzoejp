@@ -501,7 +501,7 @@ export default function ChatScreen() {
     resetIdleTimer(); // Reset idle timer on message send
 
     // Check quota
-    if (quota.text >= 2) {
+    if (quota.text >= 10) {
       showUpgradeModal();
       return;
     }
@@ -569,7 +569,7 @@ export default function ChatScreen() {
   const showUpgradeModal = () => {
     Alert.alert(
       'Daily Limit Reached',
-      'You\'ve used all your free AI requests for today. Upgrade to Pro for unlimited access!',
+      'You\'ve used all 10 of your free AI requests for today. Upgrade to Pro for unlimited access!',
       [
         { text: 'Maybe Later', style: 'cancel' },
         { text: 'Upgrade to Pro', onPress: () => console.log('Navigate to paywall') },
@@ -741,7 +741,7 @@ export default function ChatScreen() {
             </View>
             
             {/* Usage Counter Pill */}
-            <PremiumQuotaPill remaining={2 - quota.text} total={2} />
+            <PremiumQuotaPill remaining={10 - quota.text} total={10} />
           </View>
 
           {/* Welcome Block */}
@@ -757,7 +757,7 @@ export default function ChatScreen() {
             visible={showSuggestions}
             actions={personalizedActions}
             onActionPress={handleQuickAction}
-            disabled={quota.text >= 2}
+            disabled={quota.text >= 10}
           />
 
           {/* Messages */}
