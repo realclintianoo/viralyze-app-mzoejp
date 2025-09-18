@@ -15,6 +15,7 @@ import {
 interface PersonalizationContextType {
   profile: OnboardingData | null;
   theme: PersonalizationTheme;
+  themeColors: PersonalizationTheme; // Alias for backward compatibility
   followerTier: FollowerTier;
   welcomeMessage: string;
   recommendations: string[];
@@ -25,9 +26,12 @@ interface PersonalizationContextType {
   refreshPersonalization: () => Promise<void>;
 }
 
+const defaultTheme = { primary: '#22C55E', secondary: '#06B6D4', glow: 'rgba(6, 182, 212, 0.6)', gradient: ['#22C55E', '#06B6D4'], emoji: '🚀' };
+
 const PersonalizationContext = createContext<PersonalizationContextType>({
   profile: null,
-  theme: { primary: '#22C55E', secondary: '#06B6D4', glow: 'rgba(6, 182, 212, 0.6)', gradient: ['#22C55E', '#06B6D4'], emoji: '🚀' },
+  theme: defaultTheme,
+  themeColors: defaultTheme, // Alias for backward compatibility
   followerTier: { id: 'starter', label: 'Starter', min: 0, max: 1000, badge: '🌱', color: '#22C55E' },
   welcomeMessage: 'Welcome back 👋',
   recommendations: [],
@@ -136,6 +140,7 @@ export const PersonalizationProvider: React.FC<{ children: React.ReactNode }> = 
   const value = {
     profile,
     theme,
+    themeColors: theme, // Alias for backward compatibility
     followerTier,
     welcomeMessage,
     recommendations,

@@ -69,7 +69,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({ onEditPress }) => {
       -1,
       false
     );
-  }, []);
+  }, [badgeRotation, cardOpacity, cardScale, glowIntensity, profileImageScale, statsOpacity]);
 
   const loadProfile = async () => {
     try {

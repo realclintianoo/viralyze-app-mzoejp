@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
   const [criticalIssues, setCriticalIssues] = useState<string[]>([]);
   const slideAnim = useState(new Animated.Value(-100))[0];
 
-  const checkSystemOnStartup = async () => {
+  const checkSystemOnStartup = useCallback(async () => {
     try {
       console.log('🚀 Running startup system check...');
       const health = await quickHealthCheck();
@@ -43,11 +43,11 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
       setCriticalIssues(['System check failed to run']);
       showNotification();
     }
-  };
+  }, []);
 
   useEffect(() => {
     checkSystemOnStartup();
-  }, []);
+  }, [checkSystemOnStartup]);
 
   const showNotification = () => {
     setVisible(true);

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -71,7 +71,7 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
   const [systemCheck, setSystemCheck] = useState<SystemCheckResult | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
-  const runCheck = async () => {
+  const runCheck = useCallback(async () => {
     setIsLoading(true);
     try {
       console.log('🔍 Running full system check...');
@@ -84,9 +84,9 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const runQuickCheck = async () => {
+  const runQuickCheck = useCallback(async () => {
     try {
       const health = await quickHealthCheck();
       if (systemCheck) {
@@ -100,7 +100,7 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
     } catch (error) {
       console.log('Quick health check failed:', error);
     }
-  };
+  }, [systemCheck]);
 
   useEffect(() => {
     runCheck();
@@ -108,7 +108,7 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
     // Run periodic checks every 30 seconds
     const interval = setInterval(runQuickCheck, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [runCheck, runQuickCheck]);
 
   const getStatusInfo = () => {
     if (isLoading) {
