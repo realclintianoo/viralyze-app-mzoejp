@@ -11,23 +11,17 @@ const isDevelopmentEnvironment = __DEV__ || Platform.OS === 'web' || !Constants.
 
 if (!isDevelopmentEnvironment) {
   try {
-    // Use dynamic import for conditional loading
-    import('expo-in-app-purchases').then((module) => {
-      InAppPurchases = module.default || module;
-      
-      // Verify the module has the expected API
-      if (InAppPurchases && typeof InAppPurchases.connectAsync === 'function') {
-        isModuleAvailable = true;
-        console.log('✅ expo-in-app-purchases loaded successfully');
-      } else {
-        console.warn('⚠️ expo-in-app-purchases module loaded but missing expected functions');
-        isModuleAvailable = false;
-      }
-    }).catch((error: any) => {
-      console.warn('⚠️ expo-in-app-purchases not available, using mock implementation:', error.message);
+    // Dynamic import to avoid build-time issues
+    InAppPurchases = await import('expo-in-app-purchases');
+    
+    // Verify the module has the expected API
+    if (InAppPurchases && typeof InAppPurchases.connectAsync === 'function') {
+      isModuleAvailable = true;
+      console.log('✅ expo-in-app-purchases loaded successfully');
+    } else {
+      console.warn('⚠️ expo-in-app-purchases module loaded but missing expected functions');
       isModuleAvailable = false;
-      InAppPurchases = null;
-    });
+    }
   } catch (error: any) {
     console.warn('⚠️ expo-in-app-purchases not available, using mock implementation:', error.message);
     isModuleAvailable = false;

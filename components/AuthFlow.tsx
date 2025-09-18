@@ -14,9 +14,9 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -39,145 +39,42 @@ interface AuthFlowProps {
   onSuccess: () => void;
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  container: {
-    width: width * 0.9,
-    maxWidth: 400,
-    backgroundColor: '#1A1F2E',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.2)',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    backgroundColor: '#22C55E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#E6EAF0',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    textAlign: 'center',
-  },
-  form: {
-    marginBottom: 24,
-  },
-  input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#E6EAF0',
-    marginBottom: 16,
-  },
-  button: {
-    backgroundColor: '#22C55E',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0B0F14',
-  },
-  socialButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  socialButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#E6EAF0',
-    marginLeft: 12,
-  },
-  toggleText: {
-    textAlign: 'center',
-    color: '#9CA3AF',
-    marginTop: 16,
-  },
-  toggleLink: {
-    color: '#22C55E',
-    fontWeight: '600',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
-
-export default function AuthFlow({ visible, onClose, onSuccess }: AuthFlowProps) {
-  const { signIn, signUp, signInWithGoogle, signInWithApple } = useAuth();
-  const { showToast } = useToast();
-  
+const AuthFlow: React.FC<AuthFlowProps> = ({ visible, onClose, onSuccess }) => {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const { signIn, signUp } = useAuth();
+  const { showToast } = useToast();
 
   // Animation values
   const backgroundOpacity = useSharedValue(0);
-  const contentTranslateY = useSharedValue(50);
-  const formOpacity = useSharedValue(0);
-  const logoScale = useSharedValue(0.5);
+  const contentTranslateY = useSharedValue(height);
+  const logoScale = useSharedValue(0.8);
   const logoGlow = useSharedValue(0);
+  const formOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
+      // Entrance animations
       backgroundOpacity.value = withTiming(1, { duration: 300 });
-      contentTranslateY.value = withSpring(0);
-      formOpacity.value = withDelay(200, withTiming(1, { duration: 400 }));
-      logoScale.value = withSpring(1);
-      logoGlow.value = withSequence(
-        withTiming(1, { duration: 800 }),
-        withTiming(0.3, { duration: 800 })
-      );
+      contentTranslateY.value = withSpring(0, { damping: 20, stiffness: 100 });
+      logoScale.value = withDelay(200, withSpring(1, { damping: 15, stiffness: 200 }));
+      logoGlow.value = withDelay(400, withTiming(1, { duration: 800 }));
+      formOpacity.value = withDelay(600, withTiming(1, { duration: 600 }));
     } else {
+      // Exit animations
       backgroundOpacity.value = withTiming(0, { duration: 200 });
-      contentTranslateY.value = withTiming(50, { duration: 200 });
-      formOpacity.value = withTiming(0, { duration: 200 });
-      logoScale.value = withTiming(0.5, { duration: 200 });
+      contentTranslateY.value = withTiming(height, { duration: 300 });
+      logoScale.value = withTiming(0.8, { duration: 200 });
       logoGlow.value = withTiming(0, { duration: 200 });
+      formOpacity.value = withTiming(0, { duration: 200 });
     }
-  }, [visible, backgroundOpacity, contentTranslateY, formOpacity, logoGlow, logoScale]);
+  }, [visible, backgroundOpacity, contentTranslateY, logoScale, logoGlow, formOpacity]);
 
   const backgroundAnimatedStyle = useAnimatedStyle(() => ({
     opacity: backgroundOpacity.value,
@@ -185,22 +82,35 @@ export default function AuthFlow({ visible, onClose, onSuccess }: AuthFlowProps)
 
   const contentAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: contentTranslateY.value }],
-    opacity: formOpacity.value,
   }));
 
   const logoAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: logoScale.value }],
-    shadowOpacity: 0.3 + logoGlow.value * 0.4,
+    shadowOpacity: interpolate(logoGlow.value, [0, 1], [0, 0.8]),
+  }));
+
+  const formAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: formOpacity.value,
   }));
 
   const handleAuth = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!email.trim() || !password.trim()) {
+      showToast('Please fill in all fields', 'error');
+      return;
+    }
+
+    if (isSignUp && !name.trim()) {
+      showToast('Please enter your name', 'error');
+      return;
+    }
+
+    if (password.length < 6) {
+      showToast('Password must be at least 6 characters', 'error');
       return;
     }
 
     if (isSignUp && password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showToast('Passwords do not match', 'error');
       return;
     }
 
@@ -208,68 +118,61 @@ export default function AuthFlow({ visible, onClose, onSuccess }: AuthFlowProps)
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
-      if (isSignUp) {
-        const { error } = await signUp(email, password);
-        if (error) {
-          Alert.alert('Sign Up Failed', error.message);
+      const { error } = isSignUp 
+        ? await signUp(email.trim(), password)
+        : await signIn(email.trim(), password);
+
+      if (error) {
+        console.error('Auth error:', error);
+        
+        if (error.message?.includes('Invalid login credentials')) {
+          showToast('Invalid email or password', 'error');
+        } else if (error.message?.includes('Email not confirmed')) {
+          showToast('Please check your email and confirm your account', 'error');
+        } else if (error.message?.includes('User already registered')) {
+          showToast('Account already exists. Try signing in instead.', 'error');
         } else {
-          showToast('Check your email to verify your account', 'success');
-          onSuccess();
+          showToast(error.message || 'Authentication failed', 'error');
         }
       } else {
-        const { error } = await signIn(email, password);
-        if (error) {
-          Alert.alert('Sign In Failed', error.message);
+        if (isSignUp) {
+          showToast('Account created! Please check your email to verify.', 'success');
+          Alert.alert(
+            'Verify Your Email',
+            'We\'ve sent you a verification email. Please check your inbox and click the verification link to complete your registration.',
+            [{ text: 'OK' }]
+          );
+          // Don't call onSuccess for sign up since email needs to be verified
         } else {
+          showToast('Welcome back!', 'success');
           onSuccess();
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Auth error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showToast('Something went wrong. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialAuth = async (provider: 'google' | 'apple') => {
-    setLoading(true);
+  const handleSocialAuth = (provider: 'google' | 'apple') => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    try {
-      let result;
-      if (provider === 'google') {
-        result = await signInWithGoogle();
-      } else {
-        result = await signInWithApple();
-      }
-
-      if (result.error) {
-        Alert.alert('Sign In Failed', result.error.message);
-      } else {
-        onSuccess();
-      }
-    } catch (error) {
-      console.error('Social auth error:', error);
-      Alert.alert('Error', 'Failed to sign in with ' + provider);
-    } finally {
-      setLoading(false);
-    }
+    showToast(`${provider} authentication coming soon!`, 'info');
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      'Reset Password',
-      'Please contact support to reset your password.',
-      [{ text: 'OK' }]
-    );
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    showToast('Password reset coming soon!', 'info');
   };
 
   const resetForm = () => {
+    setName('');
     setEmail('');
     setPassword('');
     setConfirmPassword('');
     setIsSignUp(false);
+    setFocusedField(null);
   };
 
   const handleClose = () => {
@@ -277,130 +180,401 @@ export default function AuthFlow({ visible, onClose, onSuccess }: AuthFlowProps)
     onClose();
   };
 
-  if (!visible) return null;
-
   return (
     <Modal
       visible={visible}
-      transparent
       animationType="none"
+      presentationStyle="overFullScreen"
       onRequestClose={handleClose}
     >
-      <Animated.View style={[styles.overlay, backgroundAnimatedStyle]}>
+      <Animated.View style={[styles.container, backgroundAnimatedStyle]}>
+        <LinearGradient
+          colors={['#000000', '#0F172A', '#134E4A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ justifyContent: 'center', alignItems: 'center' }}
+          style={{ flex: 1 }}
         >
-          <Animated.View style={[styles.container, contentAnimatedStyle]}>
-            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-              <Ionicons name="close" size={20} color="#E6EAF0" />
-            </TouchableOpacity>
+          <SafeAreaView style={{ flex: 1 }}>
+            <Animated.View style={[styles.content, contentAnimatedStyle]}>
+              {/* Close Button */}
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleClose}
+              >
+                <Ionicons name="close" size={24} color="#E6EAF0" />
+              </TouchableOpacity>
 
-            <View style={styles.header}>
-              <Animated.View style={[styles.logo, logoAnimatedStyle]}>
-                <Ionicons name="flash" size={30} color="#0B0F14" />
+              {/* Logo */}
+              <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
+                <LinearGradient
+                  colors={['#22C55E', '#10B981']}
+                  style={styles.logo}
+                >
+                  <Text style={styles.logoText}>V</Text>
+                </LinearGradient>
               </Animated.View>
-              <Text style={styles.title}>
-                {isSignUp ? 'Create Account' : 'Welcome Back'}
-              </Text>
-              <Text style={styles.subtitle}>
-                {isSignUp 
-                  ? 'Join VIRALYZE and start growing your audience'
-                  : 'Sign in to continue your growth journey'
-                }
-              </Text>
-            </View>
 
-            <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#9CA3AF"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#9CA3AF"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-              />
+              {/* Title */}
+              <Animated.View style={formAnimatedStyle}>
+                <Text style={styles.title}>
+                  {isSignUp ? 'Create Account' : 'Welcome Back'}
+                </Text>
+                <Text style={styles.subtitle}>
+                  {isSignUp 
+                    ? 'Join thousands of creators growing with AI'
+                    : 'Continue your journey to viral success'
+                  }
+                </Text>
+              </Animated.View>
 
-              {isSignUp && (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Confirm Password"
-                  placeholderTextColor="#9CA3AF"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                />
-              )}
-
-              <TouchableOpacity
-                style={[styles.button, loading && { opacity: 0.7 }]}
-                onPress={handleAuth}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#0B0F14" />
-                ) : (
-                  <Text style={styles.buttonText}>
-                    {isSignUp ? 'Create Account' : 'Sign In'}
-                  </Text>
+              {/* Form */}
+              <Animated.View style={[styles.form, formAnimatedStyle]}>
+                {isSignUp && (
+                  <View style={styles.inputContainer}>
+                    <View style={[
+                      styles.inputWrapper,
+                      focusedField === 'name' && styles.inputWrapperFocused
+                    ]}>
+                      <Ionicons name="person-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Full Name"
+                        placeholderTextColor="#64748B"
+                        value={name}
+                        onChangeText={setName}
+                        onFocus={() => setFocusedField('name')}
+                        onBlur={() => setFocusedField(null)}
+                        autoCapitalize="words"
+                        autoCorrect={false}
+                      />
+                    </View>
+                  </View>
                 )}
-              </TouchableOpacity>
 
-              {!isSignUp && (
-                <TouchableOpacity onPress={handleForgotPassword}>
-                  <Text style={[styles.toggleText, { marginTop: 8, marginBottom: 16 }]}>
-                    Forgot your password?
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+                <View style={styles.inputContainer}>
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedField === 'email' && styles.inputWrapperFocused
+                  ]}>
+                    <Ionicons name="mail-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Email Address"
+                      placeholderTextColor="#64748B"
+                      value={email}
+                      onChangeText={setEmail}
+                      onFocus={() => setFocusedField('email')}
+                      onBlur={() => setFocusedField(null)}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                </View>
 
-            <View style={{ marginBottom: 24 }}>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => handleSocialAuth('google')}
-                disabled={loading}
-              >
-                <Ionicons name="logo-google" size={20} color="#E6EAF0" />
-                <Text style={styles.socialButtonText}>Continue with Google</Text>
-              </TouchableOpacity>
+                <View style={styles.inputContainer}>
+                  <View style={[
+                    styles.inputWrapper,
+                    focusedField === 'password' && styles.inputWrapperFocused
+                  ]}>
+                    <Ionicons name="lock-closed-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Password"
+                      placeholderTextColor="#64748B"
+                      value={password}
+                      onChangeText={setPassword}
+                      onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField(null)}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                </View>
 
-              {Platform.OS === 'ios' && (
+                {isSignUp && (
+                  <View style={styles.inputContainer}>
+                    <View style={[
+                      styles.inputWrapper,
+                      focusedField === 'confirmPassword' && styles.inputWrapperFocused
+                    ]}>
+                      <Ionicons name="lock-closed-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Confirm Password"
+                        placeholderTextColor="#64748B"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        onFocus={() => setFocusedField('confirmPassword')}
+                        onBlur={() => setFocusedField(null)}
+                        secureTextEntry
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {/* Primary Button */}
                 <TouchableOpacity
-                  style={styles.socialButton}
-                  onPress={() => handleSocialAuth('apple')}
+                  style={styles.primaryButton}
+                  onPress={handleAuth}
                   disabled={loading}
                 >
-                  <Ionicons name="logo-apple" size={20} color="#E6EAF0" />
-                  <Text style={styles.socialButtonText}>Continue with Apple</Text>
+                  <LinearGradient
+                    colors={['#22C55E', '#10B981']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.primaryButtonGradient}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>
+                        {isSignUp ? 'Create Account' : 'Sign In'}
+                      </Text>
+                    )}
+                  </LinearGradient>
                 </TouchableOpacity>
-              )}
-            </View>
 
-            <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
-              <Text style={styles.toggleText}>
-                {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-                <Text style={styles.toggleLink}>
-                  {isSignUp ? 'Sign In' : 'Sign Up'}
+                {/* Switch Auth Mode */}
+                <TouchableOpacity
+                  style={styles.switchButton}
+                  onPress={() => setIsSignUp(!isSignUp)}
+                  disabled={loading}
+                >
+                  <Text style={styles.switchText}>
+                    {isSignUp 
+                      ? 'Already have an account? Sign in'
+                      : 'Don\'t have an account? Sign up'
+                    }
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Forgot Password */}
+                {!isSignUp && (
+                  <TouchableOpacity
+                    style={styles.forgotButton}
+                    onPress={handleForgotPassword}
+                    disabled={loading}
+                  >
+                    <Text style={styles.forgotText}>Forgot password?</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Social Auth */}
+                <View style={styles.socialContainer}>
+                  <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>or continue with</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  <View style={styles.socialButtons}>
+                    <TouchableOpacity
+                      style={styles.socialButton}
+                      onPress={() => handleSocialAuth('google')}
+                      disabled={loading}
+                    >
+                      <Ionicons name="logo-google" size={24} color="#E6EAF0" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.socialButton}
+                      onPress={() => handleSocialAuth('apple')}
+                      disabled={loading}
+                    >
+                      <Ionicons name="logo-apple" size={24} color="#E6EAF0" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Trust Text */}
+                <Text style={styles.trustText}>
+                  🔒 Your data is encrypted and secure
                 </Text>
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
+              </Animated.View>
+            </Animated.View>
+          </SafeAreaView>
         </KeyboardAvoidingView>
       </Animated.View>
     </Modal>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 20,
+    right: 24,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  logoText: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#E6EAF0',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 40,
+    lineHeight: 22,
+  },
+  form: {
+    width: '100%',
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 20,
+    height: 56,
+  },
+  inputWrapperFocused: {
+    borderColor: '#22C55E',
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#E6EAF0',
+    fontWeight: '500',
+  },
+  primaryButton: {
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  primaryButtonGradient: {
+    height: 56,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  primaryButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  switchButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  switchText: {
+    fontSize: 14,
+    color: '#22C55E',
+    fontWeight: '600',
+  },
+  forgotButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginBottom: 24,
+  },
+  forgotText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  socialContainer: {
+    marginTop: 32,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  socialButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trustText: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 32,
+    fontWeight: '500',
+  },
+});
+
+export default AuthFlow;

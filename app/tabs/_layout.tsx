@@ -22,6 +22,12 @@ export default function TabLayout() {
   const { user } = useAuth();
   const [currentStreak, setCurrentStreak] = useState(0);
 
+  useEffect(() => {
+    if (user) {
+      loadCurrentStreak();
+    }
+  }, [user, loadCurrentStreak]);
+
   const loadCurrentStreak = useCallback(async () => {
     if (!user) return;
     
@@ -39,12 +45,6 @@ export default function TabLayout() {
       console.log('Error loading streak:', error);
     }
   }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      loadCurrentStreak();
-    }
-  }, [user, loadCurrentStreak]);
   
   return (
     <Tab.Navigator

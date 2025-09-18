@@ -1,219 +1,243 @@
 
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, Text, TouchableOpacity, Modal, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
   withDelay,
-  withSequence,
-  withRepeat,
   interpolate,
 } from 'react-native-reanimated';
 import { colors, commonStyles } from '../styles/commonStyles';
+import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
 interface FloatingQuotaAlertProps {
   visible: boolean;
-  onUpgrade: () => void;
-  onDismiss: () => void;
+  onClose: () => void;
 }
 
-export default function FloatingQuotaAlert({ visible, onUpgrade, onDismiss }: FloatingQuotaAlertProps) {
+const FloatingQuotaAlert: React.FC<FloatingQuotaAlertProps> = ({ visible, onClose }) => {
   const fadeAnim = useSharedValue(0);
-  const slideAnim = useSharedValue(-100);
   const scaleAnim = useSharedValue(0.8);
+  const slideAnim = useSharedValue(50);
   const glowAnim = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
       fadeAnim.value = withTiming(1, { duration: 400 });
-      slideAnim.value = withSpring(0, { tension: 300, friction: 8 });
       scaleAnim.value = withSpring(1, { tension: 300, friction: 8 });
-      glowAnim.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 1500 }),
-          withTiming(0.3, { duration: 1500 })
-        ),
-        -1,
-        true
+      slideAnim.value = withSpring(0, { tension: 300, friction: 8 });
+      
+      // Continuous glow effect
+      glowAnim.value = withDelay(
+        200,
+        withTiming(1, { duration: 1000 })
       );
     } else {
       fadeAnim.value = withTiming(0, { duration: 300 });
-      slideAnim.value = withTiming(-100, { duration: 300 });
       scaleAnim.value = withTiming(0.8, { duration: 300 });
+      slideAnim.value = withTiming(50, { duration: 300 });
       glowAnim.value = withTiming(0, { duration: 300 });
     }
-  }, [visible, fadeAnim, glowAnim, scaleAnim, slideAnim]);
+  }, [visible, fadeAnim, scaleAnim, slideAnim, glowAnim]);
 
-  const containerAnimatedStyle = useAnimatedStyle(() => ({
+  const animatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
     transform: [
-      { translateY: slideAnim.value },
-      { scale: scaleAnim.value }
+      { scale: scaleAnim.value },
+      { translateY: slideAnim.value }
     ],
   }));
 
-  const glowAnimatedStyle = useAnimatedStyle(() => ({
-    shadowOpacity: 0.4 + glowAnim.value * 0.4,
-    shadowRadius: 15 + glowAnim.value * 10,
+  const glowStyle = useAnimatedStyle(() => ({
+    shadowOpacity: 0.4 + glowAnim.value * 0.6,
+    shadowRadius: 16 + glowAnim.value * 12,
   }));
 
   const handleUpgrade = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onUpgrade();
+    onClose();
+    router.push('/paywall');
   };
 
-  const handleDismiss = () => {
+  const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onDismiss();
+    onClose();
   };
-
-  if (!visible) return null;
 
   return (
-    <Animated.View style={[
-      {
-        position: 'absolute',
-        top: 60,
-        left: 16,
-        right: 16,
-        zIndex: 1000,
-      },
-      containerAnimatedStyle
-    ]}>
-      <Animated.View style={[
-        {
-          shadowColor: colors.glowNeonTeal,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 12,
-        },
-        glowAnimatedStyle
-      ]}>
-        <BlurView intensity={40} style={{
-          borderRadius: 20,
-          overflow: 'hidden',
-          borderWidth: 2,
-          borderColor: colors.glassBorderUltra,
-        }}>
+    <Modal visible={visible} transparent animationType="none">
+      <View style={{
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+      }}>
+        <Animated.View style={[
+          {
+            backgroundColor: colors.glassBackgroundUltra,
+            borderRadius: 28,
+            padding: 28,
+            alignItems: 'center',
+            borderWidth: 2,
+            borderColor: colors.warning + '60',
+            shadowColor: colors.warning,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: 20,
+            maxWidth: width - 40,
+            width: '100%',
+          },
+          animatedStyle,
+          glowStyle
+        ]}>
           <LinearGradient
-            colors={[
-              colors.glassBackgroundUltra + 'F0',
-              colors.background + 'E6',
-            ]}
+            colors={[colors.warning + '15', colors.error + '10']}
             style={{
-              padding: 20,
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: 28,
             }}
-          >
-            {/* Close button */}
+          />
+          
+          <BlurView intensity={20} style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: 28,
+          }} />
+          
+          {/* Alert Icon */}
+          <View style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: colors.glassBackgroundStrong,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 20,
+            borderWidth: 2,
+            borderColor: colors.warning + '40',
+            shadowColor: colors.warning,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 16,
+            elevation: 12,
+          }}>
+            <Ionicons name="flash-off" size={36} color={colors.warning} />
+          </View>
+          
+          {/* Alert Title */}
+          <Text style={[
+            commonStyles.title,
+            {
+              fontSize: 24,
+              color: colors.text,
+              textAlign: 'center',
+              marginBottom: 12,
+              fontWeight: '800',
+            }
+          ]}>
+            Daily Limit Reached
+          </Text>
+          
+          {/* Alert Message */}
+          <Text style={[
+            commonStyles.text,
+            {
+              textAlign: 'center',
+              color: colors.textSecondary,
+              fontSize: 16,
+              lineHeight: 24,
+              marginBottom: 32,
+              paddingHorizontal: 8,
+            }
+          ]}>
+            You've hit your daily free limit. Come back tomorrow to refresh or upgrade to Pro for unlimited access.
+          </Text>
+          
+          {/* Action Buttons */}
+          <View style={{ width: '100%', gap: 12 }}>
             <TouchableOpacity
               style={{
-                position: 'absolute',
-                top: 12,
-                right: 12,
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: colors.backgroundSecondary + '80',
-                justifyContent: 'center',
+                backgroundColor: 'transparent',
+                borderRadius: 20,
+                padding: 16,
                 alignItems: 'center',
-                zIndex: 1,
-              }}
-              onPress={handleDismiss}
-            >
-              <Ionicons name="close" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
-
-            {/* Content */}
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              {/* Icon */}
-              <View style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                backgroundColor: colors.neonTeal + '20',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 16,
-                shadowColor: colors.glowNeonTeal,
+                borderWidth: 2,
+                borderColor: colors.neonGreen,
+                shadowColor: colors.glowNeonGreen,
                 shadowOffset: { width: 0, height: 0 },
                 shadowOpacity: 0.6,
-                shadowRadius: 8,
-                elevation: 4,
-              }}>
-                <Ionicons name="flash-off" size={24} color={colors.neonTeal} />
-              </View>
-
-              {/* Text content */}
-              <View style={{ flex: 1, paddingRight: 20 }}>
+                shadowRadius: 16,
+                elevation: 12,
+                overflow: 'hidden',
+              }}
+              onPress={handleUpgrade}
+            >
+              <LinearGradient
+                colors={[colors.neonGreen, colors.neonTeal]}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                }}
+              />
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="diamond" size={20} color={colors.background} style={{ marginRight: 8 }} />
                 <Text style={[
-                  commonStyles.subtitle,
+                  commonStyles.textBold,
                   {
-                    color: colors.text,
-                    fontWeight: '700',
-                    marginBottom: 6,
+                    color: colors.background,
                     fontSize: 16,
+                    letterSpacing: 0.5,
+                    textTransform: 'uppercase',
+                    fontWeight: '800',
                   }
                 ]}>
-                  Daily Limit Reached
+                  Upgrade Now
                 </Text>
-                
-                <Text style={[
-                  commonStyles.text,
-                  {
-                    color: colors.textSecondary,
-                    fontSize: 14,
-                    lineHeight: 20,
-                    marginBottom: 16,
-                  }
-                ]}>
-                  You&apos;ve hit your daily free limit. Come back tomorrow to refresh or upgrade to Pro for unlimited access.
-                </Text>
-
-                {/* Upgrade button */}
-                <TouchableOpacity
-                  style={[
-                    {
-                      backgroundColor: colors.neonTeal,
-                      borderRadius: 12,
-                      paddingVertical: 12,
-                      paddingHorizontal: 20,
-                      alignItems: 'center',
-                      shadowColor: colors.glowNeonTeal,
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.6,
-                      shadowRadius: 8,
-                      elevation: 6,
-                    }
-                  ]}
-                  onPress={handleUpgrade}
-                  activeOpacity={0.8}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="flash" size={16} color={colors.background} style={{ marginRight: 8 }} />
-                    <Text style={[
-                      commonStyles.primaryButtonText,
-                      {
-                        fontSize: 14,
-                        fontWeight: '700',
-                        color: colors.background,
-                      }
-                    ]}>
-                      Upgrade Now
-                    </Text>
-                  </View>
-                </TouchableOpacity>
               </View>
-            </View>
-          </LinearGradient>
-        </BlurView>
-      </Animated.View>
-    </Animated.View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={{
+                padding: 16,
+                alignItems: 'center',
+              }}
+              onPress={handleClose}
+            >
+              <Text style={[
+                commonStyles.textSmall,
+                {
+                  color: colors.textSecondary,
+                  fontSize: 14,
+                  textDecorationLine: 'underline',
+                }
+              ]}>
+                Maybe later
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
   );
-}
+};
+
+export default FloatingQuotaAlert;

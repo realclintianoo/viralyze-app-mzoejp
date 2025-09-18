@@ -1,147 +1,191 @@
 
-import React, { useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, commonStyles } from '../styles/commonStyles';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import { colors } from '../styles/commonStyles';
+import { performSystemCheck, SystemCheckResult, quickHealthCheck } from '../utils/systemCheck';
 
 interface SystemCheckNotificationProps {
-  visible: boolean;
-  onDismiss: () => void;
+  onOpenDebug: () => void;
 }
 
-export default function SystemCheckNotification({ visible, onDismiss }: SystemCheckNotificationProps) {
-  const fadeAnim = useSharedValue(0);
-  const slideAnim = useSharedValue(-100);
+export default function SystemCheckNotification({ onOpenDebug }: SystemCheckNotificationProps) {
+  const [systemCheck, setSystemCheck] = useState<SystemCheckResult | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+  const slideAnim = new Animated.Value(-100);
 
-  const runInitialCheck = useCallback(async () => {
-    // Initial system check logic
-    console.log('Running initial system check');
-  }, []);
-
-  const runPeriodicCheck = useCallback(async () => {
-    // Periodic system check logic
-    console.log('Running periodic system check');
-  }, []);
-
-  useEffect(() => {
-    if (visible) {
-      runInitialCheck();
-      runPeriodicCheck();
+  const runInitialCheck = async () => {
+    try {
+      const result = await performSystemCheck();
+      setSystemCheck(result);
       
-      fadeAnim.value = withTiming(1, { duration: 400 });
-      slideAnim.value = withSpring(0, { tension: 300, friction: 8 });
-
-      // Auto dismiss after 3 seconds
-      const timer = setTimeout(() => {
-        handleDismiss();
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    } else {
-      fadeAnim.value = withTiming(0, { duration: 300 });
-      slideAnim.value = withTiming(-100, { duration: 300 });
+      // Show notification if there are critical errors and not dismissed
+      if (result.errors.length > 0 && !isDismissed) {
+        showNotification();
+      }
+    } catch (error) {
+      console.error('Initial system check failed:', error);
     }
-  }, [visible, runInitialCheck, runPeriodicCheck, fadeAnim, slideAnim]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
-    transform: [{ translateY: slideAnim.value }],
-  }));
-
-  const handleDismiss = () => {
-    fadeAnim.value = withTiming(0, { duration: 300 });
-    slideAnim.value = withTiming(-100, { duration: 300 });
-    setTimeout(onDismiss, 300);
   };
 
-  if (!visible) return null;
+  const runPeriodicCheck = async () => {
+    try {
+      const healthCheck = await quickHealthCheck();
+      
+      // Only show notification for new critical issues
+      if (!healthCheck.healthy && !isVisible && !isDismissed) {
+        const result = await performSystemCheck();
+        setSystemCheck(result);
+        showNotification();
+      }
+    } catch (error) {
+      console.error('Periodic health check failed:', error);
+    }
+  };
+
+  useEffect(() => {
+    runInitialCheck();
+    
+    // Set up periodic health checks (every 5 minutes)
+    const interval = setInterval(runPeriodicCheck, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [runInitialCheck, runPeriodicCheck]);
+
+  const showNotification = () => {
+    setIsVisible(true);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 8,
+    }).start();
+    
+    // Auto-hide after 15 seconds (increased from 10)
+    setTimeout(() => {
+      if (isVisible) {
+        hideNotification();
+      }
+    }, 15000);
+  };
+
+  const hideNotification = () => {
+    Animated.timing(slideAnim, {
+      toValue: -100,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsVisible(false);
+    });
+  };
+
+  const handlePress = () => {
+    hideNotification();
+    setIsDismissed(true); // Prevent showing again until app restart
+    onOpenDebug();
+  };
+
+  const handleDismiss = () => {
+    hideNotification();
+    setIsDismissed(true); // Prevent showing again until app restart
+  };
+
+  if (!isVisible || !systemCheck || systemCheck.errors.length === 0) {
+    return null;
+  }
+
+  const criticalErrors = systemCheck.errors.filter(error => 
+    error.includes('API key') || 
+    error.includes('polyfill') || 
+    error.includes('placeholder')
+  );
+
+  const severity = criticalErrors.length > 0 ? 'critical' : 'warning';
+  const iconName = severity === 'critical' ? 'alert-circle' : 'warning';
+  const iconColor = severity === 'critical' ? '#ef4444' : '#f59e0b';
+  const borderColor = severity === 'critical' ? '#ef4444' : '#f59e0b';
 
   return (
-    <Animated.View style={[
-      {
-        position: 'absolute',
-        top: 60,
-        left: 16,
-        right: 16,
-        zIndex: 1000,
-      },
-      animatedStyle
-    ]}>
-      <BlurView intensity={40} style={{
-        borderRadius: 16,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: colors.glassBorder,
-      }}>
-        <LinearGradient
-          colors={[
-            colors.glassBackground + 'F0',
-            colors.background + 'E6',
-          ]}
-          style={{
-            padding: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-          }}
-        >
-          <View style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: colors.neonTeal + '20',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginRight: 12,
-          }}>
-            <Ionicons name="sync" size={20} color={colors.neonTeal} />
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={[
-              commonStyles.subtitle,
-              {
-                color: colors.text,
-                fontSize: 14,
-                fontWeight: '600',
-                marginBottom: 2,
-              }
-            ]}>
-              System Check
-            </Text>
-            <Text style={[
-              commonStyles.textSmall,
-              {
-                color: colors.textSecondary,
-                fontSize: 12,
-              }
-            ]}>
-              Verifying system status...
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: colors.backgroundSecondary + '80',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-            onPress={handleDismiss}
-          >
-            <Ionicons name="close" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </LinearGradient>
-      </BlurView>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          transform: [{ translateY: slideAnim }],
+        },
+      ]}
+    >
+      <TouchableOpacity style={[styles.content, { borderLeftColor: borderColor }]} onPress={handlePress}>
+        <View style={styles.iconContainer}>
+          <Ionicons name={iconName} size={20} color={iconColor} />
+        </View>
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>
+            {severity === 'critical' ? 'Critical Configuration Issues' : 'Configuration Issues Detected'}
+          </Text>
+          <Text style={styles.subtitle}>
+            {systemCheck.errors.length} error{systemCheck.errors.length !== 1 ? 's' : ''} found. 
+            {severity === 'critical' ? ' AI features may not work.' : ''} Tap to view details.
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleDismiss} style={styles.closeButton}>
+          <Ionicons name="close" size={18} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 16,
+    right: 16,
+    zIndex: 1000,
+    elevation: 1000,
+  },
+  content: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderLeftWidth: 4,
+  },
+  iconContainer: {
+    marginRight: 12,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
+  closeButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+});

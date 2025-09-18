@@ -1,5 +1,5 @@
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -13,57 +13,13 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { colors, commonStyles } from '../styles/commonStyles';
+import { BlurView } from 'expo-blur';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 interface PremiumSplashScreenProps {
   onFinish: () => void;
 }
-
-interface LoadingDotProps {
-  index: number;
-}
-
-const LoadingDot: React.FC<LoadingDotProps> = ({ index }) => {
-  const dotOpacity = useSharedValue(0.3);
-
-  useEffect(() => {
-    dotOpacity.value = withDelay(
-      index * 200,
-      withRepeat(
-        withSequence(
-          withTiming(0.3, { duration: 600 }),
-          withTiming(1, { duration: 600 })
-        ),
-        -1,
-        true
-      )
-    );
-  }, [index, dotOpacity]);
-
-  const dotAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: dotOpacity.value,
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: colors.neonTeal,
-          shadowColor: colors.glowNeonTeal,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.8,
-          shadowRadius: 6,
-          elevation: 6,
-        },
-        dotAnimatedStyle
-      ]}
-    />
-  );
-};
 
 const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) => {
   const fadeAnim = useSharedValue(0);
@@ -72,41 +28,7 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
   const textFadeAnim = useSharedValue(0);
   const logoRotateAnim = useSharedValue(0);
 
-  const startAnimation = useCallback(() => {
-    // Logo scale and fade in
-    scaleAnim.value = withSpring(1, { tension: 300, friction: 8 });
-    fadeAnim.value = withTiming(1, { duration: 800 });
-    
-    // Continuous glow effect
-    glowAnim.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1500 }),
-        withTiming(0, { duration: 1500 })
-      ),
-      -1,
-      true
-    );
-    
-    // Subtle logo rotation
-    logoRotateAnim.value = withRepeat(
-      withTiming(360, { duration: 20000 }),
-      -1,
-      false
-    );
-    
-    // Text fade in after logo
-    textFadeAnim.value = withDelay(600, withTiming(1, { duration: 600 }));
-    
-    // Auto finish after 3 seconds
-    setTimeout(() => {
-      onFinish();
-    }, 3000);
-  }, [fadeAnim, glowAnim, logoRotateAnim, onFinish, scaleAnim, textFadeAnim]);
-
-  useEffect(() => {
-    startAnimation();
-  }, [startAnimation]);
-
+  // Create animated styles outside of useEffect
   const logoAnimatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
     transform: [
@@ -128,6 +50,59 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
     opacity: glowAnim.value * 0.8,
     transform: [{ scale: 1 + glowAnim.value * 0.1 }],
   }));
+
+  // Create dot animated styles outside of useEffect
+  const dotAnimatedStyles = [0, 1, 2].map((index) => 
+    useAnimatedStyle(() => ({
+      opacity: withDelay(
+        index * 200,
+        withRepeat(
+          withSequence(
+            withTiming(0.3, { duration: 600 }),
+            withTiming(1, { duration: 600 })
+          ),
+          -1,
+          true
+        )
+      ),
+    }))
+  );
+
+  useEffect(() => {
+    // Start the splash animation sequence
+    const startAnimation = () => {
+      // Logo scale and fade in
+      scaleAnim.value = withSpring(1, { tension: 300, friction: 8 });
+      fadeAnim.value = withTiming(1, { duration: 800 });
+      
+      // Continuous glow effect
+      glowAnim.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 1500 }),
+          withTiming(0, { duration: 1500 })
+        ),
+        -1,
+        true
+      );
+      
+      // Subtle logo rotation
+      logoRotateAnim.value = withRepeat(
+        withTiming(360, { duration: 20000 }),
+        -1,
+        false
+      );
+      
+      // Text fade in after logo
+      textFadeAnim.value = withDelay(600, withTiming(1, { duration: 600 }));
+      
+      // Auto finish after 3 seconds
+      setTimeout(() => {
+        onFinish();
+      }, 3000);
+    };
+
+    startAnimation();
+  }, [fadeAnim, glowAnim, logoRotateAnim, onFinish, scaleAnim, textFadeAnim]);
 
   return (
     <View style={{
@@ -259,9 +234,25 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
         },
         textAnimatedStyle
       ]}>
-        <LoadingDot index={0} />
-        <LoadingDot index={1} />
-        <LoadingDot index={2} />
+        {[0, 1, 2].map((index) => (
+          <Animated.View
+            key={index}
+            style={[
+              {
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: colors.neonTeal,
+                shadowColor: colors.glowNeonTeal,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,
+                shadowRadius: 6,
+                elevation: 6,
+              },
+              dotAnimatedStyles[index]
+            ]}
+          />
+        ))}
       </Animated.View>
     </View>
   );

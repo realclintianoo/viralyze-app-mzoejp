@@ -11,10 +11,11 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -25,15 +26,14 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
-import { useConversations, Conversation } from '../contexts/ConversationsContext';
-import { usePersonalization } from '../contexts/PersonalizationContext';
 import { commonStyles, colors, animations } from '../styles/commonStyles';
+import { useAuth } from '../contexts/AuthContext';
+import { usePersonalization } from '../contexts/PersonalizationContext';
+import { useConversations, Conversation } from '../contexts/ConversationsContext';
+import { router } from 'expo-router';
 
-const { width } = Dimensions.get('window');
-const SIDEBAR_WIDTH = width * 0.85;
+const { width: screenWidth } = Dimensions.get('window');
+const SIDEBAR_WIDTH = screenWidth * 0.85;
 
 interface PremiumSidebarProps {
   visible: boolean;
@@ -62,7 +62,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ visible, onClose, onS
   useEffect(() => {
     if (visible) {
       fadeAnim.value = withTiming(1, { duration: 300 });
-      scaleAnim.value = withSpring(1, { tension: 300, friction: 8 });
+      scaleAnim.value = withSpring(1, animations.premiumStiffness);
     } else {
       fadeAnim.value = withTiming(0, { duration: 200 });
       scaleAnim.value = withTiming(0.8, { duration: 200 });
@@ -83,56 +83,51 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ visible, onClose, onS
   };
 
   return (
-    <Modal visible={visible} transparent animationType="none">
+    <Modal visible={visible} transparent animationType="fade">
       <View style={{
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 24,
+        padding: 20,
       }}>
-        <Animated.View style={[
-          {
-            width: width * 0.85,
-            maxWidth: 400,
-          },
-          animatedStyle
-        ]}>
-          <BlurView intensity={40} style={{
-            borderRadius: 20,
+        <Animated.View style={[animatedStyle]}>
+          <BlurView intensity={20} style={{
+            borderRadius: 28,
             overflow: 'hidden',
-            borderWidth: 2,
-            borderColor: colors.glassBorderUltra,
+            width: screenWidth * 0.9,
           }}>
             <LinearGradient
-              colors={[
-                colors.glassBackgroundUltra + 'F0',
-                colors.background + 'E6',
-              ]}
-              style={{ padding: 24 }}
+              colors={['rgba(11, 15, 20, 0.95)', 'rgba(26, 31, 38, 0.95)']}
+              style={{ padding: 32 }}
             >
-              <Text style={[commonStyles.subtitle, { 
-                fontSize: 20,
-                marginBottom: 16,
-                textAlign: 'center',
-                color: colors.text,
-              }]}>
-                New Conversation
-              </Text>
-              
+              <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                <View style={{
+                  backgroundColor: colors.glowTeal + '20',
+                  borderRadius: 20,
+                  padding: 16,
+                  marginBottom: 16,
+                }}>
+                  <Ionicons name="add-circle" size={32} color={colors.tealPrimary} />
+                </View>
+                <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 8 }]}>
+                  Start a New AI Project
+                </Text>
+                <Text style={[commonStyles.textSmall, { textAlign: 'center' }]}>
+                  Give your project a memorable name
+                </Text>
+              </View>
+
               <TextInput
-                style={[commonStyles.input, {
-                  backgroundColor: colors.glassBackground,
-                  borderColor: colors.glassBorder,
-                  marginBottom: 20,
-                }]}
-                placeholder="Enter conversation title..."
+                style={[commonStyles.premiumInput, { marginBottom: 24 }]}
+                placeholder="e.g., TikTok Growth Strategy, Brand Campaign..."
                 placeholderTextColor={colors.textSecondary}
                 value={title}
                 onChangeText={setTitle}
                 autoFocus
+                onSubmitEditing={handleSubmit}
               />
-              
+
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <TouchableOpacity
                   style={[commonStyles.secondaryButton, { flex: 1 }]}
@@ -140,12 +135,32 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ visible, onClose, onS
                 >
                   <Text style={commonStyles.secondaryButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, { flex: 1 }]}
+                  style={[
+                    commonStyles.premiumButton,
+                    { 
+                      flex: 1,
+                      opacity: title.trim() ? 1 : 0.5,
+                    }
+                  ]}
                   onPress={handleSubmit}
+                  disabled={!title.trim()}
                 >
-                  <Text style={commonStyles.primaryButtonText}>Create</Text>
+                  <LinearGradient
+                    colors={[colors.gradientStart, colors.gradientEnd]}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      borderRadius: 22,
+                    }}
+                  />
+                  <Text style={[commonStyles.buttonText, { fontSize: 16 }]}>
+                    Create Project
+                  </Text>
                 </TouchableOpacity>
               </View>
             </LinearGradient>
@@ -156,18 +171,18 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ visible, onClose, onS
   );
 };
 
-const UserProfileMenu: React.FC<UserProfileMenuProps> = ({ 
-  visible, 
-  onClose, 
-  onAccountSettings, 
-  onSubscription, 
-  onLogout 
+const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
+  visible,
+  onClose,
+  onAccountSettings,
+  onSubscription,
+  onLogout,
 }) => {
   const slideAnim = useSharedValue(100);
 
   useEffect(() => {
     if (visible) {
-      slideAnim.value = withSpring(0, { tension: 300, friction: 8 });
+      slideAnim.value = withSpring(0, animations.premiumStiffness);
     } else {
       slideAnim.value = withTiming(100, { duration: 200 });
     }
@@ -177,9 +192,15 @@ const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
     transform: [{ translateY: slideAnim.value }],
   }));
 
+  const menuItems = [
+    { icon: 'settings-outline', title: 'Account Settings', onPress: onAccountSettings },
+    { icon: 'diamond-outline', title: 'Subscription Status', onPress: onSubscription },
+    { icon: 'log-out-outline', title: 'Logout', onPress: onLogout, isDestructive: true },
+  ];
+
   return (
-    <Modal visible={visible} transparent animationType="none">
-      <TouchableOpacity 
+    <Modal visible={visible} transparent animationType="fade">
+      <TouchableOpacity
         style={{
           flex: 1,
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -189,51 +210,66 @@ const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
         onPress={onClose}
       >
         <Animated.View style={[animatedStyle]}>
-          <BlurView intensity={40} style={{
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
+          <BlurView intensity={20} style={{
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
             overflow: 'hidden',
-            borderTopWidth: 2,
-            borderLeftWidth: 2,
-            borderRightWidth: 2,
-            borderColor: colors.glassBorderUltra,
           }}>
             <LinearGradient
-              colors={[
-                colors.glassBackgroundUltra + 'F0',
-                colors.background + 'E6',
-              ]}
+              colors={['rgba(26, 31, 38, 0.95)', 'rgba(11, 15, 20, 0.95)']}
               style={{ padding: 24, paddingBottom: 40 }}
             >
-              <TouchableOpacity
-                style={[commonStyles.menuItem, { marginBottom: 12 }]}
-                onPress={onAccountSettings}
-              >
-                <Ionicons name="person-outline" size={20} color={colors.text} />
-                <Text style={[commonStyles.menuItemText, { marginLeft: 12 }]}>
-                  Account Settings
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[commonStyles.menuItem, { marginBottom: 12 }]}
-                onPress={onSubscription}
-              >
-                <Ionicons name="diamond-outline" size={20} color={colors.neonTeal} />
-                <Text style={[commonStyles.menuItemText, { marginLeft: 12 }]}>
-                  Subscription
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[commonStyles.menuItem]}
-                onPress={onLogout}
-              >
-                <Ionicons name="log-out-outline" size={20} color={colors.neonRed} />
-                <Text style={[commonStyles.menuItemText, { marginLeft: 12, color: colors.neonRed }]}>
-                  Sign Out
-                </Text>
-              </TouchableOpacity>
+              {menuItems.map((item, index) => (
+                <TouchableOpacity
+                  key={item.title}
+                  style={[
+                    commonStyles.glassCard,
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: 20,
+                      marginVertical: 6,
+                      borderColor: item.isDestructive 
+                        ? colors.error + '40' 
+                        : colors.glassBorderStrong,
+                    }
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    item.onPress();
+                    onClose();
+                  }}
+                >
+                  <View style={{
+                    backgroundColor: item.isDestructive 
+                      ? colors.error + '20' 
+                      : colors.glowTeal + '20',
+                    borderRadius: 16,
+                    padding: 12,
+                    marginRight: 16,
+                  }}>
+                    <Ionicons 
+                      name={item.icon as any} 
+                      size={20} 
+                      color={item.isDestructive ? colors.error : colors.tealPrimary} 
+                    />
+                  </View>
+                  <Text style={[
+                    commonStyles.textBold,
+                    { 
+                      flex: 1,
+                      color: item.isDestructive ? colors.error : colors.text,
+                    }
+                  ]}>
+                    {item.title}
+                  </Text>
+                  <Ionicons 
+                    name="chevron-forward" 
+                    size={16} 
+                    color={colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+              ))}
             </LinearGradient>
           </BlurView>
         </Animated.View>
@@ -242,81 +278,90 @@ const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
   );
 };
 
-export default function PremiumSidebar({ visible, onClose }: PremiumSidebarProps) {
-  const { user } = useAuth();
-  const { conversations, createConversation, selectConversation, deleteConversation } = useConversations();
-  const { profile } = usePersonalization();
-  
-  const [showNewProject, setShowNewProject] = useState(false);
+const PremiumSidebar: React.FC<PremiumSidebarProps> = ({
+  visible,
+  onClose,
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const overlayAnim = useSharedValue(0);
+  const { user } = useAuth();
+  const { profile } = usePersonalization();
+  const { 
+    conversations, 
+    currentConversation, 
+    isLoading, 
+    createConversation, 
+    selectConversation,
+    deleteConversation,
+  } = useConversations();
+
   const slideAnim = useSharedValue(-SIDEBAR_WIDTH);
+  const overlayAnim = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
+      slideAnim.value = withSpring(0, animations.premiumStiffness);
       overlayAnim.value = withTiming(1, { duration: 300 });
-      slideAnim.value = withSpring(0, { tension: 300, friction: 8 });
     } else {
-      overlayAnim.value = withTiming(0, { duration: 200 });
-      slideAnim.value = withTiming(-SIDEBAR_WIDTH, { duration: 200 });
+      slideAnim.value = withTiming(-SIDEBAR_WIDTH, { duration: 250 });
+      overlayAnim.value = withTiming(0, { duration: 250 });
     }
   }, [visible, overlayAnim, slideAnim]);
-
-  const overlayAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: overlayAnim.value,
-  }));
 
   const sidebarAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: slideAnim.value }],
   }));
 
-  const getNicheEmoji = () => {
-    const niche = profile?.niche?.toLowerCase() || '';
-    if (niche.includes('business') || niche.includes('finance')) return '💼';
-    if (niche.includes('health') || niche.includes('fitness')) return '💪';
-    if (niche.includes('technology') || niche.includes('tech')) return '💻';
-    if (niche.includes('lifestyle')) return '✨';
-    if (niche.includes('education')) return '📚';
-    if (niche.includes('entertainment')) return '🎬';
-    if (niche.includes('travel')) return '✈️';
-    if (niche.includes('food') || niche.includes('cooking')) return '🍳';
-    if (niche.includes('fashion') || niche.includes('beauty')) return '👗';
-    if (niche.includes('gaming')) return '🎮';
-    if (niche.includes('sports')) return '⚽';
-    if (niche.includes('music')) return '🎵';
-    return '🚀';
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: overlayAnim.value,
+  }));
+
+  const getNicheEmoji = (niche?: string): string => {
+    if (!niche) return '💬';
+    const nicheEmojis: Record<string, string> = {
+      'fitness': '💪',
+      'tech': '💻',
+      'music': '🎶',
+      'food': '🍳',
+      'fashion': '👗',
+      'travel': '✈️',
+      'business': '💼',
+      'lifestyle': '✨',
+    };
+    return nicheEmojis[niche.toLowerCase()] || '💬';
   };
+
+  const filteredConversations = conversations.filter(conv =>
+    conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conv.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const formatTimeAgo = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
-    return `${Math.floor(diffInHours / 168)}w ago`;
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
   };
 
   const handleNewProject = async (title: string) => {
-    try {
-      await createConversation(title, getNicheEmoji());
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      Alert.alert('Error', 'Failed to create new conversation');
-    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    const emoji = getNicheEmoji(profile?.niche);
+    await createConversation(title, emoji);
+    onClose();
   };
 
   const handleConversationPress = async (conversation: Conversation) => {
-    try {
-      await selectConversation(conversation.id);
-      onClose();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch (error) {
-      console.error('Error selecting conversation:', error);
-    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await selectConversation(conversation.id);
+    onClose();
   };
 
   const handleConversationDelete = async (conversationId: string) => {
@@ -329,15 +374,9 @@ export default function PremiumSidebar({ visible, onClose }: PremiumSidebarProps
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            try {
-              await deleteConversation(conversationId);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            } catch (error) {
-              console.error('Error deleting conversation:', error);
-              Alert.alert('Error', 'Failed to delete conversation');
-            }
-          }
-        }
+            await deleteConversation(conversationId);
+          },
+        },
       ]
     );
   };
@@ -347,206 +386,373 @@ export default function PremiumSidebar({ visible, onClose }: PremiumSidebarProps
   };
 
   const handleAccountSettings = () => {
-    setShowProfileMenu(false);
-    onClose();
     router.push('/profile/edit');
   };
 
   const handleSubscription = () => {
-    setShowProfileMenu(false);
-    onClose();
     router.push('/paywall');
   };
 
   const handleLogout = () => {
-    setShowProfileMenu(false);
-    // Handle logout logic here
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: () => {
-        // Implement logout
-      }}
-    ]);
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            // Handle logout logic here
+            console.log('Logout pressed');
+          },
+        },
+      ]
+    );
   };
 
   if (!visible) return null;
 
   return (
-    <>
-      <Modal visible={visible} transparent animationType="none">
-        <View style={{ flex: 1, flexDirection: 'row' }}>
-          {/* Overlay */}
-          <TouchableOpacity
+    <Modal visible={visible} transparent animationType="none">
+      {/* Overlay */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          },
+          overlayAnimatedStyle,
+        ]}
+      >
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+      </Animated.View>
+
+      {/* Sidebar */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: SIDEBAR_WIDTH,
+          },
+          sidebarAnimatedStyle,
+        ]}
+      >
+        <BlurView intensity={30} style={{ flex: 1 }}>
+          <LinearGradient
+            colors={[
+              'rgba(11, 15, 20, 0.98)',
+              'rgba(6, 182, 212, 0.05)',
+              'rgba(0, 0, 0, 0.98)',
+            ]}
             style={{ flex: 1 }}
-            activeOpacity={1}
-            onPress={onClose}
           >
-            <Animated.View style={[
-              {
-                flex: 1,
-                backgroundColor: 'rgba(0, 0, 0, 0.6)',
-              },
-              overlayAnimatedStyle
-            ]} />
-          </TouchableOpacity>
+            <SafeAreaView style={{ flex: 1 }}>
+              {/* Header */}
+              <View style={{ padding: 24, paddingBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+                  <Text style={[commonStyles.headerTitle, { flex: 1, fontSize: 28 }]}>
+                    VIRALYZE
+                  </Text>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: colors.glassBackgroundStrong,
+                      borderRadius: 16,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor: colors.glassBorderStrong,
+                    }}
+                    onPress={onClose}
+                  >
+                    <Ionicons name="close" size={20} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
 
-          {/* Sidebar */}
-          <Animated.View style={[
-            {
-              width: SIDEBAR_WIDTH,
-              backgroundColor: colors.background,
-            },
-            sidebarAnimatedStyle
-          ]}>
-            <BlurView intensity={40} style={{ flex: 1 }}>
-              <LinearGradient
-                colors={[
-                  colors.glassBackgroundUltra + 'F0',
-                  colors.background + 'E6',
-                ]}
-                style={{ flex: 1 }}
-              >
-                <SafeAreaView style={{ flex: 1 }}>
-                  {/* Header */}
+                {/* Search Bar */}
+                <View style={{ position: 'relative' }}>
+                  <TextInput
+                    style={[
+                      commonStyles.premiumInput,
+                      {
+                        paddingLeft: 50,
+                        marginVertical: 0,
+                        borderColor: colors.glowTeal + '40',
+                        shadowColor: colors.glowTeal,
+                        shadowOffset: { width: 0, height: 0 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 12,
+                        elevation: 8,
+                      }
+                    ]}
+                    placeholder="Search chats & projects…"
+                    placeholderTextColor={colors.textSecondary}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
                   <View style={{
-                    padding: 24,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.glassBorder,
+                    position: 'absolute',
+                    left: 18,
+                    top: 0,
+                    bottom: 0,
+                    justifyContent: 'center',
                   }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                      <TouchableOpacity
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: 24,
-                          backgroundColor: colors.neonTeal + '20',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          marginRight: 12,
-                        }}
-                        onPress={handleProfilePress}
-                      >
-                        <Text style={{ fontSize: 20 }}>{getNicheEmoji()}</Text>
-                      </TouchableOpacity>
-                      
-                      <View style={{ flex: 1 }}>
-                        <Text style={[commonStyles.subtitle, { 
-                          color: colors.text,
-                          fontSize: 16,
-                          marginBottom: 2,
-                        }]}>
-                          {user?.email?.split('@')[0] || 'User'}
-                        </Text>
-                        <Text style={[commonStyles.textSmall, { 
-                          color: colors.textSecondary,
-                        }]}>
-                          {profile?.niche || 'Creator'}
-                        </Text>
-                      </View>
-                      
-                      <TouchableOpacity onPress={onClose}>
-                        <Ionicons name="close" size={24} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    </View>
+                    <Ionicons name="search-outline" size={20} color={colors.tealPrimary} />
+                  </View>
+                </View>
 
-                    {/* New Project Button */}
+                {/* Divider */}
+                <View style={{
+                  height: 1,
+                  backgroundColor: colors.glassBorderStrong,
+                  marginTop: 20,
+                  shadowColor: colors.glowTeal,
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }} />
+              </View>
+
+              {/* New Project Button */}
+              <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
+                <TouchableOpacity
+                  style={[
+                    commonStyles.premiumButton,
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: 16,
+                    }
+                  ]}
+                  onPress={() => setShowNewProjectModal(true)}
+                >
+                  <LinearGradient
+                    colors={[colors.gradientStart, colors.gradientEnd]}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      borderRadius: 22,
+                    }}
+                  />
+                  <Ionicons name="add-circle-outline" size={20} color={colors.white} style={{ marginRight: 8 }} />
+                  <Text style={[commonStyles.buttonText, { fontSize: 16 }]}>
+                    New Project
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Conversations List */}
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {isLoading ? (
+                  <View style={{ alignItems: 'center', padding: 40 }}>
+                    <Text style={commonStyles.textSmall}>Loading conversations...</Text>
+                  </View>
+                ) : filteredConversations.length === 0 ? (
+                  <View style={{ alignItems: 'center', padding: 40 }}>
+                    <Ionicons name="chatbubbles-outline" size={48} color={colors.textSecondary} />
+                    <Text style={[commonStyles.textSmall, { marginTop: 16, textAlign: 'center' }]}>
+                      {searchQuery ? 'No conversations found' : 'No conversations yet'}
+                    </Text>
+                  </View>
+                ) : (
+                  filteredConversations.map((conversation, index) => (
                     <TouchableOpacity
-                      style={[commonStyles.primaryButton, {
-                        backgroundColor: colors.neonTeal,
-                        shadowColor: colors.glowNeonTeal,
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.4,
-                        shadowRadius: 8,
-                        elevation: 6,
-                      }]}
-                      onPress={() => setShowNewProject(true)}
+                      key={conversation.id}
+                      style={[
+                        commonStyles.glassCard,
+                        {
+                          marginVertical: 6,
+                          padding: 20,
+                          borderColor: conversation.is_active 
+                            ? colors.glowTeal + '60' 
+                            : colors.glassBorderStrong,
+                          shadowColor: conversation.is_active 
+                            ? colors.glowTeal 
+                            : colors.neuDark,
+                          shadowOpacity: conversation.is_active ? 0.6 : 0.2,
+                          position: 'relative',
+                        }
+                      ]}
+                      onPress={() => handleConversationPress(conversation)}
+                      onLongPress={() => handleConversationDelete(conversation.id)}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="add" size={20} color={colors.background} />
-                        <Text style={[commonStyles.primaryButtonText, { 
-                          marginLeft: 8,
-                          color: colors.background,
-                        }]}>
-                          New Conversation
-                        </Text>
+                      {conversation.is_active && (
+                        <LinearGradient
+                          colors={['rgba(6, 182, 212, 0.1)', 'rgba(34, 197, 94, 0.1)']}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            borderRadius: 26,
+                          }}
+                        />
+                      )}
+
+                      {conversation.is_active && (
+                        <View style={{
+                          position: 'absolute',
+                          left: -2,
+                          top: 20,
+                          bottom: 20,
+                          width: 4,
+                          backgroundColor: colors.tealPrimary,
+                          borderRadius: 2,
+                          shadowColor: colors.glowTeal,
+                          shadowOffset: { width: 0, height: 0 },
+                          shadowOpacity: 1,
+                          shadowRadius: 8,
+                          elevation: 8,
+                        }} />
+                      )}
+
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                        <View style={{
+                          backgroundColor: colors.glowTeal + '20',
+                          borderRadius: 16,
+                          padding: 12,
+                          marginRight: 16,
+                        }}>
+                          <Text style={{ fontSize: 20 }}>{conversation.emoji}</Text>
+                        </View>
+
+                        <View style={{ flex: 1 }}>
+                          <Text style={[
+                            commonStyles.textBold,
+                            { 
+                              marginBottom: 4,
+                              color: conversation.is_active ? colors.white : colors.text,
+                            }
+                          ]}>
+                            {conversation.title}
+                          </Text>
+                          
+                          {conversation.description && (
+                            <Text style={[
+                              commonStyles.textSmall,
+                              { 
+                                marginBottom: 8,
+                                color: conversation.is_active 
+                                  ? colors.textSecondary 
+                                  : colors.textTertiary,
+                              }
+                            ]}>
+                              {conversation.description}
+                            </Text>
+                          )}
+
+                          <Text style={[
+                            commonStyles.textSmall,
+                            { 
+                              fontSize: 12,
+                              color: conversation.is_active 
+                                ? colors.tealPrimary 
+                                : colors.textTertiary,
+                            }
+                          ]}>
+                            {formatTimeAgo(conversation.last_message_at)}
+                          </Text>
+                        </View>
                       </View>
                     </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+
+              {/* User Profile */}
+              <View style={{ padding: 24, paddingTop: 16 }}>
+                <TouchableOpacity
+                  style={[
+                    commonStyles.glassCard,
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: 20,
+                      marginVertical: 0,
+                      borderColor: colors.glassBorderUltra,
+                    }
+                  ]}
+                  onPress={handleProfilePress}
+                >
+                  <View style={{ position: 'relative', marginRight: 16 }}>
+                    <View style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      backgroundColor: colors.gradientStart,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 2,
+                      borderColor: colors.glassBorderUltra,
+                    }}>
+                      <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.white }}>
+                        {user?.email?.charAt(0).toUpperCase() || 'U'}
+                      </Text>
+                    </View>
+                    
+                    {/* Status dot */}
+                    <View style={{
+                      position: 'absolute',
+                      bottom: 2,
+                      right: 2,
+                      width: 12,
+                      height: 12,
+                      borderRadius: 6,
+                      backgroundColor: colors.statusOnline,
+                      borderWidth: 2,
+                      borderColor: colors.background,
+                      shadowColor: colors.statusOnline,
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: 0.8,
+                      shadowRadius: 4,
+                      elevation: 4,
+                    }} />
                   </View>
 
-                  {/* Conversations List */}
-                  <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-                    {conversations.length === 0 ? (
-                      <View style={{
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingVertical: 40,
-                      }}>
-                        <Ionicons name="chatbubbles-outline" size={48} color={colors.textSecondary} />
-                        <Text style={[commonStyles.text, {
-                          color: colors.textSecondary,
-                          textAlign: 'center',
-                          marginTop: 16,
-                        }]}>
-                          No conversations yet.{'\n'}Start a new one to begin!
-                        </Text>
-                      </View>
-                    ) : (
-                      conversations.map((conversation) => (
-                        <TouchableOpacity
-                          key={conversation.id}
-                          style={{
-                            backgroundColor: conversation.is_active 
-                              ? colors.neonTeal + '20' 
-                              : colors.glassBackground,
-                            borderRadius: 16,
-                            padding: 16,
-                            marginBottom: 12,
-                            borderWidth: conversation.is_active ? 2 : 1,
-                            borderColor: conversation.is_active 
-                              ? colors.neonTeal + '40' 
-                              : colors.glassBorder,
-                          }}
-                          onPress={() => handleConversationPress(conversation)}
-                          onLongPress={() => handleConversationDelete(conversation.id)}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={{ fontSize: 20, marginRight: 12 }}>
-                              {conversation.emoji}
-                            </Text>
-                            <View style={{ flex: 1 }}>
-                              <Text style={[commonStyles.subtitle, {
-                                color: conversation.is_active ? colors.neonTeal : colors.text,
-                                fontSize: 16,
-                                marginBottom: 4,
-                              }]}>
-                                {conversation.title}
-                              </Text>
-                              <Text style={[commonStyles.textSmall, {
-                                color: colors.textSecondary,
-                              }]}>
-                                {formatTimeAgo(conversation.last_message_at)}
-                              </Text>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-                      ))
-                    )}
-                  </ScrollView>
-                </SafeAreaView>
-              </LinearGradient>
-            </BlurView>
-          </Animated.View>
-        </View>
-      </Modal>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[commonStyles.textBold, { marginBottom: 2 }]}>
+                      {profile?.niche ? `${profile.niche} Creator` : 'Creator'}
+                    </Text>
+                    <Text style={[commonStyles.textSmall, { fontSize: 12 }]}>
+                      @{user?.email?.split('@')[0] || 'user'}
+                    </Text>
+                  </View>
 
-      {/* New Project Modal */}
+                  <Ionicons name="chevron-up" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </SafeAreaView>
+          </LinearGradient>
+        </BlurView>
+      </Animated.View>
+
+      {/* Modals */}
       <NewProjectModal
-        visible={showNewProject}
-        onClose={() => setShowNewProject(false)}
+        visible={showNewProjectModal}
+        onClose={() => setShowNewProjectModal(false)}
         onSubmit={handleNewProject}
       />
 
-      {/* Profile Menu */}
       <UserProfileMenu
         visible={showProfileMenu}
         onClose={() => setShowProfileMenu(false)}
@@ -554,6 +760,8 @@ export default function PremiumSidebar({ visible, onClose }: PremiumSidebarProps
         onSubscription={handleSubscription}
         onLogout={handleLogout}
       />
-    </>
+    </Modal>
   );
-}
+};
+
+export default PremiumSidebar;

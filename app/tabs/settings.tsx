@@ -599,7 +599,7 @@ const PremiumActionCard: React.FC<PremiumActionCardProps> = ({
         true
       );
     }
-  }, [index, isDestructive, glowAnim, scaleAnim]);
+  }, [index, isDestructive, scaleAnim, glowAnim]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scaleAnim.value }],

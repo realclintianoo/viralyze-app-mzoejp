@@ -1,286 +1,212 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, commonStyles } from '../styles/commonStyles';
-import { BlurView } from 'expo-blur';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  withRepeat,
-  withSequence,
-} from 'react-native-reanimated';
+import { colors } from '../styles/commonStyles';
+import { performSystemCheck, SystemCheckResult, quickHealthCheck } from '../utils/systemCheck';
 
 interface SystemStatusIndicatorProps {
-  onPress?: () => void;
+  onPress: () => void;
 }
 
-interface SystemStatus {
-  overall: 'healthy' | 'warning' | 'error';
-  services: {
-    api: boolean;
-    database: boolean;
-    ai: boolean;
-  };
-}
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  healthy: {
+    backgroundColor: '#D4F4DD',
+    borderWidth: 1,
+    borderColor: '#22C55E',
+  },
+  unhealthy: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  warning: {
+    backgroundColor: '#FFF3CD',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  loading: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  text: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  healthyText: {
+    color: '#15803D',
+  },
+  unhealthyText: {
+    color: '#DC2626',
+  },
+  warningText: {
+    color: '#D97706',
+  },
+  loadingText: {
+    color: colors.text,
+  },
+  subText: {
+    fontSize: 10,
+    opacity: 0.8,
+  },
+});
 
 export default function SystemStatusIndicator({ onPress }: SystemStatusIndicatorProps) {
-  const [status, setStatus] = useState<SystemStatus>({
-    overall: 'healthy',
-    services: {
-      api: true,
-      database: true,
-      ai: true,
-    }
-  });
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [systemCheck, setSystemCheck] = useState<SystemCheckResult | null>(null);
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
-  const pulseAnim = useSharedValue(1);
-  const expandAnim = useSharedValue(0);
-
-  const runQuickCheck = useCallback(async () => {
-    // Quick system check logic
+  const runCheck = async () => {
+    setIsLoading(true);
     try {
-      // Simulate API check
-      const apiStatus = Math.random() > 0.1; // 90% success rate
-      const dbStatus = Math.random() > 0.05; // 95% success rate
-      const aiStatus = Math.random() > 0.15; // 85% success rate
-
-      const newStatus: SystemStatus = {
-        services: {
-          api: apiStatus,
-          database: dbStatus,
-          ai: aiStatus,
-        },
-        overall: apiStatus && dbStatus && aiStatus ? 'healthy' : 
-                 (apiStatus || dbStatus || aiStatus) ? 'warning' : 'error'
-      };
-
-      setStatus(newStatus);
+      console.log('🔍 Running full system check...');
+      const result = await performSystemCheck();
+      setSystemCheck(result);
+      setLastChecked(new Date());
+      console.log('✅ System check completed:', result.criticalIssues.length === 0 ? 'Healthy' : 'Issues found');
     } catch (error) {
-      console.error('System check failed:', error);
-      setStatus({
-        overall: 'error',
-        services: {
-          api: false,
-          database: false,
-          ai: false,
-        }
-      });
+      console.log('❌ System check failed:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  };
+
+  const runQuickCheck = async () => {
+    try {
+      const health = await quickHealthCheck();
+      if (systemCheck) {
+        setSystemCheck({
+          ...systemCheck,
+          criticalIssues: health.criticalIssues,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      setLastChecked(new Date());
+    } catch (error) {
+      console.log('Quick health check failed:', error);
+    }
+  };
 
   useEffect(() => {
-    runQuickCheck();
+    runCheck();
     
-    // Set up periodic checks
-    const interval = setInterval(runQuickCheck, 30000); // Check every 30 seconds
-    
+    // Run periodic checks every 30 seconds
+    const interval = setInterval(runQuickCheck, 30000);
     return () => clearInterval(interval);
   }, [runQuickCheck]);
 
-  useEffect(() => {
-    // Pulse animation based on status
-    if (status.overall === 'healthy') {
-      pulseAnim.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 1000 }),
-          withTiming(0.8, { duration: 1000 })
-        ),
-        -1,
-        true
-      );
-    } else if (status.overall === 'warning') {
-      pulseAnim.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 500 }),
-          withTiming(0.6, { duration: 500 })
-        ),
-        -1,
-        true
-      );
-    } else {
-      pulseAnim.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 300 }),
-          withTiming(0.4, { duration: 300 })
-        ),
-        -1,
-        true
-      );
+  const getStatusInfo = () => {
+    if (isLoading) {
+      return {
+        icon: 'sync' as keyof typeof Ionicons.glyphMap,
+        text: 'Checking...',
+        subText: 'System status',
+        style: styles.loading,
+        textStyle: styles.loadingText,
+        iconColor: colors.text,
+      };
     }
-  }, [status.overall, pulseAnim]);
 
-  useEffect(() => {
-    expandAnim.value = withSpring(isExpanded ? 1 : 0, { tension: 300, friction: 8 });
-  }, [isExpanded, expandAnim]);
-
-  const indicatorAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: pulseAnim.value,
-  }));
-
-  const expandedAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: expandAnim.value,
-    transform: [{ scale: expandAnim.value }],
-  }));
-
-  const getStatusColor = () => {
-    switch (status.overall) {
-      case 'healthy': return colors.neonGreen;
-      case 'warning': return colors.neonYellow;
-      case 'error': return colors.neonRed;
-      default: return colors.textSecondary;
+    if (!systemCheck) {
+      return {
+        icon: 'alert-circle' as keyof typeof Ionicons.glyphMap,
+        text: 'Check Failed',
+        subText: 'Tap to retry',
+        style: styles.unhealthy,
+        textStyle: styles.unhealthyText,
+        iconColor: '#DC2626',
+      };
     }
+
+    const hasCriticalIssues = systemCheck.criticalIssues.length > 0;
+    const hasErrors = systemCheck.errors.length > 0;
+    const hasWarnings = systemCheck.warnings.length > 0;
+
+    if (hasCriticalIssues || hasErrors) {
+      const apiKeyIssue = systemCheck.criticalIssues.some(issue => 
+        issue.includes('OpenAI API key') || issue.includes('placeholder')
+      );
+      
+      return {
+        icon: 'warning' as keyof typeof Ionicons.glyphMap,
+        text: apiKeyIssue ? 'API Key Required' : 'Configuration Error',
+        subText: apiKeyIssue ? 'OpenAI not configured' : `${systemCheck.criticalIssues.length + systemCheck.errors.length} issue(s)`,
+        style: styles.unhealthy,
+        textStyle: styles.unhealthyText,
+        iconColor: '#DC2626',
+      };
+    }
+
+    if (hasWarnings) {
+      return {
+        icon: 'alert' as keyof typeof Ionicons.glyphMap,
+        text: 'Minor Issues',
+        subText: `${systemCheck.warnings.length} warning(s)`,
+        style: styles.warning,
+        textStyle: styles.warningText,
+        iconColor: '#D97706',
+      };
+    }
+
+    return {
+      icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
+      text: 'All Systems OK',
+      subText: 'AI ready',
+      style: styles.healthy,
+      textStyle: styles.healthyText,
+      iconColor: '#22C55E',
+    };
   };
 
-  const getStatusIcon = () => {
-    switch (status.overall) {
-      case 'healthy': return 'checkmark-circle';
-      case 'warning': return 'warning';
-      case 'error': return 'close-circle';
-      default: return 'help-circle';
-    }
+  const formatLastChecked = () => {
+    if (!lastChecked) return '';
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - lastChecked.getTime()) / 1000);
+    
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
   };
 
-  const handlePress = () => {
-    setIsExpanded(!isExpanded);
-    if (onPress) {
-      onPress();
-    }
-  };
+  const statusInfo = getStatusInfo();
 
   return (
-    <View style={{
-      position: 'absolute',
-      top: 16,
-      right: 16,
-      zIndex: 100,
-    }}>
-      <TouchableOpacity onPress={handlePress}>
-        <Animated.View style={[
-          {
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: colors.glassBackground,
-            borderWidth: 1,
-            borderColor: colors.glassBorder,
-            justifyContent: 'center',
-            alignItems: 'center',
-            shadowColor: getStatusColor(),
-            shadowOffset: { width: 0, height: 0 },
-            shadowRadius: 8,
-            elevation: 4,
-          },
-          indicatorAnimatedStyle
-        ]}>
-          <Ionicons 
-            name={getStatusIcon() as keyof typeof Ionicons.glyphMap} 
-            size={20} 
-            color={getStatusColor()} 
-          />
-        </Animated.View>
-      </TouchableOpacity>
-
-      {/* Expanded Status Panel */}
-      {isExpanded && (
-        <Animated.View style={[
-          {
-            position: 'absolute',
-            top: 50,
-            right: 0,
-            width: 200,
-          },
-          expandedAnimatedStyle
-        ]}>
-          <BlurView intensity={40} style={{
-            borderRadius: 12,
-            overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: colors.glassBorder,
-          }}>
-            <View style={{
-              backgroundColor: colors.glassBackground + 'F0',
-              padding: 16,
-            }}>
-              <Text style={[
-                commonStyles.subtitle,
-                {
-                  color: colors.text,
-                  fontSize: 14,
-                  fontWeight: '600',
-                  marginBottom: 12,
-                }
-              ]}>
-                System Status
-              </Text>
-
-              {/* Service Status Items */}
-              <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>
-                    API Service
-                  </Text>
-                  <Ionicons 
-                    name={status.services.api ? 'checkmark-circle' : 'close-circle'} 
-                    size={16} 
-                    color={status.services.api ? colors.neonGreen : colors.neonRed} 
-                  />
-                </View>
-
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>
-                    Database
-                  </Text>
-                  <Ionicons 
-                    name={status.services.database ? 'checkmark-circle' : 'close-circle'} 
-                    size={16} 
-                    color={status.services.database ? colors.neonGreen : colors.neonRed} 
-                  />
-                </View>
-
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>
-                    AI Service
-                  </Text>
-                  <Ionicons 
-                    name={status.services.ai ? 'checkmark-circle' : 'close-circle'} 
-                    size={16} 
-                    color={status.services.ai ? colors.neonGreen : colors.neonRed} 
-                  />
-                </View>
-              </View>
-
-              {/* Overall Status */}
-              <View style={{
-                marginTop: 12,
-                paddingTop: 12,
-                borderTopWidth: 1,
-                borderTopColor: colors.glassBorder,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}>
-                <Text style={[
-                  commonStyles.textSmall,
-                  {
-                    color: getStatusColor(),
-                    fontWeight: '600',
-                    textTransform: 'capitalize',
-                  }
-                ]}>
-                  {status.overall}
-                </Text>
-                <TouchableOpacity onPress={runQuickCheck}>
-                  <Ionicons name="refresh" size={16} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </BlurView>
-        </Animated.View>
+    <TouchableOpacity
+      style={[styles.container, statusInfo.style]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {isLoading ? (
+        <ActivityIndicator size="small" color={colors.text} />
+      ) : (
+        <Ionicons name={statusInfo.icon} size={16} color={statusInfo.iconColor} />
       )}
-    </View>
+      
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.text, statusInfo.textStyle]}>
+          {statusInfo.text}
+        </Text>
+        <Text style={[styles.subText, statusInfo.textStyle]}>
+          {statusInfo.subText} {lastChecked && `• ${formatLastChecked()}`}
+        </Text>
+      </View>
+      
+      <Ionicons name="chevron-forward" size={12} color={statusInfo.textStyle.color} />
+    </TouchableOpacity>
   );
 }

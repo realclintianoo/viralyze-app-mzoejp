@@ -289,7 +289,7 @@ export default function ToolScreen() {
     
     contentOpacity.value = withDelay(200, withTiming(1, { duration: 800 }));
     contentTranslateY.value = withDelay(200, withSpring(0, { damping: 12, stiffness: 120 }));
-  }, [contentOpacity, contentTranslateY, headerOpacity, headerTranslateY]);
+  }, [headerOpacity, headerTranslateY, contentOpacity, contentTranslateY]);
 
   const loadProfile = async () => {
     try {
