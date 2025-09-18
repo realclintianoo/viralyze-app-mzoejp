@@ -188,7 +188,7 @@ export const getPersonalizedWelcomeMessage = (profile: OnboardingData | null, us
   const theme = getPersonalizationTheme(profile.niche);
   const displayName = username || 'Creator';
   
-  return `Welcome back, ${displayName} 👋 — Your journey as a ${profile.niche || 'Content'} creator continues! ${theme.emoji}`;
+  return `Welcome back, ${displayName} 👋 — Your journey as a ${profile.niche || 'Content'} creator continues!`;
 };
 
 export const getPersonalizedRecommendations = (profile: OnboardingData | null): string[] => {
@@ -287,8 +287,6 @@ export const getPersonalizedQuickActions = (profile: OnboardingData | null) => {
     { id: 'hooks', title: 'Hooks', icon: '🎣' },
     { id: 'ideas', title: 'Ideas', icon: '💡' },
     { id: 'captions', title: 'Captions', icon: '✍️' },
-    { id: 'calendar', title: 'Calendar', icon: '📅' },
-    { id: 'rewriter', title: 'Rewriter', icon: '🔄' },
   ];
   
   if (!profile) return baseActions;
@@ -301,24 +299,48 @@ export const getPersonalizedQuickActions = (profile: OnboardingData | null) => {
       { id: 'hooks', title: 'Workout Hooks', icon: '💪' },
       { id: 'ideas', title: 'Fitness Ideas', icon: '🏋️' },
       { id: 'captions', title: 'Motivation', icon: '🔥' },
-      { id: 'calendar', title: 'Training Plan', icon: '📅' },
-      { id: 'rewriter', title: 'Rewriter', icon: '🔄' },
     ];
   } else if (niche.includes('tech')) {
     return [
       { id: 'hooks', title: 'Tech Hooks', icon: '💻' },
       { id: 'ideas', title: 'Tech Reviews', icon: '📱' },
       { id: 'captions', title: 'Tutorials', icon: '🛠️' },
-      { id: 'calendar', title: 'Tech Calendar', icon: '📅' },
-      { id: 'rewriter', title: 'Rewriter', icon: '🔄' },
     ];
   } else if (niche.includes('food')) {
     return [
       { id: 'hooks', title: 'Recipe Hooks', icon: '🍳' },
       { id: 'ideas', title: 'Food Ideas', icon: '🍕' },
       { id: 'captions', title: 'Food Captions', icon: '📸' },
-      { id: 'calendar', title: 'Meal Plan', icon: '📅' },
-      { id: 'rewriter', title: 'Rewriter', icon: '🔄' },
+    ];
+  } else if (niche.includes('fashion')) {
+    return [
+      { id: 'hooks', title: 'Style Hooks', icon: '👗' },
+      { id: 'ideas', title: 'Fashion Ideas', icon: '✨' },
+      { id: 'captions', title: 'Outfit Posts', icon: '📷' },
+    ];
+  } else if (niche.includes('music')) {
+    return [
+      { id: 'hooks', title: 'Music Hooks', icon: '🎵' },
+      { id: 'ideas', title: 'Song Reviews', icon: '🎧' },
+      { id: 'captions', title: 'Music Posts', icon: '🎤' },
+    ];
+  } else if (niche.includes('travel')) {
+    return [
+      { id: 'hooks', title: 'Travel Hooks', icon: '✈️' },
+      { id: 'ideas', title: 'Trip Ideas', icon: '🗺️' },
+      { id: 'captions', title: 'Travel Posts', icon: '📍' },
+    ];
+  } else if (niche.includes('business')) {
+    return [
+      { id: 'hooks', title: 'Biz Hooks', icon: '💼' },
+      { id: 'ideas', title: 'Growth Tips', icon: '📈' },
+      { id: 'captions', title: 'Pro Content', icon: '🎯' },
+    ];
+  } else if (niche.includes('lifestyle')) {
+    return [
+      { id: 'hooks', title: 'Life Hooks', icon: '🌟' },
+      { id: 'ideas', title: 'Daily Ideas', icon: '☀️' },
+      { id: 'captions', title: 'Life Posts', icon: '💫' },
     ];
   }
   

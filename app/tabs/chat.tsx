@@ -38,8 +38,8 @@ import {
   Dimensions,
 } from 'react-native';
 
-interface PremiumQuickActionCardProps {
-  action: typeof QUICK_ACTIONS[0];
+interface PremiumSuggestionTileProps {
+  action: any;
   index: number;
   onPress: () => void;
   disabled: boolean;
@@ -50,26 +50,207 @@ interface PremiumQuotaPillProps {
   total: number;
 }
 
-const QUICK_ACTIONS = [
-  { id: 'hooks', title: 'Hooks', icon: 'fish', description: 'Attention-grabbing openers' },
-  { id: 'ideas', title: 'Ideas', icon: 'bulb', description: 'Fresh content concepts' },
-  { id: 'captions', title: 'Captions', icon: 'create', description: 'Engaging post captions' },
-  { id: 'calendar', title: 'Calendar', icon: 'calendar', description: '7-day content plan' },
-  { id: 'rewriter', title: 'Rewriter', icon: 'refresh', description: 'Adapt for platforms' },
-];
+interface WelcomeBlockProps {
+  visible: boolean;
+  profile: OnboardingData | null;
+  welcomeMessage: string;
+  recommendations: string[];
+}
 
-const PremiumQuickActionCard: React.FC<PremiumQuickActionCardProps> = ({ action, index, onPress, disabled }) => {
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
+interface SuggestionTilesProps {
+  visible: boolean;
+  actions: any[];
+  onActionPress: (actionId: string) => void;
+  disabled: boolean;
+}
+
+const { width } = Dimensions.get('window');
+
+// Premium Quota Pill Component
+const PremiumQuotaPill: React.FC<PremiumQuotaPillProps> = ({ remaining, total }) => {
+  const pulseAnim = useSharedValue(1);
+  const glowAnim = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseAnim.value }],
+    shadowOpacity: glowAnim.value,
+  }));
 
   useEffect(() => {
-    opacity.value = withDelay(index * 100, withTiming(1, { duration: 300 }));
-  }, [index]);
+    // Gentle glow animation
+    glowAnim.value = withRepeat(
+      withSequence(
+        withTiming(0.8, { duration: 2000 }),
+        withTiming(0.3, { duration: 2000 })
+      ),
+      -1,
+      true
+    );
+
+    // Pulse when low quota
+    if (remaining <= 1) {
+      pulseAnim.value = withRepeat(
+        withSequence(
+          withTiming(1.05, { duration: 800 }),
+          withTiming(1, { duration: 800 })
+        ),
+        -1,
+        true
+      );
+    }
+  }, [remaining]);
+
+  const getColor = () => {
+    if (remaining === 0) return '#EF4444';
+    if (remaining === 1) return '#F59E0B';
+    return '#22C55E';
+  };
+
+  return (
+    <Animated.View style={[animatedStyle, {
+      shadowColor: getColor(),
+      shadowOffset: { width: 0, height: 0 },
+      shadowRadius: 8,
+      elevation: 8,
+    }]}>
+      <BlurView intensity={20} style={{
+        backgroundColor: `${getColor()}15`,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: `${getColor()}40`,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        overflow: 'hidden',
+      }}>
+        <Text style={{
+          color: getColor(),
+          fontSize: 12,
+          fontWeight: '600',
+          textAlign: 'center',
+        }}>
+          {remaining} Free Left Today
+        </Text>
+      </BlurView>
+    </Animated.View>
+  );
+};
+
+// Welcome Block Component
+const WelcomeBlock: React.FC<WelcomeBlockProps> = ({ visible, profile, welcomeMessage, recommendations }) => {
+  const fadeAnim = useSharedValue(0);
+  const slideAnim = useSharedValue(30);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+    transform: [{ translateY: slideAnim.value }],
+  }));
+
+  useEffect(() => {
+    if (visible) {
+      fadeAnim.value = withTiming(1, { duration: 600 });
+      slideAnim.value = withTiming(0, { duration: 600 });
+    } else {
+      fadeAnim.value = withTiming(0, { duration: 400 });
+      slideAnim.value = withTiming(-30, { duration: 400 });
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  const getNicheEmoji = (niche?: string): string => {
+    const emojis: Record<string, string> = {
+      'fitness': '💪',
+      'tech': '💻',
+      'music': '🎵',
+      'food': '🍕',
+      'fashion': '👗',
+      'travel': '✈️',
+      'business': '💼',
+      'lifestyle': '✨',
+    };
+    return emojis[niche?.toLowerCase() || ''] || '👋';
+  };
+
+  return (
+    <Animated.View style={[animatedStyle, { margin: 16, marginBottom: 8 }]}>
+      <BlurView intensity={20} style={{
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        padding: 20,
+        overflow: 'hidden',
+      }}>
+        <LinearGradient
+          colors={['rgba(34, 197, 94, 0.1)', 'rgba(6, 182, 212, 0.1)']}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+        />
+        
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={{ fontSize: 24, marginRight: 8 }}>
+            {getNicheEmoji(profile?.niche)}
+          </Text>
+          <Text style={[commonStyles.textBold, { fontSize: 16, flex: 1 }]}>
+            {welcomeMessage}
+          </Text>
+        </View>
+        
+        {recommendations.length > 0 && (
+          <View>
+            <Text style={[commonStyles.textSmall, { marginBottom: 8, opacity: 0.8 }]}>
+              Personalized suggestions:
+            </Text>
+            {recommendations.slice(0, 2).map((rec, index) => (
+              <Text key={index} style={[commonStyles.textSmall, { marginBottom: 4, opacity: 0.9 }]}>
+                • {rec}
+              </Text>
+            ))}
+          </View>
+        )}
+      </BlurView>
+    </Animated.View>
+  );
+};
+
+// Suggestion Tile Component
+const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({ action, index, onPress, disabled }) => {
+  const scale = useSharedValue(1);
+  const shimmerAnim = useSharedValue(0);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    opacity: opacity.value,
   }));
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(shimmerAnim.value, [0, 1], [-100, 100]) }],
+  }));
+
+  useEffect(() => {
+    // Gentle bounce on load
+    scale.value = withDelay(
+      index * 150,
+      withSequence(
+        withTiming(1.1, { duration: 200 }),
+        withTiming(1, { duration: 200 })
+      )
+    );
+
+    // Subtle shimmer effect
+    shimmerAnim.value = withDelay(
+      index * 300,
+      withRepeat(
+        withTiming(1, { duration: 2000 }),
+        -1,
+        false
+      )
+    );
+  }, [index]);
 
   const handlePressIn = () => {
     if (!disabled) {
@@ -85,117 +266,128 @@ const PremiumQuickActionCard: React.FC<PremiumQuickActionCardProps> = ({ action,
 
   const handlePress = () => {
     if (!disabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onPress();
     }
   };
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[animatedStyle, { flex: 1, marginHorizontal: 4 }]}>
       <TouchableOpacity
-        style={[
-          commonStyles.glassCard,
-          {
-            padding: 16,
-            margin: 6,
-            opacity: disabled ? 0.5 : 1,
-            minHeight: 100,
-          }
-        ]}
+        style={{
+          opacity: disabled ? 0.5 : 1,
+        }}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
         disabled={disabled}
         activeOpacity={0.8}
       >
-        <LinearGradient
-          colors={['rgba(34, 197, 94, 0.1)', 'rgba(6, 182, 212, 0.1)']}
-          style={{
+        <BlurView intensity={20} style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: 'rgba(34, 197, 94, 0.3)',
+          padding: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 80,
+          overflow: 'hidden',
+        }}>
+          {/* Shimmer overlay */}
+          <Animated.View style={[shimmerStyle, {
             position: 'absolute',
             top: 0,
-            left: 0,
-            right: 0,
+            left: -50,
+            right: -50,
             bottom: 0,
-            borderRadius: 24,
-          }}
-        />
-        
-        <View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-          <View style={{
-            backgroundColor: 'rgba(34, 197, 94, 0.2)',
-            borderRadius: 20,
-            padding: 12,
-            marginBottom: 8,
-          }}>
-            <Ionicons name={action.icon as any} size={24} color={colors.accent} />
-          </View>
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            width: 50,
+          }]} />
           
-          <Text style={[commonStyles.textBold, { fontSize: 14, textAlign: 'center', marginBottom: 4 }]}>
+          <LinearGradient
+            colors={['rgba(34, 197, 94, 0.15)', 'rgba(6, 182, 212, 0.15)']}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
+          />
+          
+          <Text style={{ fontSize: 20, marginBottom: 4 }}>
+            {action.icon}
+          </Text>
+          
+          <Text style={[commonStyles.textBold, { 
+            fontSize: 11, 
+            textAlign: 'center',
+            color: colors.text,
+          }]}>
             {action.title}
           </Text>
-          
-          <Text style={[commonStyles.textSmall, { textAlign: 'center', fontSize: 11 }]}>
-            {action.description}
-          </Text>
-        </View>
+        </BlurView>
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
-const PremiumQuotaPill: React.FC<PremiumQuotaPillProps> = ({ remaining, total }) => {
-  const pulseAnim = useSharedValue(1);
+// Suggestion Tiles Row Component
+const SuggestionTiles: React.FC<SuggestionTilesProps> = ({ visible, actions, onActionPress, disabled }) => {
+  const fadeAnim = useSharedValue(0);
+  const slideAnim = useSharedValue(20);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseAnim.value }],
+    opacity: fadeAnim.value,
+    transform: [{ translateY: slideAnim.value }],
   }));
 
   useEffect(() => {
-    if (remaining <= 1) {
-      pulseAnim.value = withRepeat(
-        withSequence(
-          withTiming(1.05, { duration: 500 }),
-          withTiming(1, { duration: 500 })
-        ),
-        -1,
-        true
-      );
+    if (visible) {
+      fadeAnim.value = withTiming(1, { duration: 500 });
+      slideAnim.value = withTiming(0, { duration: 500 });
+    } else {
+      fadeAnim.value = withTiming(0, { duration: 300 });
+      slideAnim.value = withTiming(20, { duration: 300 });
     }
-  }, [remaining]);
+  }, [visible]);
 
-  const getColor = () => {
-    if (remaining === 0) return colors.error;
-    if (remaining === 1) return colors.warning;
-    return colors.accent;
-  };
+  if (!visible) return null;
 
   return (
-    <Animated.View style={animatedStyle}>
-      <View style={[
-        commonStyles.usageCounter,
-        { 
-          backgroundColor: `${getColor()}20`,
-          borderColor: `${getColor()}40`,
-        }
-      ]}>
-        <Text style={[
-          commonStyles.usageCounterText,
-          { color: getColor() }
-        ]}>
-          {remaining} free left today
-        </Text>
+    <Animated.View style={[animatedStyle, { paddingHorizontal: 16, marginBottom: 16 }]}>
+      <View style={{ 
+        flexDirection: 'row', 
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        {actions.slice(0, 3).map((action, index) => (
+          <PremiumSuggestionTile
+            key={action.id}
+            action={action}
+            index={index}
+            onPress={() => onActionPress(action.id)}
+            disabled={disabled}
+          />
+        ))}
       </View>
     </Animated.View>
   );
 };
 
 export default function ChatScreen() {
-  console.log('💬 Chat screen rendered');
+  console.log('💬 Premium Chat screen rendered');
   
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const [idleTimer, setIdleTimer] = useState<NodeJS.Timeout | null>(null);
+  
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { profile, theme, welcomeMessage, recommendations, chatContext, isPersonalized } = usePersonalization();
@@ -212,11 +404,57 @@ export default function ChatScreen() {
     opacity: fadeAnim.value,
   }));
 
+  // Activity tracking and idle behavior
+  const resetIdleTimer = () => {
+    setLastActivityTime(Date.now());
+    
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+    }
+    
+    // Hide welcome and suggestions when user is active
+    if (messages.length > 0) {
+      setShowWelcome(false);
+      setShowSuggestions(false);
+    }
+    
+    // Set new idle timer for 5 minutes
+    const newTimer = setTimeout(() => {
+      console.log('💤 User idle for 5 minutes, showing welcome elements');
+      if (!currentConversation || messages.length === 0) {
+        setShowWelcome(true);
+        setShowSuggestions(true);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+    
+    setIdleTimer(newTimer);
+  };
+
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 500 });
     loadInitialData();
     checkSystemHealth();
+    
+    // Initialize idle timer
+    resetIdleTimer();
+    
+    return () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    // Show/hide welcome based on conversation state
+    if (!currentConversation || messages.length === 0) {
+      setShowWelcome(true);
+      setShowSuggestions(true);
+    } else {
+      setShowWelcome(false);
+      setShowSuggestions(false);
+    }
+  }, [currentConversation, messages.length]);
 
   const loadInitialData = async () => {
     try {
@@ -236,6 +474,8 @@ export default function ChatScreen() {
   };
 
   const handleQuickAction = async (actionId: string) => {
+    resetIdleTimer(); // Reset idle timer on action
+    
     const prompts: Record<string, string> = {
       hooks: `Generate 5 attention-grabbing hooks for ${profile?.niche || 'general'} content`,
       ideas: `Suggest 5 trending content ideas for ${profile?.niche || 'general'} creators`,
@@ -257,6 +497,8 @@ export default function ChatScreen() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading || !currentConversation) return;
+
+    resetIdleTimer(); // Reset idle timer on message send
 
     // Check quota
     if (quota.text >= 2) {
@@ -336,13 +578,13 @@ export default function ChatScreen() {
   };
 
   const copyMessage = async (content: string) => {
-    // Implementation for copying message
+    resetIdleTimer();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('Copy message:', content);
   };
 
   const saveMessage = async (messageContent: string) => {
-    // Implementation for saving message
+    resetIdleTimer();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     console.log('Save message:', messageContent);
   };
@@ -367,53 +609,77 @@ export default function ChatScreen() {
       key={message.id}
       style={{
         alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
-        maxWidth: '80%',
+        maxWidth: '85%',
         marginVertical: 8,
       }}
     >
-      <View
-        style={[
-          {
-            padding: 16,
-            borderRadius: 20,
-            backgroundColor: message.role === 'user' 
-              ? theme.primary 
-              : colors.glassBackgroundStrong,
-            borderWidth: 1,
-            borderColor: message.role === 'user' 
-              ? 'transparent' 
-              : colors.glassBorderStrong,
-          }
-        ]}
-      >
+      <BlurView intensity={20} style={{
+        backgroundColor: message.role === 'user' 
+          ? 'rgba(34, 197, 94, 0.2)' 
+          : 'rgba(255, 255, 255, 0.08)',
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: message.role === 'user' 
+          ? 'rgba(34, 197, 94, 0.4)' 
+          : 'rgba(255, 255, 255, 0.15)',
+        padding: 16,
+        overflow: 'hidden',
+      }}>
+        {message.role === 'user' && (
+          <LinearGradient
+            colors={['rgba(34, 197, 94, 0.3)', 'rgba(6, 182, 212, 0.2)']}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
+          />
+        )}
+        
         <Text
           style={[
             commonStyles.text,
             {
-              color: message.role === 'user' 
-                ? colors.white 
-                : colors.text,
+              color: colors.text,
+              lineHeight: 20,
             }
           ]}
         >
           {message.content}
         </Text>
-      </View>
+      </BlurView>
 
       {message.role === 'assistant' && (
         <View style={{ flexDirection: 'row', marginTop: 8, justifyContent: 'flex-start' }}>
           <TouchableOpacity
-            style={[commonStyles.chip, { marginRight: 8, paddingHorizontal: 12, paddingVertical: 6 }]}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              marginRight: 8,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+            }}
             onPress={() => copyMessage(message.content)}
           >
-            <Text style={[commonStyles.chipText, { fontSize: 12 }]}>Copy</Text>
+            <Text style={[commonStyles.textSmall, { color: colors.text }]}>Copy</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[commonStyles.chip, { paddingHorizontal: 12, paddingVertical: 6 }]}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+            }}
             onPress={() => saveMessage(message.content)}
           >
-            <Text style={[commonStyles.chipText, { fontSize: 12 }]}>Save</Text>
+            <Text style={[commonStyles.textSmall, { color: colors.text }]}>Save</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -424,176 +690,184 @@ export default function ChatScreen() {
   const personalizedActions = getPersonalizedQuickActions(profile);
 
   return (
-    <SafeAreaView style={commonStyles.safeArea}>
-      <Animated.View style={[commonStyles.container, animatedStyle]}>
-        {/* Header */}
-        <View style={[commonStyles.header, { paddingBottom: 8 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            {/* Sidebar Toggle Button */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: colors.glassBackgroundStrong,
-                borderRadius: 16,
-                padding: 12,
-                marginRight: 16,
-                borderWidth: 1,
-                borderColor: colors.glassBorderStrong,
-              }}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setShowSidebar(true);
-              }}
-            >
-              <Ionicons name="menu" size={20} color={colors.text} />
-            </TouchableOpacity>
-
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.headerTitle, { fontSize: 24 }]}>
-                {currentConversation?.title || 'VIRALYZE'}
-              </Text>
-              {isPersonalized && (
-                <Text style={[commonStyles.textSmall, { color: theme.primary }]}>
-                  Chatting as {profile?.niche || 'Content'} Creator
-                </Text>
-              )}
-            </View>
-          </View>
-          
-          <View style={{ alignItems: 'flex-end' }}>
-            <PremiumQuotaPill remaining={2 - quota.text} total={2} />
-          </View>
-        </View>
-
-        {/* Welcome Message */}
-        {isPersonalized && !currentConversation && (
-          <View style={[commonStyles.glassCard, { margin: 16, marginBottom: 8 }]}>
-            <Text style={[commonStyles.textBold, { marginBottom: 8 }]}>
-              {welcomeMessage}
-            </Text>
-            {recommendations.length > 0 && (
-              <View>
-                <Text style={[commonStyles.textSmall, { marginBottom: 8 }]}>
-                  Personalized for you:
-                </Text>
-                {recommendations.slice(0, 2).map((rec, index) => (
-                  <Text key={index} style={[commonStyles.textSmall, { marginBottom: 4 }]}>
-                    • {rec}
-                  </Text>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Quick Actions */}
-        {!currentConversation && (
-          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 4 }}
-            >
-              {personalizedActions.map((action, index) => (
-                <PremiumQuickActionCard
-                  key={action.id}
-                  action={action}
-                  index={index}
-                  onPress={() => handleQuickAction(action.id)}
-                  disabled={quota.text >= 2}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Messages */}
-        <ScrollView
-          ref={scrollViewRef}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16 }}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-        >
-          {messages.map(renderMessage)}
-          
-          {isLoading && (
-            <View style={{ alignSelf: 'flex-start', marginVertical: 8 }}>
-              <View style={[
-                commonStyles.glassCard,
-                { padding: 16, flexDirection: 'row', alignItems: 'center' }
-              ]}>
-                <ActivityIndicator size="small" color={colors.accent} style={{ marginRight: 8 }} />
-                <Text style={commonStyles.textSmall}>AI is thinking...</Text>
-              </View>
-            </View>
-          )}
-        </ScrollView>
-
-        {/* Input */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-        >
+    <View style={{ flex: 1 }}>
+      {/* Dark gradient background */}
+      <LinearGradient
+        colors={['#000000', '#0F172A', '#1E293B']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      
+      <SafeAreaView style={{ flex: 1 }}>
+        <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+          {/* Header with Usage Counter */}
           <View style={{
             flexDirection: 'row',
-            padding: 16,
-            paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-            backgroundColor: colors.background,
-            borderTopWidth: 1,
-            borderTopColor: colors.glassBorder,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderBottomWidth: 1,
+            borderBottomColor: 'rgba(255, 255, 255, 0.1)',
           }}>
-            <TextInput
-              style={[
-                commonStyles.premiumInput,
-                {
-                  flex: 1,
-                  marginVertical: 0,
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              {/* Sidebar Toggle Button */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: 12,
+                  padding: 10,
                   marginRight: 12,
-                  maxHeight: 100,
-                }
-              ]}
-              placeholder={isPersonalized 
-                ? `Ask me anything about ${profile?.niche || 'content'} creation...`
-                : "Ask me anything about content creation..."
-              }
-              placeholderTextColor={colors.textSecondary}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              onSubmitEditing={() => sendMessage(inputText)}
-              editable={!isLoading}
-            />
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                }}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setShowSidebar(true);
+                }}
+              >
+                <Ionicons name="menu" size={18} color={colors.text} />
+              </TouchableOpacity>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[commonStyles.headerTitle, { fontSize: 20, fontWeight: '700' }]}>
+                  {currentConversation?.title || 'VIRALYZE'}
+                </Text>
+                {isPersonalized && (
+                  <Text style={[commonStyles.textSmall, { color: theme.primary, fontSize: 11 }]}>
+                    Chatting as {profile?.niche || 'Content'} Creator
+                  </Text>
+                )}
+              </View>
+            </View>
             
-            <TouchableOpacity
-              style={[
-                {
+            {/* Usage Counter Pill */}
+            <PremiumQuotaPill remaining={2 - quota.text} total={2} />
+          </View>
+
+          {/* Welcome Block */}
+          <WelcomeBlock
+            visible={showWelcome && isPersonalized}
+            profile={profile}
+            welcomeMessage={welcomeMessage}
+            recommendations={recommendations}
+          />
+
+          {/* Suggestion Tiles */}
+          <SuggestionTiles
+            visible={showSuggestions}
+            actions={personalizedActions}
+            onActionPress={handleQuickAction}
+            disabled={quota.text >= 2}
+          />
+
+          {/* Messages */}
+          <ScrollView
+            ref={scrollViewRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 16, paddingTop: showWelcome || showSuggestions ? 8 : 16 }}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            onScrollBeginDrag={resetIdleTimer}
+          >
+            {messages.map(renderMessage)}
+            
+            {isLoading && (
+              <View style={{ alignSelf: 'flex-start', marginVertical: 8 }}>
+                <BlurView intensity={20} style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.15)',
+                  padding: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  overflow: 'hidden',
+                }}>
+                  <ActivityIndicator size="small" color={colors.accent} style={{ marginRight: 8 }} />
+                  <Text style={[commonStyles.textSmall, { color: colors.text }]}>AI is thinking...</Text>
+                </BlurView>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Input */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          >
+            <View style={{
+              flexDirection: 'row',
+              padding: 16,
+              paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255, 255, 255, 0.1)',
+            }}>
+              <BlurView intensity={20} style={{
+                flex: 1,
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                marginRight: 12,
+                overflow: 'hidden',
+              }}>
+                <TextInput
+                  style={{
+                    color: colors.text,
+                    fontSize: 16,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    maxHeight: 100,
+                  }}
+                  placeholder={isPersonalized 
+                    ? `Ask me anything about ${profile?.niche || 'content'} creation...`
+                    : "Ask me anything about content creation..."
+                  }
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={inputText}
+                  onChangeText={(text) => {
+                    setInputText(text);
+                    resetIdleTimer();
+                  }}
+                  multiline
+                  onSubmitEditing={() => sendMessage(inputText)}
+                  editable={!isLoading}
+                />
+              </BlurView>
+              
+              <TouchableOpacity
+                style={{
                   backgroundColor: theme.primary,
                   borderRadius: 20,
                   padding: 16,
                   justifyContent: 'center',
                   alignItems: 'center',
                   opacity: (!inputText.trim() || isLoading) ? 0.5 : 1,
-                },
-                commonStyles.glowEffect
-              ]}
-              onPress={() => sendMessage(inputText)}
-              disabled={!inputText.trim() || isLoading}
-            >
-              <Ionicons 
-                name={isLoading ? 'hourglass' : 'send'} 
-                size={20} 
-                color={colors.white} 
-              />
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Animated.View>
+                  shadowColor: theme.primary,
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.6,
+                  shadowRadius: 8,
+                  elevation: 8,
+                }}
+                onPress={() => sendMessage(inputText)}
+                disabled={!inputText.trim() || isLoading}
+              >
+                <Ionicons 
+                  name={isLoading ? 'hourglass' : 'arrow-forward'} 
+                  size={20} 
+                  color={colors.white} 
+                />
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </Animated.View>
 
-      {/* Premium Sidebar */}
-      <PremiumSidebar
-        visible={showSidebar}
-        onClose={() => setShowSidebar(false)}
-      />
-    </SafeAreaView>
+        {/* Premium Sidebar */}
+        <PremiumSidebar
+          visible={showSidebar}
+          onClose={() => setShowSidebar(false)}
+        />
+      </SafeAreaView>
+    </View>
   );
 }
