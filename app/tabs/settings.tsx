@@ -640,6 +640,202 @@ export default function SettingsScreen() {
             <PremiumProfileCard profile={profile} user={user} />
           </View>
 
+          {/* Gamification Stats */}
+          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+            <View style={[
+              commonStyles.ultraCard,
+              {
+                padding: 24,
+                borderWidth: 2,
+                borderColor: colors.glassBorderUltra,
+                shadowColor: colors.glowNeonGreen,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.4,
+                shadowRadius: 16,
+                elevation: 12,
+              }
+            ]}>
+              <LinearGradient
+                colors={[colors.neonGreen + '10', colors.neonTeal + '10']}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  borderRadius: 28,
+                }}
+              />
+              
+              <Text style={[
+                commonStyles.subtitle,
+                { 
+                  textAlign: 'center', 
+                  marginBottom: 20,
+                  color: colors.neonGreen,
+                  textShadowColor: colors.glowNeonGreen,
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 8,
+                }
+              ]}>
+                🔥 Creator Journey
+              </Text>
+              
+              <View style={{ 
+                flexDirection: 'row', 
+                justifyContent: 'space-around',
+                marginBottom: 20 
+              }}>
+                {/* Streak */}
+                <View style={{ alignItems: 'center' }}>
+                  <View style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 30,
+                    backgroundColor: colors.glassBackgroundStrong,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 2,
+                    borderColor: colors.streakFire + '40',
+                    shadowColor: 'rgba(255, 69, 0, 0.8)',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.8,
+                    shadowRadius: 12,
+                    elevation: 8,
+                    marginBottom: 8,
+                  }}>
+                    <Text style={{ fontSize: 20 }}>🔥</Text>
+                  </View>
+                  <Text style={[
+                    commonStyles.textBold,
+                    { color: colors.streakFire, fontSize: 18 }
+                  ]}>
+                    5
+                  </Text>
+                  <Text style={[
+                    commonStyles.textSmall,
+                    { color: colors.textSecondary, fontSize: 10 }
+                  ]}>
+                    Day Streak
+                  </Text>
+                </View>
+                
+                {/* Level */}
+                <View style={{ alignItems: 'center' }}>
+                  <View style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 30,
+                    backgroundColor: colors.glassBackgroundStrong,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 2,
+                    borderColor: colors.levelGold + '40',
+                    shadowColor: 'rgba(255, 215, 0, 0.8)',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.8,
+                    shadowRadius: 12,
+                    elevation: 8,
+                    marginBottom: 8,
+                  }}>
+                    <Text style={{ fontSize: 20 }}>⭐</Text>
+                  </View>
+                  <Text style={[
+                    commonStyles.textBold,
+                    { color: colors.levelGold, fontSize: 18 }
+                  ]}>
+                    Rising
+                  </Text>
+                  <Text style={[
+                    commonStyles.textSmall,
+                    { color: colors.textSecondary, fontSize: 10 }
+                  ]}>
+                    Creator
+                  </Text>
+                </View>
+                
+                {/* Badges */}
+                <View style={{ alignItems: 'center' }}>
+                  <View style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 30,
+                    backgroundColor: colors.glassBackgroundStrong,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 2,
+                    borderColor: colors.badgeBlue + '40',
+                    shadowColor: 'rgba(0, 128, 255, 0.8)',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.8,
+                    shadowRadius: 12,
+                    elevation: 8,
+                    marginBottom: 8,
+                  }}>
+                    <Text style={{ fontSize: 20 }}>🏆</Text>
+                  </View>
+                  <Text style={[
+                    commonStyles.textBold,
+                    { color: colors.badgeBlue, fontSize: 18 }
+                  ]}>
+                    3
+                  </Text>
+                  <Text style={[
+                    commonStyles.textSmall,
+                    { color: colors.textSecondary, fontSize: 10 }
+                  ]}>
+                    Badges
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Progress to next level */}
+              <View>
+                <Text style={[
+                  commonStyles.textBold,
+                  { 
+                    textAlign: 'center', 
+                    marginBottom: 8,
+                    color: colors.neonTeal,
+                    fontSize: 12
+                  }
+                ]}>
+                  Progress to Influencer Level
+                </Text>
+                
+                <View style={{
+                  height: 8,
+                  backgroundColor: colors.backgroundSecondary,
+                  borderRadius: 4,
+                  overflow: 'hidden',
+                  borderWidth: 1,
+                  borderColor: colors.glassBorder,
+                }}>
+                  <LinearGradient
+                    colors={[colors.neonGreen, colors.neonTeal]}
+                    style={{
+                      height: '100%',
+                      width: '65%',
+                      borderRadius: 4,
+                    }}
+                  />
+                </View>
+                
+                <Text style={[
+                  commonStyles.textSmall,
+                  { 
+                    textAlign: 'center', 
+                    marginTop: 4,
+                    color: colors.textTertiary,
+                    fontSize: 10
+                  }
+                ]}>
+                  650/1000 XP
+                </Text>
+              </View>
+            </View>
+          </View>
+
           {/* Stats Row */}
           <PremiumStatsRow profile={profile} quota={quota} />
 

@@ -421,14 +421,68 @@ export default function SavedScreen() {
         colors={[colors.background, colors.backgroundSecondary]}
         style={{ flex: 1 }}
       >
-        {/* Header */}
-        <Animated.View style={[commonStyles.header, headerAnimatedStyle]}>
+        {/* Premium Header */}
+        <Animated.View style={[
+          commonStyles.header,
+          {
+            backgroundColor: colors.glassBackgroundUltra,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.glassBorderStrong,
+            shadowColor: colors.glowNeonTeal,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+            elevation: 8,
+          },
+          headerAnimatedStyle
+        ]}>
           <View>
-            <Text style={commonStyles.headerTitle}>Saved</Text>
-            <Text style={[commonStyles.textSmall, { opacity: 0.7, marginTop: 4 }]}>
-              {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'}
+            <Text style={[
+              commonStyles.headerTitle,
+              {
+                color: colors.neonTeal,
+                textShadowColor: colors.glowNeonTeal,
+                textShadowOffset: { width: 0, height: 0 },
+                textShadowRadius: 12,
+              }
+            ]}>
+              Content Library
+            </Text>
+            <Text style={[
+              commonStyles.textSmall, 
+              { 
+                color: colors.neonGreen,
+                fontSize: 10,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                marginTop: -2
+              }
+            ]}>
+              {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} saved
             </Text>
           </View>
+          
+          {/* Export/Multi-select button */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: colors.glassBackgroundStrong,
+              borderRadius: 16,
+              padding: 12,
+              borderWidth: 2,
+              borderColor: colors.neonPurple + '40',
+              shadowColor: colors.glowNeonPurple,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
+            onPress={() => {
+              // TODO: Implement multi-select export
+              Alert.alert('Export', 'Multi-select export coming soon!');
+            }}
+          >
+            <Ionicons name="download-outline" size={20} color={colors.neonPurple} />
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Search */}

@@ -13,7 +13,7 @@ export interface User {
 export interface SavedItem {
   id: string;
   user_id?: string;
-  type: 'hook' | 'script' | 'caption' | 'calendar' | 'rewrite' | 'image';
+  type: 'hook' | 'script' | 'caption' | 'calendar' | 'rewrite' | 'image' | 'chat';
   title: string;
   payload: any;
   created_at: string;
@@ -22,7 +22,7 @@ export interface SavedItem {
 export interface ChatMessage {
   id: string;
   content: string;
-  isUser: boolean;
+  role: 'user' | 'assistant';
   timestamp: Date;
   isError?: boolean;
 }
@@ -37,4 +37,43 @@ export interface OnboardingData {
   niche: string;
   followers: number;
   goal: string;
+}
+
+export interface UserStats {
+  streak: number;
+  level: number;
+  xp: number;
+  badges: Badge[];
+  totalGenerated: {
+    hooks: number;
+    scripts: number;
+    captions: number;
+    images: number;
+  };
+  lastActiveDate: string;
+}
+
+export interface Badge {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  color: string;
+  unlockedAt: string;
+  category: 'milestone' | 'streak' | 'activity' | 'special';
+}
+
+export interface PresetPrompt {
+  id: string;
+  title: string;
+  prompt: string;
+  category: string;
+  icon: string;
+}
+
+export interface InputMode {
+  id: 'text' | 'image';
+  title: string;
+  icon: string;
+  active: boolean;
 }

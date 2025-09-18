@@ -9,12 +9,19 @@ export const colors = {
   textSecondary: '#9CA3AF',
   textTertiary: '#6B7280',
   
-  // Premium gradient colors - Enhanced with teal/cyan
+  // Premium gradient colors - Enhanced with neon glow accents
   primary: '#22C55E',
   accent: '#22C55E',
   gradientStart: '#22C55E',
   gradientEnd: '#06B6D4', // Teal accent
   gradientAccent: '#0891B2',
+  
+  // Premium neon variants (green, teal, purple)
+  neonGreen: '#00FF88',
+  neonTeal: '#00FFFF',
+  neonPurple: '#8B5CF6',
+  neonPink: '#FF00FF',
+  neonBlue: '#0080FF',
   
   // Premium teal variants
   tealPrimary: '#06B6D4',
@@ -35,14 +42,14 @@ export const colors = {
   white: '#FFFFFF',
   black: '#000000',
   
-  // Premium tool-specific gradients with teal accents
-  hookGradient: ['#F59E0B', '#06B6D4'], // Orange to teal
-  captionGradient: ['#8B5CF6', '#06B6D4'], // Purple to teal
-  calendarGradient: ['#06B6D4', '#22C55E'], // Teal to green
-  rewriterGradient: ['#EC4899', '#06B6D4'], // Pink to teal
+  // Premium tool-specific gradients with neon accents
+  hookGradient: ['#00FF88', '#06B6D4'], // Neon green to teal
+  captionGradient: ['#8B5CF6', '#00FFFF'], // Purple to neon teal
+  calendarGradient: ['#06B6D4', '#00FF88'], // Teal to neon green
+  rewriterGradient: ['#FF00FF', '#06B6D4'], // Neon pink to teal
   scriptGradient: ['#22C55E', '#0891B2'], // Green to teal
   guardianGradient: ['#EF4444', '#F59E0B'], // Red to orange
-  imageGradient: ['#10B981', '#06B6D4'], // Emerald to teal
+  imageGradient: ['#10B981', '#00FFFF'], // Emerald to neon teal
   
   // Enhanced glassmorphism colors
   glassBackground: 'rgba(26, 31, 38, 0.4)',
@@ -58,11 +65,20 @@ export const colors = {
   neuHighlight: 'rgba(255, 255, 255, 0.03)',
   neuShadow: 'rgba(0, 0, 0, 0.4)',
   
-  // Enhanced glow effects
-  glowPrimary: 'rgba(34, 197, 94, 0.5)',
-  glowSecondary: 'rgba(6, 182, 212, 0.4)',
-  glowTertiary: 'rgba(34, 197, 94, 0.2)',
+  // Enhanced neon glow effects
+  glowPrimary: 'rgba(0, 255, 136, 0.8)',
+  glowSecondary: 'rgba(0, 255, 255, 0.6)',
+  glowTertiary: 'rgba(139, 92, 246, 0.7)',
   glowTeal: 'rgba(6, 182, 212, 0.6)',
+  glowNeonGreen: 'rgba(0, 255, 136, 0.9)',
+  glowNeonTeal: 'rgba(0, 255, 255, 0.8)',
+  glowNeonPurple: 'rgba(139, 92, 246, 0.8)',
+  
+  // Gamification colors
+  streakFire: '#FF4500',
+  levelGold: '#FFD700',
+  badgeBlue: '#0080FF',
+  xpGreen: '#00FF88',
   
   // Status colors
   statusOnline: '#22C55E',

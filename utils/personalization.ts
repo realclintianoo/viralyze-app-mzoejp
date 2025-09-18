@@ -28,87 +28,87 @@ export interface QuickAction {
 
 export const NICHE_THEMES: Record<string, PersonalizationTheme> = {
   fitness: {
-    primary: '#22C55E',
+    primary: colors.neonGreen,
     secondary: '#16A34A',
-    glow: 'rgba(34, 197, 94, 0.6)',
-    gradient: ['#22C55E', '#16A34A'],
+    glow: colors.glowNeonGreen,
+    gradient: [colors.neonGreen, '#16A34A'],
     emoji: '💪',
   },
   tech: {
-    primary: '#3B82F6',
+    primary: colors.neonBlue,
     secondary: '#2563EB',
-    glow: 'rgba(59, 130, 246, 0.6)',
-    gradient: ['#3B82F6', '#2563EB'],
+    glow: 'rgba(0, 128, 255, 0.8)',
+    gradient: [colors.neonBlue, '#2563EB'],
     emoji: '💻',
   },
   fashion: {
-    primary: '#EC4899',
+    primary: colors.neonPink,
     secondary: '#BE185D',
-    glow: 'rgba(236, 72, 153, 0.6)',
-    gradient: ['#EC4899', '#A855F7'],
+    glow: 'rgba(255, 0, 255, 0.8)',
+    gradient: [colors.neonPink, colors.neonPurple],
     emoji: '👗',
   },
   music: {
     primary: '#F59E0B',
     secondary: '#D97706',
-    glow: 'rgba(245, 158, 11, 0.6)',
+    glow: 'rgba(245, 158, 11, 0.8)',
     gradient: ['#F59E0B', '#EAB308'],
     emoji: '🎵',
   },
   food: {
     primary: '#EF4444',
     secondary: '#DC2626',
-    glow: 'rgba(239, 68, 68, 0.6)',
+    glow: 'rgba(239, 68, 68, 0.8)',
     gradient: ['#EF4444', '#F97316'],
     emoji: '🍕',
   },
   beauty: {
-    primary: '#F472B6',
+    primary: colors.neonPink,
     secondary: '#EC4899',
-    glow: 'rgba(244, 114, 182, 0.6)',
-    gradient: ['#F472B6', '#EC4899'],
+    glow: 'rgba(255, 0, 255, 0.8)',
+    gradient: [colors.neonPink, '#EC4899'],
     emoji: '💄',
   },
   travel: {
-    primary: '#06B6D4',
+    primary: colors.neonTeal,
     secondary: '#0891B2',
-    glow: 'rgba(6, 182, 212, 0.6)',
-    gradient: ['#06B6D4', '#0891B2'],
+    glow: colors.glowNeonTeal,
+    gradient: [colors.neonTeal, '#0891B2'],
     emoji: '✈️',
   },
   gaming: {
-    primary: '#8B5CF6',
+    primary: colors.neonPurple,
     secondary: '#7C3AED',
-    glow: 'rgba(139, 92, 246, 0.6)',
-    gradient: ['#8B5CF6', '#7C3AED'],
+    glow: colors.glowNeonPurple,
+    gradient: [colors.neonPurple, '#7C3AED'],
     emoji: '🎮',
   },
   business: {
-    primary: '#10B981',
+    primary: colors.neonGreen,
     secondary: '#059669',
-    glow: 'rgba(16, 185, 129, 0.6)',
-    gradient: ['#10B981', '#059669'],
+    glow: colors.glowNeonGreen,
+    gradient: [colors.neonGreen, '#059669'],
     emoji: '💼',
   },
   lifestyle: {
     primary: '#F97316',
     secondary: '#EA580C',
-    glow: 'rgba(249, 115, 22, 0.6)',
+    glow: 'rgba(249, 115, 22, 0.8)',
     gradient: ['#F97316', '#EA580C'],
     emoji: '🌟',
   },
   comedy: {
     primary: '#FBBF24',
     secondary: '#F59E0B',
-    glow: 'rgba(251, 191, 36, 0.6)',
+    glow: 'rgba(251, 191, 36, 0.8)',
     gradient: ['#FBBF24', '#F59E0B'],
     emoji: '😂',
   },
   default: {
-    primary: colors.accent,
-    secondary: colors.gradientEnd,
-    glow: colors.glowTeal,
-    gradient: [colors.gradientStart, colors.gradientEnd],
+    primary: colors.neonTeal,
+    secondary: colors.neonGreen,
+    glow: colors.glowNeonTeal,
+    gradient: [colors.neonTeal, colors.neonGreen],
     emoji: '🚀',
   },
 };
@@ -308,19 +308,19 @@ export const getPersonalizedQuickActions = (profile: OnboardingData | null): Qui
       id: 'hooks', 
       title: 'Hooks', 
       icon: 'fish-outline',
-      gradient: [colors.gradientStart, colors.gradientEnd]
+      gradient: [colors.neonGreen, colors.neonTeal]
     },
     { 
       id: 'ideas', 
       title: 'Ideas', 
       icon: 'bulb-outline',
-      gradient: [colors.gradientStart, colors.gradientEnd]
+      gradient: [colors.neonTeal, colors.neonPurple]
     },
     { 
       id: 'captions', 
       title: 'Captions', 
       icon: 'create-outline',
-      gradient: [colors.gradientStart, colors.gradientEnd]
+      gradient: [colors.neonPurple, colors.neonPink]
     },
   ];
   
@@ -329,7 +329,7 @@ export const getPersonalizedQuickActions = (profile: OnboardingData | null): Qui
   const niche = profile.niche?.toLowerCase() || '';
   const theme = getPersonalizationTheme(profile.niche);
   
-  // Customize actions based on niche
+  // Customize actions based on niche with enhanced titles
   if (niche.includes('fitness')) {
     return [
       { 
@@ -522,4 +522,85 @@ export const getPersonalizedQuickActions = (profile: OnboardingData | null): Qui
   }
   
   return baseActions;
+};
+
+// Gamification utilities
+export const calculateUserLevel = (totalGenerated: number): { level: number; title: string; nextLevelAt: number } => {
+  const levels = [
+    { level: 1, title: 'Starter', min: 0, max: 10 },
+    { level: 2, title: 'Rising Star', min: 10, max: 50 },
+    { level: 3, title: 'Influencer', min: 50, max: 150 },
+    { level: 4, title: 'Top Creator', min: 150, max: 500 },
+    { level: 5, title: 'Legend', min: 500, max: Infinity },
+  ];
+
+  for (const levelData of levels) {
+    if (totalGenerated >= levelData.min && totalGenerated < levelData.max) {
+      return {
+        level: levelData.level,
+        title: levelData.title,
+        nextLevelAt: levelData.max === Infinity ? levelData.min : levelData.max,
+      };
+    }
+  }
+
+  return levels[levels.length - 1];
+};
+
+export const getAvailableBadges = () => [
+  {
+    id: 'first_hook',
+    title: 'Hook Master',
+    description: 'Generated your first viral hook',
+    icon: '🎣',
+    color: colors.neonGreen,
+    requirement: 'Generate 1 hook',
+  },
+  {
+    id: 'content_creator',
+    title: 'Content Creator',
+    description: 'Generated 10 pieces of content',
+    icon: '📝',
+    color: colors.neonTeal,
+    requirement: 'Generate 10 items',
+  },
+  {
+    id: 'streak_warrior',
+    title: 'Streak Warrior',
+    description: 'Maintained a 7-day streak',
+    icon: '🔥',
+    color: colors.streakFire,
+    requirement: '7-day streak',
+  },
+  {
+    id: 'viral_master',
+    title: 'Viral Master',
+    description: 'Generated 100 pieces of content',
+    icon: '🚀',
+    color: colors.neonPurple,
+    requirement: 'Generate 100 items',
+  },
+  {
+    id: 'consistency_king',
+    title: 'Consistency King',
+    description: 'Used the app for 30 days',
+    icon: '👑',
+    color: colors.levelGold,
+    requirement: '30 active days',
+  },
+];
+
+export const checkStreakStatus = (lastActiveDate: string): { streak: number; isActive: boolean } => {
+  const today = new Date();
+  const lastActive = new Date(lastActiveDate);
+  const diffTime = Math.abs(today.getTime() - lastActive.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 1) {
+    // Streak is active
+    return { streak: diffDays === 0 ? 1 : diffDays, isActive: true };
+  } else {
+    // Streak is broken
+    return { streak: 0, isActive: false };
+  }
 };

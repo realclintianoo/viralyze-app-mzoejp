@@ -313,17 +313,30 @@ const PremiumToolCard: React.FC<PremiumToolCardProps> = ({ tool, index, onPress,
 };
 
 const PremiumStatsCard: React.FC<PremiumStatsCardProps> = ({ quota }) => {
-  const { theme } = usePersonalization();
+  const { theme, profile } = usePersonalization();
   const pulseAnim = useSharedValue(1);
   const fadeAnim = useSharedValue(0);
+  const glowAnim = useSharedValue(0);
   
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseAnim.value }],
     opacity: fadeAnim.value,
+    shadowOpacity: 0.4 + glowAnim.value * 0.4,
+    shadowRadius: 16 + glowAnim.value * 8,
   }));
 
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 600 });
+    
+    // Glow animation
+    glowAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 2500 }),
+        withTiming(0, { duration: 2500 })
+      ),
+      -1,
+      true
+    );
     
     if (quota && quota.text >= 8) {
       pulseAnim.value = withRepeat(
@@ -346,17 +359,30 @@ const PremiumStatsCard: React.FC<PremiumStatsCardProps> = ({ quota }) => {
     const percentage = getUsagePercentage();
     if (percentage >= 80) return colors.error;
     if (percentage >= 60) return colors.warning;
-    return colors.success;
+    return colors.neonGreen;
+  };
+
+  const getGlowColor = () => {
+    const percentage = getUsagePercentage();
+    if (percentage >= 80) return 'rgba(239, 68, 68, 0.8)';
+    if (percentage >= 60) return 'rgba(245, 158, 11, 0.8)';
+    return colors.glowNeonGreen;
   };
 
   return (
     <Animated.View style={[
       commonStyles.ultraCard,
-      { margin: 16, padding: 24 },
+      { 
+        margin: 16, 
+        padding: 28,
+        borderWidth: 2,
+        borderColor: colors.glassBorderUltra,
+        shadowColor: getGlowColor(),
+      },
       animatedStyle
     ]}>
       <LinearGradient
-        colors={[theme.gradient[0] + '08', theme.gradient[1] + '08']}
+        colors={[colors.neonTeal + '12', colors.neonGreen + '12']}
         style={{
           position: 'absolute',
           top: 0,
@@ -367,62 +393,153 @@ const PremiumStatsCard: React.FC<PremiumStatsCardProps> = ({ quota }) => {
         }}
       />
       
-      <Text style={[commonStyles.subtitle, { marginBottom: 20, textAlign: 'center' }]}>
-        Daily Usage
-      </Text>
-      
-      <View style={{ alignItems: 'center', marginBottom: 20 }}>
+      {/* Header */}
+      <View style={{ 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        marginBottom: 24 
+      }}>
+        <View style={{
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: colors.neonTeal,
+          marginRight: 12,
+          shadowColor: colors.glowNeonTeal,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 8,
+          elevation: 8,
+        }} />
+        
         <Text style={[
-          commonStyles.title,
+          commonStyles.subtitle, 
           { 
-            fontSize: 36, 
-            color: getUsageColor(),
-            marginBottom: 4
+            color: colors.neonTeal,
+            textShadowColor: colors.glowNeonTeal,
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 8,
           }
         ]}>
-          {quota ? 10 - quota.text : 10}
+          Daily AI Usage
         </Text>
-        <Text style={[
-          commonStyles.textSmall,
-          { color: colors.textSecondary }
-        ]}>
-          AI requests remaining
-        </Text>
+      </View>
+      
+      {/* Usage Circle */}
+      <View style={{ alignItems: 'center', marginBottom: 24 }}>
+        <View style={{
+          width: 120,
+          height: 120,
+          borderRadius: 60,
+          backgroundColor: colors.glassBackgroundStrong,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 4,
+          borderColor: getUsageColor() + '40',
+          shadowColor: getGlowColor(),
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.8,
+          shadowRadius: 20,
+          elevation: 16,
+          marginBottom: 16,
+        }}>
+          <Text style={[
+            commonStyles.title,
+            { 
+              fontSize: 32, 
+              color: getUsageColor(),
+              textShadowColor: getGlowColor(),
+              textShadowOffset: { width: 0, height: 0 },
+              textShadowRadius: 8,
+            }
+          ]}>
+            {quota ? 10 - quota.text : 10}
+          </Text>
+          <Text style={[
+            commonStyles.textBold,
+            { 
+              color: colors.textSecondary,
+              fontSize: 12,
+              textTransform: 'uppercase',
+              letterSpacing: 1
+            }
+          ]}>
+            Left Today
+          </Text>
+        </View>
       </View>
       
       {/* Progress Bar */}
       <View style={{
-        height: 8,
+        height: 12,
         backgroundColor: colors.backgroundSecondary,
-        borderRadius: 4,
+        borderRadius: 6,
         overflow: 'hidden',
-        marginBottom: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: colors.glassBorder,
       }}>
-        <View style={{
-          height: '100%',
-          width: `${getUsagePercentage()}%`,
-          backgroundColor: getUsageColor(),
-          borderRadius: 4,
-        }} />
+        <LinearGradient
+          colors={[getUsageColor(), getUsageColor() + '80']}
+          style={{
+            height: '100%',
+            width: `${getUsagePercentage()}%`,
+            borderRadius: 6,
+          }}
+        />
       </View>
       
+      {/* Stats Row */}
       <View style={{
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
       }}>
-        <Text style={[
-          commonStyles.textSmall,
-          { color: colors.textTertiary }
-        ]}>
-          {quota?.text || 0}/10 used
-        </Text>
-        <Text style={[
-          commonStyles.textSmall,
-          { color: colors.textTertiary }
-        ]}>
-          Resets daily
-        </Text>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={[
+            commonStyles.textBold,
+            { color: colors.neonTeal, fontSize: 16 }
+          ]}>
+            {quota?.text || 0}/10
+          </Text>
+          <Text style={[
+            commonStyles.textSmall,
+            { color: colors.textTertiary, fontSize: 10 }
+          ]}>
+            Used
+          </Text>
+        </View>
+        
+        <View style={{ alignItems: 'center' }}>
+          <Text style={[
+            commonStyles.textBold,
+            { color: colors.neonGreen, fontSize: 16 }
+          ]}>
+            {profile?.niche || 'Creator'}
+          </Text>
+          <Text style={[
+            commonStyles.textSmall,
+            { color: colors.textTertiary, fontSize: 10 }
+          ]}>
+            Mode
+          </Text>
+        </View>
+        
+        <View style={{ alignItems: 'center' }}>
+          <Text style={[
+            commonStyles.textBold,
+            { color: colors.warning, fontSize: 16 }
+          ]}>
+            24h
+          </Text>
+          <Text style={[
+            commonStyles.textSmall,
+            { color: colors.textTertiary, fontSize: 10 }
+          ]}>
+            Reset
+          </Text>
+        </View>
       </View>
     </Animated.View>
   );
@@ -494,14 +611,73 @@ export default function ToolsScreen() {
   return (
     <SafeAreaView style={commonStyles.safeArea}>
       <Animated.View style={[commonStyles.container, animatedStyle]}>
-        {/* Header */}
-        <View style={commonStyles.header}>
-          <Text style={commonStyles.headerTitle}>AI Tools</Text>
+        {/* Premium Header */}
+        <View style={[
+          commonStyles.header,
+          {
+            backgroundColor: colors.glassBackgroundUltra,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.glassBorderStrong,
+            shadowColor: colors.glowNeonTeal,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+            elevation: 8,
+          }
+        ]}>
+          <View>
+            <Text style={[
+              commonStyles.headerTitle,
+              {
+                color: colors.neonTeal,
+                textShadowColor: colors.glowNeonTeal,
+                textShadowOffset: { width: 0, height: 0 },
+                textShadowRadius: 12,
+              }
+            ]}>
+              AI Tools
+            </Text>
+            <Text style={[
+              commonStyles.textSmall,
+              { 
+                color: colors.neonGreen, 
+                fontSize: 10,
+                letterSpacing: 2,
+                textTransform: 'uppercase',
+                marginTop: -4
+              }
+            ]}>
+              Creator Suite
+            </Text>
+          </View>
+          
           <TouchableOpacity
-            style={commonStyles.headerButton}
+            style={{
+              backgroundColor: colors.glassBackgroundStrong,
+              borderRadius: 16,
+              padding: 12,
+              borderWidth: 2,
+              borderColor: colors.neonPurple + '40',
+              shadowColor: colors.glowNeonPurple,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: 12,
+              elevation: 8,
+            }}
             onPress={showProModal}
           >
-            <Ionicons name="diamond" size={24} color="#8B5CF6" />
+            <LinearGradient
+              colors={[colors.neonPurple + '20', colors.neonPurple + '10']}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                borderRadius: 16,
+              }}
+            />
+            <Ionicons name="diamond" size={24} color={colors.neonPurple} />
           </TouchableOpacity>
         </View>
 
