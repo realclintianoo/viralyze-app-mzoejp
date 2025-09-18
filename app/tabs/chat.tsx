@@ -8,7 +8,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { storage } from '../../utils/storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePersonalization } from '../../contexts/PersonalizationContext';
+import { useConversations } from '../../contexts/ConversationsContext';
 import { getPersonalizedQuickActions } from '../../utils/personalization';
+import PremiumSidebar from '../../components/PremiumSidebar';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
@@ -190,13 +192,19 @@ const PremiumQuotaPill: React.FC<PremiumQuotaPillProps> = ({ remaining, total })
 export default function ChatScreen() {
   console.log('💬 Chat screen rendered');
   
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
+  const [showSidebar, setShowSidebar] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { profile, theme, welcomeMessage, recommendations, chatContext, isPersonalized } = usePersonalization();
+  const { 
+    currentConversation, 
+    messages, 
+    addMessage, 
+    createConversation,
+  } = useConversations();
   
   const fadeAnim = useSharedValue(0);
 
@@ -214,12 +222,6 @@ export default function ChatScreen() {
     try {
       const quotaData = await storage.getQuotaUsage();
       setQuota(quotaData);
-      
-      // Load chat messages from storage
-      const savedMessages = await storage.getItem('chat_messages');
-      if (savedMessages) {
-        setMessages(JSON.parse(savedMessages));
-      }
     } catch (error) {
       console.error('Error loading initial data:', error);
     }
@@ -233,7 +235,7 @@ export default function ChatScreen() {
     }
   };
 
-  const handleQuickAction = (actionId: string) => {
+  const handleQuickAction = async (actionId: string) => {
     const prompts: Record<string, string> = {
       hooks: `Generate 5 attention-grabbing hooks for ${profile?.niche || 'general'} content`,
       ideas: `Suggest 5 trending content ideas for ${profile?.niche || 'general'} creators`,
@@ -243,11 +245,18 @@ export default function ChatScreen() {
     };
 
     const prompt = prompts[actionId] || prompts.ideas;
+    
+    // Create a new conversation if none exists
+    if (!currentConversation) {
+      const title = `${actionId.charAt(0).toUpperCase() + actionId.slice(1)} Project`;
+      await createConversation(title, getNicheEmoji(profile?.niche));
+    }
+    
     sendMessage(prompt);
   };
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+    if (!text.trim() || isLoading || !currentConversation) return;
 
     // Check quota
     if (quota.text >= 2) {
@@ -262,18 +271,13 @@ export default function ChatScreen() {
       return;
     }
 
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: text.trim(),
-      isUser: true,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
     setInputText('');
     setIsLoading(true);
 
     try {
+      // Add user message to conversation
+      await addMessage(currentConversation.id, text.trim(), 'user');
+
       // Enhanced system prompt with personalization context
       const enhancedProfile = profile ? {
         ...profile,
@@ -289,35 +293,24 @@ export default function ChatScreen() {
         n: 1,
       });
 
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: responses[0] || 'Sorry, I couldn\'t generate a response.',
-        isUser: false,
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
+      const aiResponse = responses[0] || 'Sorry, I couldn\'t generate a response.';
+      
+      // Add AI response to conversation
+      await addMessage(currentConversation.id, aiResponse, 'assistant');
       
       // Update quota
       const newQuota = await storage.updateQuotaUsage(1, 0);
       setQuota(newQuota);
 
-      // Save messages to storage
-      const updatedMessages = [...messages, userMessage, aiMessage];
-      await storage.setItem('chat_messages', JSON.stringify(updatedMessages));
-
     } catch (error: any) {
       console.error('AI completion error:', error);
       
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: `Sorry, I encountered an error: ${error.message}`,
-        isUser: false,
-        timestamp: new Date(),
-        isError: true,
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
+      // Add error message to conversation
+      await addMessage(
+        currentConversation.id, 
+        `Sorry, I encountered an error: ${error.message}`, 
+        'assistant'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -348,17 +341,32 @@ export default function ChatScreen() {
     console.log('Copy message:', content);
   };
 
-  const saveMessage = async (message: ChatMessage) => {
+  const saveMessage = async (messageContent: string) => {
     // Implementation for saving message
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    console.log('Save message:', message);
+    console.log('Save message:', messageContent);
   };
 
-  const renderMessage = (message: ChatMessage) => (
+  const getNicheEmoji = (niche?: string): string => {
+    if (!niche) return '💬';
+    const nicheEmojis: Record<string, string> = {
+      'fitness': '💪',
+      'tech': '💻',
+      'music': '🎶',
+      'food': '🍳',
+      'fashion': '👗',
+      'travel': '✈️',
+      'business': '💼',
+      'lifestyle': '✨',
+    };
+    return nicheEmojis[niche.toLowerCase()] || '💬';
+  };
+
+  const renderMessage = (message: any) => (
     <View
       key={message.id}
       style={{
-        alignSelf: message.isUser ? 'flex-end' : 'flex-start',
+        alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
         maxWidth: '80%',
         marginVertical: 8,
       }}
@@ -368,17 +376,13 @@ export default function ChatScreen() {
           {
             padding: 16,
             borderRadius: 20,
-            backgroundColor: message.isUser 
+            backgroundColor: message.role === 'user' 
               ? theme.primary 
-              : message.isError 
-                ? colors.error + '20'
-                : colors.glassBackgroundStrong,
+              : colors.glassBackgroundStrong,
             borderWidth: 1,
-            borderColor: message.isUser 
+            borderColor: message.role === 'user' 
               ? 'transparent' 
-              : message.isError 
-                ? colors.error + '40'
-                : colors.glassBorderStrong,
+              : colors.glassBorderStrong,
           }
         ]}
       >
@@ -386,11 +390,9 @@ export default function ChatScreen() {
           style={[
             commonStyles.text,
             {
-              color: message.isUser 
+              color: message.role === 'user' 
                 ? colors.white 
-                : message.isError 
-                  ? colors.error
-                  : colors.text,
+                : colors.text,
             }
           ]}
         >
@@ -398,7 +400,7 @@ export default function ChatScreen() {
         </Text>
       </View>
 
-      {!message.isUser && !message.isError && (
+      {message.role === 'assistant' && (
         <View style={{ flexDirection: 'row', marginTop: 8, justifyContent: 'flex-start' }}>
           <TouchableOpacity
             style={[commonStyles.chip, { marginRight: 8, paddingHorizontal: 12, paddingVertical: 6 }]}
@@ -409,7 +411,7 @@ export default function ChatScreen() {
           
           <TouchableOpacity
             style={[commonStyles.chip, { paddingHorizontal: 12, paddingVertical: 6 }]}
-            onPress={() => saveMessage(message)}
+            onPress={() => saveMessage(message.content)}
           >
             <Text style={[commonStyles.chipText, { fontSize: 12 }]}>Save</Text>
           </TouchableOpacity>
@@ -426,13 +428,35 @@ export default function ChatScreen() {
       <Animated.View style={[commonStyles.container, animatedStyle]}>
         {/* Header */}
         <View style={[commonStyles.header, { paddingBottom: 8 }]}>
-          <View>
-            <Text style={commonStyles.headerTitle}>VIRALYZE</Text>
-            {isPersonalized && (
-              <Text style={[commonStyles.textSmall, { color: theme.primary }]}>
-                Chatting as {profile?.niche || 'Content'} Creator
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            {/* Sidebar Toggle Button */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.glassBackgroundStrong,
+                borderRadius: 16,
+                padding: 12,
+                marginRight: 16,
+                borderWidth: 1,
+                borderColor: colors.glassBorderStrong,
+              }}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setShowSidebar(true);
+              }}
+            >
+              <Ionicons name="menu" size={20} color={colors.text} />
+            </TouchableOpacity>
+
+            <View style={{ flex: 1 }}>
+              <Text style={[commonStyles.headerTitle, { fontSize: 24 }]}>
+                {currentConversation?.title || 'VIRALYZE'}
               </Text>
-            )}
+              {isPersonalized && (
+                <Text style={[commonStyles.textSmall, { color: theme.primary }]}>
+                  Chatting as {profile?.niche || 'Content'} Creator
+                </Text>
+              )}
+            </View>
           </View>
           
           <View style={{ alignItems: 'flex-end' }}>
@@ -441,7 +465,7 @@ export default function ChatScreen() {
         </View>
 
         {/* Welcome Message */}
-        {isPersonalized && (
+        {isPersonalized && !currentConversation && (
           <View style={[commonStyles.glassCard, { margin: 16, marginBottom: 8 }]}>
             <Text style={[commonStyles.textBold, { marginBottom: 8 }]}>
               {welcomeMessage}
@@ -462,23 +486,25 @@ export default function ChatScreen() {
         )}
 
         {/* Quick Actions */}
-        <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 4 }}
-          >
-            {personalizedActions.map((action, index) => (
-              <PremiumQuickActionCard
-                key={action.id}
-                action={action}
-                index={index}
-                onPress={() => handleQuickAction(action.id)}
-                disabled={quota.text >= 2}
-              />
-            ))}
-          </ScrollView>
-        </View>
+        {!currentConversation && (
+          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 4 }}
+            >
+              {personalizedActions.map((action, index) => (
+                <PremiumQuickActionCard
+                  key={action.id}
+                  action={action}
+                  index={index}
+                  onPress={() => handleQuickAction(action.id)}
+                  disabled={quota.text >= 2}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Messages */}
         <ScrollView
@@ -562,6 +588,12 @@ export default function ChatScreen() {
           </View>
         </KeyboardAvoidingView>
       </Animated.View>
+
+      {/* Premium Sidebar */}
+      <PremiumSidebar
+        visible={showSidebar}
+        onClose={() => setShowSidebar(false)}
+      />
     </SafeAreaView>
   );
 }
