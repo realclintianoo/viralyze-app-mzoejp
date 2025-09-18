@@ -71,14 +71,6 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
   const [systemCheck, setSystemCheck] = useState<SystemCheckResult | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
-  useEffect(() => {
-    runCheck();
-    
-    // Run periodic checks every 30 seconds
-    const interval = setInterval(runQuickCheck, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   const runCheck = async () => {
     setIsLoading(true);
     try {
@@ -109,6 +101,14 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
       console.log('Quick health check failed:', error);
     }
   };
+
+  useEffect(() => {
+    runCheck();
+    
+    // Run periodic checks every 30 seconds
+    const interval = setInterval(runQuickCheck, 30000);
+    return () => clearInterval(interval);
+  }, [runQuickCheck]);
 
   const getStatusInfo = () => {
     if (isLoading) {

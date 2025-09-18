@@ -21,15 +21,6 @@ export default function SystemCheckNotification({ onOpenDebug }: SystemCheckNoti
   const [isDismissed, setIsDismissed] = useState(false);
   const slideAnim = new Animated.Value(-100);
 
-  useEffect(() => {
-    runInitialCheck();
-    
-    // Set up periodic health checks (every 5 minutes)
-    const interval = setInterval(runPeriodicCheck, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
   const runInitialCheck = async () => {
     try {
       const result = await performSystemCheck();
@@ -58,6 +49,15 @@ export default function SystemCheckNotification({ onOpenDebug }: SystemCheckNoti
       console.error('Periodic health check failed:', error);
     }
   };
+
+  useEffect(() => {
+    runInitialCheck();
+    
+    // Set up periodic health checks (every 5 minutes)
+    const interval = setInterval(runPeriodicCheck, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [runInitialCheck, runPeriodicCheck]);
 
   const showNotification = () => {
     setIsVisible(true);

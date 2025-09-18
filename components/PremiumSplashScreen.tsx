@@ -51,6 +51,7 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
     transform: [{ scale: 1 + glowAnim.value * 0.1 }],
   }));
 
+  // Create dot animated styles outside of useEffect
   const dotAnimatedStyles = [0, 1, 2].map((index) => 
     useAnimatedStyle(() => ({
       opacity: withDelay(

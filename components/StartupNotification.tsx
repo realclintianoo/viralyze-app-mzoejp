@@ -23,10 +23,6 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
   const [criticalIssues, setCriticalIssues] = useState<string[]>([]);
   const slideAnim = useState(new Animated.Value(-100))[0];
 
-  useEffect(() => {
-    checkSystemOnStartup();
-  }, []);
-
   const checkSystemOnStartup = async () => {
     try {
       console.log('🚀 Running startup system check...');
@@ -48,6 +44,10 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
       showNotification();
     }
   };
+
+  useEffect(() => {
+    checkSystemOnStartup();
+  }, [checkSystemOnStartup]);
 
   const showNotification = () => {
     setVisible(true);
