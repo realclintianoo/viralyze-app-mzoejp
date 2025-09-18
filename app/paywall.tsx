@@ -59,7 +59,7 @@ const BenefitItem: React.FC<BenefitItemProps> = ({ icon, text, index }) => {
   useEffect(() => {
     opacity.value = withDelay(index * 150, withTiming(1, { duration: 600 }));
     translateX.value = withDelay(index * 150, withSpring(0, { damping: 15, stiffness: 100 }));
-  }, [index]);
+  }, [index, opacity, translateX]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -107,7 +107,7 @@ const ToggleOption: React.FC<ToggleOptionProps> = ({
   useEffect(() => {
     borderWidth.value = withSpring(isSelected ? 2 : 1, { damping: 15, stiffness: 200 });
     glowOpacity.value = withTiming(isSelected ? 1 : 0, { duration: 300 });
-  }, [isSelected]);
+  }, [isSelected, borderWidth, glowOpacity]);
 
   const handlePressIn = () => {
     scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
@@ -211,7 +211,7 @@ export default function PaywallScreen() {
     headerScale.value = withDelay(200, withSpring(1, { damping: 15, stiffness: 100 }));
     contentOpacity.value = withDelay(600, withTiming(1, { duration: 800 }));
     contentTranslateY.value = withDelay(600, withSpring(0, { damping: 15, stiffness: 100 }));
-  }, []);
+  }, [headerOpacity, headerScale, contentOpacity, contentTranslateY]);
 
   const initializeInAppPurchases = async () => {
     try {

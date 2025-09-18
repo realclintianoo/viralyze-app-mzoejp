@@ -80,7 +80,7 @@ const PremiumProfileHeader: React.FC<PremiumProfileHeaderProps> = ({ profile, on
 
   useEffect(() => {
     fadeAnim.value = withDelay(100, withTiming(1, { duration: 600 }));
-  }, []);
+  }, [fadeAnim]);
 
   const handleEditPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -130,7 +130,7 @@ const PremiumProfileCard: React.FC<PremiumProfileCardProps> = ({ profile, user }
   useEffect(() => {
     fadeAnim.value = withDelay(200, withTiming(1, { duration: 600 }));
     scaleAnim.value = withDelay(200, withSpring(1, { tension: 300, friction: 8 }));
-  }, []);
+  }, [fadeAnim, scaleAnim]);
 
   const handleCardPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -275,7 +275,7 @@ const PremiumStatsRow: React.FC<PremiumStatsRowProps> = ({ profile, quota }) => 
   useEffect(() => {
     slideAnim.value = withDelay(400, withSpring(0, { tension: 300, friction: 8 }));
     fadeAnim.value = withDelay(400, withTiming(1, { duration: 600 }));
-  }, []);
+  }, [slideAnim, fadeAnim]);
 
   const formatFollowers = (count: number): string => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -373,7 +373,7 @@ const PremiumSectionCard: React.FC<PremiumSectionCardProps> = ({ title, children
   useEffect(() => {
     slideAnim.value = withDelay(index * 100 + 600, withSpring(0, { tension: 300, friction: 8 }));
     fadeAnim.value = withDelay(index * 100 + 600, withTiming(1, { duration: 600 }));
-  }, [index]);
+  }, [index, slideAnim, fadeAnim]);
 
   return (
     <Animated.View style={[commonStyles.ultraCard, { margin: 16 }, animatedStyle]}>
@@ -425,7 +425,7 @@ const PremiumActionCard: React.FC<PremiumActionCardProps> = ({
   useEffect(() => {
     slideAnim.value = withDelay(index * 50, withSpring(0, { tension: 300, friction: 8 }));
     fadeAnim.value = withDelay(index * 50, withTiming(1, { duration: 400 }));
-  }, [index]);
+  }, [index, slideAnim, fadeAnim]);
 
   const handlePressIn = () => {
     scaleAnim.value = withSpring(0.98);
@@ -533,7 +533,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 500 });
     loadData();
-  }, []);
+  }, [fadeAnim]);
 
   const loadData = async () => {
     try {
@@ -679,7 +679,7 @@ export default function SettingsScreen() {
           >
             <View style={{ marginBottom: 16 }}>
               <SparklineChart 
-                data={[quota.text, 2 - quota.text]} 
+                data={[quota.text, 10 - quota.text]} 
                 width={200} 
                 height={60} 
               />

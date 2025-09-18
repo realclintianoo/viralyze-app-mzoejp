@@ -18,22 +18,7 @@ export default function Index() {
   const { user, loading: authLoading, session } = useAuth();
   const { profile, isPersonalized } = usePersonalization();
 
-  // Check if user needs onboarding on every app launch
-  useFocusEffect(
-    useCallback(() => {
-      if (!authLoading) {
-        initializeApp();
-      }
-    }, [authLoading, isPersonalized])
-  );
-
-  useEffect(() => {
-    if (!authLoading) {
-      initializeApp();
-    }
-  }, [authLoading, isPersonalized]);
-
-  const initializeApp = async () => {
+  const initializeApp = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -62,7 +47,22 @@ export default function Index() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isPersonalized, profile, user]);
+
+  // Check if user needs onboarding on every app launch
+  useFocusEffect(
+    useCallback(() => {
+      if (!authLoading) {
+        initializeApp();
+      }
+    }, [authLoading, initializeApp])
+  );
+
+  useEffect(() => {
+    if (!authLoading) {
+      initializeApp();
+    }
+  }, [authLoading, initializeApp]);
 
   if (authLoading || isLoading) {
     return (

@@ -136,7 +136,7 @@ const PremiumToolCard: React.FC<PremiumToolCardProps> = ({ tool, index, onPress,
   useEffect(() => {
     fadeAnim.value = withDelay(index * 100, withTiming(1, { duration: 400 }));
     scaleAnim.value = withDelay(index * 100, withSpring(1, { tension: 300, friction: 8 }));
-  }, [index]);
+  }, [index, fadeAnim, scaleAnim]);
 
   const handlePressIn = () => {
     scaleAnim.value = withSpring(0.95);
@@ -294,7 +294,7 @@ const PremiumStatsCard: React.FC<PremiumStatsCardProps> = ({ quota }) => {
         true
       );
     }
-  }, [quota]);
+  }, [quota, fadeAnim, pulseAnim]);
 
   return (
     <Animated.View style={[commonStyles.glassCard, { margin: 16 }, animatedStyle]}>
@@ -380,7 +380,7 @@ export default function ToolsScreen() {
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 500 });
     loadQuota();
-  }, []);
+  }, [fadeAnim]);
 
   const loadQuota = async () => {
     try {

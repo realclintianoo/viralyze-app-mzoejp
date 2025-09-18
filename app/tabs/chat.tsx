@@ -99,7 +99,7 @@ const PremiumQuotaPill: React.FC<PremiumQuotaPillProps> = ({ remaining, total })
         true
       );
     }
-  }, [remaining]);
+  }, [remaining, glowAnim, pulseAnim]);
 
   const getColor = () => {
     if (remaining === 0) return '#EF4444';
@@ -154,7 +154,7 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({ visible, profile, welcomeMe
       fadeAnim.value = withTiming(0, { duration: 400 });
       slideAnim.value = withTiming(-30, { duration: 400 });
     }
-  }, [visible]);
+  }, [visible, fadeAnim, slideAnim]);
 
   if (!visible) return null;
 
@@ -251,7 +251,7 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({ action, i
         false
       )
     );
-  }, [index]);
+  }, [index, scale, shimmerAnim]);
 
   const handlePressIn = () => {
     if (!disabled) {
@@ -352,7 +352,7 @@ const SuggestionTiles: React.FC<SuggestionTilesProps> = ({ visible, actions, onA
       fadeAnim.value = withTiming(0, { duration: 300 });
       slideAnim.value = withTiming(20, { duration: 300 });
     }
-  }, [visible]);
+  }, [visible, fadeAnim, slideAnim]);
 
   if (!visible) return null;
 
@@ -444,7 +444,7 @@ export default function ChatScreen() {
         clearTimeout(idleTimer);
       }
     };
-  }, []);
+  }, [fadeAnim]);
 
   useEffect(() => {
     // Show/hide welcome based on conversation state
