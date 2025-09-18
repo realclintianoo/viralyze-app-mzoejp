@@ -308,7 +308,7 @@ const PremiumSidebar: React.FC<PremiumSidebarProps> = ({
       slideAnim.value = withTiming(-SIDEBAR_WIDTH, { duration: 250 });
       overlayAnim.value = withTiming(0, { duration: 250 });
     }
-  }, [visible]);
+  }, [visible, overlayAnim, slideAnim]);
 
   const sidebarAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: slideAnim.value }],

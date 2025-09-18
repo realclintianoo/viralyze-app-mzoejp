@@ -562,7 +562,7 @@ const StreakPopup: React.FC<StreakPopupProps> = ({ visible, streakCount, onSave,
       fadeAnim.value = withTiming(0, { duration: 300 });
       scaleAnim.value = withTiming(0.8, { duration: 300 });
     }
-  }, [visible]);
+  }, [visible, fadeAnim, scaleAnim]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
@@ -1388,13 +1388,6 @@ export default function ChatScreen() {
     opacity: fadeAnim.value,
   }));
 
-  useEffect(() => {
-    fadeAnim.value = withTiming(1, { duration: 500 });
-    loadInitialData();
-    checkSystemHealth();
-    checkDailyStreak();
-  }, [fadeAnim, checkDailyStreak]);
-
   // Check if user has already seen streak popup today
   const checkDailyStreak = useCallback(async () => {
     if (!user) return;
@@ -1439,6 +1432,13 @@ export default function ChatScreen() {
       console.error('❌ Error checking daily streak:', error);
     }
   }, [user]);
+
+  useEffect(() => {
+    fadeAnim.value = withTiming(1, { duration: 500 });
+    loadInitialData();
+    checkSystemHealth();
+    checkDailyStreak();
+  }, [fadeAnim, checkDailyStreak]);
 
   useEffect(() => {
     if (currentConversation && conversationMessages.length > 0) {

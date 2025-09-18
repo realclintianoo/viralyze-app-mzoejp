@@ -28,6 +28,45 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
   const textFadeAnim = useSharedValue(0);
   const logoRotateAnim = useSharedValue(0);
 
+  // Create animated styles outside of useEffect
+  const logoAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+    transform: [
+      { scale: scaleAnim.value },
+      { rotate: `${logoRotateAnim.value}deg` }
+    ],
+    shadowOpacity: 0.6 + glowAnim.value * 0.4,
+    shadowRadius: 20 + glowAnim.value * 20,
+  }));
+
+  const textAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: textFadeAnim.value,
+    transform: [
+      { translateY: interpolate(textFadeAnim.value, [0, 1], [20, 0]) }
+    ],
+  }));
+
+  const glowAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: glowAnim.value * 0.8,
+    transform: [{ scale: 1 + glowAnim.value * 0.1 }],
+  }));
+
+  const dotAnimatedStyles = [0, 1, 2].map((index) => 
+    useAnimatedStyle(() => ({
+      opacity: withDelay(
+        index * 200,
+        withRepeat(
+          withSequence(
+            withTiming(0.3, { duration: 600 }),
+            withTiming(1, { duration: 600 })
+          ),
+          -1,
+          true
+        )
+      ),
+    }))
+  );
+
   useEffect(() => {
     // Start the splash animation sequence
     const startAnimation = () => {
@@ -62,29 +101,7 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
     };
 
     startAnimation();
-  }, []);
-
-  const logoAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
-    transform: [
-      { scale: scaleAnim.value },
-      { rotate: `${logoRotateAnim.value}deg` }
-    ],
-    shadowOpacity: 0.6 + glowAnim.value * 0.4,
-    shadowRadius: 20 + glowAnim.value * 20,
-  }));
-
-  const textAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: textFadeAnim.value,
-    transform: [
-      { translateY: interpolate(textFadeAnim.value, [0, 1], [20, 0]) }
-    ],
-  }));
-
-  const glowAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: glowAnim.value * 0.8,
-    transform: [{ scale: 1 + glowAnim.value * 0.1 }],
-  }));
+  }, [fadeAnim, glowAnim, logoRotateAnim, onFinish, scaleAnim, textFadeAnim]);
 
   return (
     <View style={{
@@ -231,19 +248,7 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
                 shadowRadius: 6,
                 elevation: 6,
               },
-              useAnimatedStyle(() => ({
-                opacity: withDelay(
-                  index * 200,
-                  withRepeat(
-                    withSequence(
-                      withTiming(0.3, { duration: 600 }),
-                      withTiming(1, { duration: 600 })
-                    ),
-                    -1,
-                    true
-                  )
-                ),
-              }))
+              dotAnimatedStyles[index]
             ]}
           />
         ))}
