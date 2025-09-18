@@ -39,6 +39,13 @@ export default function RootLayout() {
             <Stack.Screen name="tabs" />
             <Stack.Screen name="tool/[id]" />
             <Stack.Screen 
+              name="profile/edit" 
+              options={{
+                presentation: 'modal',
+                animation: 'slide_from_right',
+              }}
+            />
+            <Stack.Screen 
               name="paywall" 
               options={{
                 presentation: 'modal',
