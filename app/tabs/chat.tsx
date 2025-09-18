@@ -1,6 +1,7 @@
 
 import { useConversations } from '../../contexts/ConversationsContext';
 import { usePersonalization } from '../../contexts/PersonalizationContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { BlurView } from 'expo-blur';
 import React, { useState, useEffect, useRef } from 'react';
 import * as Haptics from 'expo-haptics';
@@ -39,6 +40,8 @@ import {
 import { ChatMessage, QuotaUsage, OnboardingData, InputMode, PresetPrompt } from '../../types';
 import { quickHealthCheck } from '../../utils/systemCheck';
 import PremiumSidebar from '../../components/PremiumSidebar';
+import ConfettiCannon from 'react-native-confetti-cannon';
+import { supabase } from '../../lib/supabase';
 
 interface PremiumSuggestionTileProps {
   action: any;
@@ -64,6 +67,7 @@ interface SuggestionTilesProps {
   actions: any[];
   onActionPress: (actionId: string) => void;
   disabled: boolean;
+  onSeeMore?: () => void;
 }
 
 interface NotificationModalProps {
@@ -86,6 +90,19 @@ interface PresetPromptsProps {
   visible: boolean;
   prompts: PresetPrompt[];
   onPromptSelect: (prompt: string) => void;
+}
+
+interface StreakPopupProps {
+  visible: boolean;
+  streakCount: number;
+  onSave: () => void;
+  onMaybeLater: () => void;
+}
+
+interface StreakData {
+  current_streak: number;
+  is_new_day: boolean;
+  show_popup: boolean;
 }
 
 const InputModeToggle: React.FC<InputModeToggleProps> = ({ modes, activeMode, onModeChange }) => {
@@ -467,6 +484,233 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   );
 };
 
+const StreakPopup: React.FC<StreakPopupProps> = ({ visible, streakCount, onSave, onMaybeLater }) => {
+  const fadeAnim = useSharedValue(0);
+  const scaleAnim = useSharedValue(0.8);
+  const confettiRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (visible) {
+      fadeAnim.value = withTiming(1, { duration: 400 });
+      scaleAnim.value = withSpring(1, { tension: 300, friction: 8 });
+      
+      // Trigger confetti after a short delay
+      setTimeout(() => {
+        confettiRef.current?.start();
+      }, 600);
+    } else {
+      fadeAnim.value = withTiming(0, { duration: 300 });
+      scaleAnim.value = withTiming(0.8, { duration: 300 });
+    }
+  }, [visible]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+    transform: [{ scale: scaleAnim.value }],
+  }));
+
+  const getStreakEmoji = (count: number) => {
+    if (count >= 30) return '🏆';
+    if (count >= 14) return '💎';
+    if (count >= 7) return '⭐';
+    if (count >= 3) return '🔥';
+    return '✨';
+  };
+
+  const getStreakMessage = (count: number) => {
+    if (count === 1) return 'Welcome to your content creation journey!';
+    if (count >= 30) return 'Legendary creator! You\'re unstoppable!';
+    if (count >= 14) return 'Two weeks strong! You\'re building amazing habits!';
+    if (count >= 7) return 'One week streak! You\'re on fire!';
+    if (count >= 3) return 'Keep creating daily to grow your audience!';
+    return 'Every day counts towards your success!';
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      <View style={{
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+      }}>
+        <ConfettiCannon
+          ref={confettiRef}
+          count={50}
+          origin={{ x: Dimensions.get('window').width / 2, y: -10 }}
+          autoStart={false}
+          fadeOut={true}
+          fallSpeed={3000}
+          colors={[colors.neonGreen, colors.neonTeal, colors.neonPurple, '#FFD700', '#FF6B6B']}
+        />
+        
+        <Animated.View style={[
+          {
+            backgroundColor: colors.glassBackgroundUltra,
+            borderRadius: 32,
+            padding: 32,
+            alignItems: 'center',
+            borderWidth: 3,
+            borderColor: colors.neonGreen + '60',
+            shadowColor: colors.glowNeonGreen,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 24,
+            elevation: 20,
+            maxWidth: 340,
+            width: '100%',
+          },
+          animatedStyle
+        ]}>
+          <LinearGradient
+            colors={[colors.neonGreen + '15', colors.neonTeal + '15']}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: 32,
+            }}
+          />
+          
+          <BlurView intensity={30} style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: 32,
+          }} />
+          
+          {/* Streak Icon */}
+          <View style={{
+            width: 100,
+            height: 100,
+            borderRadius: 50,
+            backgroundColor: colors.glassBackgroundStrong,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 24,
+            borderWidth: 3,
+            borderColor: colors.neonGreen + '40',
+            shadowColor: colors.glowNeonGreen,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 1,
+            shadowRadius: 20,
+            elevation: 16,
+          }}>
+            <Text style={{ fontSize: 48 }}>
+              {getStreakEmoji(streakCount)}
+            </Text>
+          </View>
+          
+          {/* Streak Count */}
+          <Text style={[
+            commonStyles.title,
+            {
+              fontSize: 32,
+              color: colors.neonGreen,
+              textShadowColor: colors.glowNeonGreen,
+              textShadowOffset: { width: 0, height: 0 },
+              textShadowRadius: 12,
+              marginBottom: 8,
+              fontWeight: '800',
+            }
+          ]}>
+            🔥 Day {streakCount} Streak!
+          </Text>
+          
+          {/* Streak Message */}
+          <Text style={[
+            commonStyles.subtitle,
+            {
+              textAlign: 'center',
+              color: colors.text,
+              fontSize: 16,
+              lineHeight: 24,
+              marginBottom: 32,
+              paddingHorizontal: 8,
+            }
+          ]}>
+            {getStreakMessage(streakCount)}
+          </Text>
+          
+          {/* Action Buttons */}
+          <View style={{ width: '100%', gap: 12 }}>
+            <TouchableOpacity
+              style={{
+                backgroundColor: 'transparent',
+                borderRadius: 20,
+                padding: 16,
+                alignItems: 'center',
+                borderWidth: 2,
+                borderColor: colors.neonGreen,
+                shadowColor: colors.glowNeonGreen,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.6,
+                shadowRadius: 16,
+                elevation: 12,
+                overflow: 'hidden',
+              }}
+              onPress={() => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                onSave();
+              }}
+            >
+              <LinearGradient
+                colors={[colors.neonGreen, colors.neonTeal]}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                }}
+              />
+              
+              <Text style={[
+                commonStyles.textBold,
+                {
+                  color: colors.background,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                }
+              ]}>
+                🎯 Save My Streak
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={{
+                padding: 16,
+                alignItems: 'center',
+              }}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onMaybeLater();
+              }}
+            >
+              <Text style={[
+                commonStyles.textSmall,
+                {
+                  color: colors.textSecondary,
+                  fontSize: 14,
+                  textDecorationLine: 'underline',
+                }
+              ]}>
+                Maybe later
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
 const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose }) => {
   const slideAnim = useSharedValue(100);
 
@@ -716,27 +960,16 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
 }) => {
   const fadeAnim = useSharedValue(0);
   const slideAnim = useSharedValue(-20);
-  const glowAnim = useSharedValue(0);
   
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
     transform: [{ translateY: slideAnim.value }],
-    shadowOpacity: 0.3 + glowAnim.value * 0.4,
-    shadowRadius: 20 + glowAnim.value * 10,
   }));
 
   useEffect(() => {
     if (visible) {
       fadeAnim.value = withTiming(1, { duration: 600 });
       slideAnim.value = withSpring(0, { tension: 300, friction: 8 });
-      glowAnim.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 3000 }),
-          withTiming(0, { duration: 3000 })
-        ),
-        -1,
-        true
-      );
     } else {
       fadeAnim.value = withTiming(0, { duration: 300 });
       slideAnim.value = withTiming(-20, { duration: 300 });
@@ -773,127 +1006,63 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
       {
         margin: 16,
         marginTop: 100,
-        padding: 24,
+        padding: 20,
         backgroundColor: colors.glassBackgroundUltra,
-        borderRadius: 28,
+        borderRadius: 24,
         borderWidth: 2,
         borderColor: colors.glassBorderUltra,
         shadowColor: colors.glowNeonTeal,
         shadowOffset: { width: 0, height: 0 },
-        elevation: 16,
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+        elevation: 12,
       },
       animatedStyle
     ]}>
       <LinearGradient
-        colors={[colors.neonTeal + '10', colors.neonGreen + '10']}
+        colors={[colors.neonTeal + '08', colors.neonGreen + '08']}
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          borderRadius: 28,
+          borderRadius: 24,
         }}
       />
       
-      <BlurView intensity={30} style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        borderRadius: 28,
-      }} />
-      
-      <View style={{ alignItems: 'center', marginBottom: 20 }}>
-        <View style={{
-          width: 60,
-          height: 60,
-          borderRadius: 30,
-          backgroundColor: colors.glassBackgroundStrong,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 12,
-          borderWidth: 2,
-          borderColor: colors.neonTeal + '40',
-          shadowColor: colors.glowNeonTeal,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.8,
-          shadowRadius: 16,
-          elevation: 12,
-        }}>
-          <Text style={{ fontSize: 24 }}>
-            {getNicheEmoji()}
-          </Text>
-        </View>
-        
-        <Text style={[
-          commonStyles.title, 
-          { 
-            textAlign: 'center', 
-            fontSize: 20, 
-            lineHeight: 26,
-            color: colors.neonTeal,
-            textShadowColor: colors.glowNeonTeal,
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 8,
-          }
-        ]}>
-          {welcomeMessage}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <Text style={{ fontSize: 28, marginRight: 12 }}>
+          {getNicheEmoji()}
         </Text>
-      </View>
-      
-      {recommendations.length > 0 && (
-        <View>
+        
+        <View style={{ flex: 1 }}>
           <Text style={[
-            commonStyles.textBold, 
+            commonStyles.title, 
             { 
-              marginBottom: 16, 
-              color: colors.neonGreen, 
-              fontSize: 14,
-              textAlign: 'center',
+              fontSize: 18, 
+              lineHeight: 22,
+              color: colors.text,
+              marginBottom: 2,
+            }
+          ]}>
+            {welcomeMessage.split(' ').slice(0, 4).join(' ')}
+          </Text>
+          
+          <Text style={[
+            commonStyles.textSmall,
+            { 
+              color: colors.neonTeal, 
+              fontSize: 12,
               textTransform: 'uppercase',
-              letterSpacing: 1
+              letterSpacing: 0.8,
+              fontWeight: '600',
             }
           ]}>
             ✨ Personalized for you
           </Text>
-          
-          <View style={{ gap: 8 }}>
-            {recommendations.slice(0, 3).map((rec, index) => (
-              <View key={index} style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: colors.glassBackground,
-                borderRadius: 16,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: colors.glassBorder,
-              }}>
-                <View style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: colors.neonGreen,
-                  marginRight: 12,
-                  shadowColor: colors.glowNeonGreen,
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 1,
-                  shadowRadius: 4,
-                  elevation: 4,
-                }} />
-                
-                <Text style={[
-                  commonStyles.textSmall,
-                  { color: colors.text, fontSize: 13, lineHeight: 18, flex: 1 }
-                ]}>
-                  {rec}
-                </Text>
-              </View>
-            ))}
-          </View>
         </View>
-      )}
+      </View>
     </Animated.View>
   );
 };
@@ -933,11 +1102,13 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
       true
     );
     
-    // Shimmer effect
-    shimmerAnim.value = withRepeat(
-      withTiming(1, { duration: 3000 }),
-      -1,
-      false
+    // Shimmer effect - only once on load
+    shimmerAnim.value = withDelay(
+      index * 200,
+      withSequence(
+        withTiming(1, { duration: 1500 }),
+        withTiming(0, { duration: 500 })
+      )
     );
   }, [index]);
 
@@ -1003,13 +1174,14 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
         style={[
           {
             backgroundColor: disabled ? colors.backgroundSecondary : colors.glassBackgroundUltra,
-            borderRadius: 20,
-            padding: 16,
+            borderRadius: 16,
+            padding: 12,
             alignItems: 'center',
             borderWidth: 2,
             borderColor: disabled ? colors.backgroundTertiary : getAccentColor() + '30',
             opacity: disabled ? 0.5 : 1,
-            minHeight: 90,
+            width: 90,
+            height: 90,
             justifyContent: 'center',
             shadowColor: disabled ? colors.neuDark : getGlowColor(),
             shadowOffset: { width: 0, height: 0 },
@@ -1057,24 +1229,24 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
         
         {/* Icon container */}
         <View style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
+          width: 32,
+          height: 32,
+          borderRadius: 16,
           backgroundColor: disabled ? colors.backgroundTertiary : getAccentColor() + '20',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: 8,
+          marginBottom: 6,
           borderWidth: 1,
           borderColor: disabled ? colors.backgroundTertiary : getAccentColor() + '40',
           shadowColor: disabled ? 'transparent' : getGlowColor(),
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.8,
-          shadowRadius: 8,
-          elevation: 8,
+          shadowRadius: 6,
+          elevation: 6,
         }}>
           <Ionicons 
             name={getIconName(action.id)} 
-            size={20} 
+            size={16} 
             color={disabled ? colors.textTertiary : getAccentColor()} 
           />
         </View>
@@ -1082,11 +1254,11 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
         <Text style={[
           commonStyles.textBold,
           { 
-            fontSize: 12, 
+            fontSize: 10, 
             textAlign: 'center',
             color: disabled ? colors.textTertiary : colors.text,
-            lineHeight: 16,
-            letterSpacing: 0.3,
+            lineHeight: 12,
+            letterSpacing: 0.2,
           }
         ]}>
           {action.title}
@@ -1100,7 +1272,8 @@ const SuggestionTiles: React.FC<SuggestionTilesProps> = ({
   visible, 
   actions, 
   onActionPress, 
-  disabled 
+  disabled,
+  onSeeMore
 }) => {
   const slideAnim = useSharedValue(30);
   const fadeAnim = useSharedValue(0);
@@ -1125,21 +1298,63 @@ const SuggestionTiles: React.FC<SuggestionTilesProps> = ({
   return (
     <Animated.View style={[
       {
-        flexDirection: 'row',
         paddingHorizontal: 16,
         marginBottom: 16,
       },
       animatedStyle
     ]}>
-      {actions.slice(0, 3).map((action, index) => (
-        <PremiumSuggestionTile
-          key={action.id}
-          action={action}
-          index={index}
-          onPress={() => onActionPress(action.id)}
-          disabled={disabled}
-        />
-      ))}
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 8,
+      }}>
+        {actions.slice(0, 3).map((action, index) => (
+          <PremiumSuggestionTile
+            key={action.id}
+            action={action}
+            index={index}
+            onPress={() => onActionPress(action.id)}
+            disabled={disabled}
+          />
+        ))}
+      </View>
+      
+      {actions.length > 3 && onSeeMore && (
+        <TouchableOpacity
+          style={{
+            backgroundColor: colors.glassBackground,
+            borderRadius: 16,
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            alignItems: 'center',
+            marginTop: 12,
+            borderWidth: 1,
+            borderColor: colors.glassBorder,
+            shadowColor: colors.glowNeonTeal,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onSeeMore();
+          }}
+        >
+          <Text style={[
+            commonStyles.textBold,
+            {
+              color: colors.neonTeal,
+              fontSize: 12,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }
+          ]}>
+            See More Tools
+          </Text>
+        </TouchableOpacity>
+      )}
     </Animated.View>
   );
 };
@@ -1158,6 +1373,8 @@ export default function ChatScreen() {
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [activeInputMode, setActiveInputMode] = useState<'text' | 'image'>('text');
+  const [streakPopupVisible, setStreakPopupVisible] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
   
   const scrollViewRef = useRef<ScrollView>(null);
   const idleTimerRef = useRef<NodeJS.Timeout>();
@@ -1165,6 +1382,7 @@ export default function ChatScreen() {
   
   const { profile, welcomeMessage, recommendations, chatContext } = usePersonalization();
   const { currentConversation, messages: conversationMessages, addMessage } = useConversations();
+  const { user } = useAuth();
 
   // Input modes for toggle
   const inputModes: InputMode[] = [
@@ -1239,7 +1457,53 @@ export default function ChatScreen() {
     fadeAnim.value = withTiming(1, { duration: 500 });
     loadInitialData();
     checkSystemHealth();
+    checkDailyStreak();
   }, []);
+
+  // Check if user has already seen streak popup today
+  const checkDailyStreak = async () => {
+    if (!user) return;
+    
+    try {
+      // Check if we've already shown the popup today
+      const lastShownDate = await storage.getItem('streak_popup_shown_date');
+      const today = new Date().toDateString();
+      
+      if (lastShownDate === today) {
+        console.log('🔥 Streak popup already shown today');
+        return;
+      }
+
+      // Call the Supabase function to update streak
+      const { data, error } = await supabase.rpc('update_user_streak', {
+        user_uuid: user.id
+      });
+
+      if (error) {
+        console.error('❌ Error updating streak:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const streakData: StreakData = data[0];
+        console.log('🔥 Streak data:', streakData);
+        
+        setCurrentStreak(streakData.current_streak);
+        
+        if (streakData.show_popup && streakData.is_new_day) {
+          // Show streak popup
+          setTimeout(() => {
+            setStreakPopupVisible(true);
+          }, 1000); // Delay to let the screen load
+        }
+      } else {
+        // No streak data, user might be new
+        setCurrentStreak(0);
+      }
+    } catch (error) {
+      console.error('❌ Error checking daily streak:', error);
+    }
+  };
 
   useEffect(() => {
     if (currentConversation && conversationMessages.length > 0) {
@@ -1436,6 +1700,52 @@ export default function ChatScreen() {
   const handleProfilePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setProfileMenuVisible(true);
+  };
+
+  const handleStreakSave = async () => {
+    try {
+      // Mark popup as shown for today
+      const today = new Date().toDateString();
+      await storage.setItem('streak_popup_shown_date', today);
+      
+      setStreakPopupVisible(false);
+      
+      // Refresh streak count (in case it changed)
+      if (user) {
+        const { data } = await supabase
+          .from('user_streaks')
+          .select('current_streak')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (data) {
+          setCurrentStreak(data.current_streak || 0);
+        }
+      }
+      
+      // Show success message
+      setTimeout(() => {
+        Alert.alert(
+          '🎉 Streak Saved!',
+          `Your ${currentStreak}-day streak has been saved. Keep creating daily to maintain your momentum!`,
+          [{ text: 'Let\'s Go!' }]
+        );
+      }, 500);
+    } catch (error) {
+      console.error('❌ Error saving streak:', error);
+    }
+  };
+
+  const handleStreakMaybeLater = async () => {
+    try {
+      // Mark popup as shown for today (so it doesn't show again)
+      const today = new Date().toDateString();
+      await storage.setItem('streak_popup_shown_date', today);
+      
+      setStreakPopupVisible(false);
+    } catch (error) {
+      console.error('❌ Error dismissing streak popup:', error);
+    }
   };
 
   const getNicheEmoji = () => {
@@ -1702,6 +2012,35 @@ export default function ChatScreen() {
           </View>
           
           <View style={{ flexDirection: 'row', gap: 8 }}>
+            {currentStreak > 0 && (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.glassBackgroundStrong,
+                borderRadius: 16,
+                paddingHorizontal: 8,
+                paddingVertical: 6,
+                borderWidth: 2,
+                borderColor: colors.neonGreen + '40',
+                shadowColor: colors.glowNeonGreen,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.6,
+                shadowRadius: 8,
+                elevation: 8,
+              }}>
+                <Text style={{ fontSize: 12, marginRight: 4 }}>🔥</Text>
+                <Text style={[
+                  commonStyles.textBold,
+                  {
+                    color: colors.neonGreen,
+                    fontSize: 12,
+                  }
+                ]}>
+                  {currentStreak}
+                </Text>
+              </View>
+            )}
+            
             <TouchableOpacity 
               style={{
                 padding: 12,
@@ -1833,12 +2172,17 @@ export default function ChatScreen() {
             actions={quickActions}
             onActionPress={handleQuickAction}
             disabled={isQuotaExceeded}
+            onSeeMore={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push('/tabs/tools');
+            }}
           />
 
           {/* Premium Input Area */}
           <View style={{
             paddingHorizontal: 16,
             paddingVertical: 16,
+            paddingBottom: 100, // Space for navigation bar
             backgroundColor: colors.background,
           }}>
             {/* Input Mode Toggle */}
@@ -1950,6 +2294,14 @@ export default function ChatScreen() {
         <ProfileMenu
           visible={profileMenuVisible}
           onClose={() => setProfileMenuVisible(false)}
+        />
+
+        {/* Streak Popup */}
+        <StreakPopup
+          visible={streakPopupVisible}
+          streakCount={currentStreak}
+          onSave={handleStreakSave}
+          onMaybeLater={handleStreakMaybeLater}
         />
       </Animated.View>
     </SafeAreaView>

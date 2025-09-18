@@ -7,6 +7,7 @@ const KEYS = {
   QUOTA_USAGE: 'quota_usage',
   ONBOARDING_DATA: 'onboarding_data',
   CHAT_MESSAGES: 'chat_messages',
+  STREAK_POPUP_SHOWN: 'streak_popup_shown_date',
 };
 
 export const storage = {
@@ -189,6 +190,7 @@ export const storage = {
         KEYS.QUOTA_USAGE,
         KEYS.ONBOARDING_DATA,
         KEYS.CHAT_MESSAGES,
+        KEYS.STREAK_POPUP_SHOWN,
       ]);
       
       console.log('✅ Storage cleared successfully');
