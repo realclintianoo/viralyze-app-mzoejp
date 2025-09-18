@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,54 +8,44 @@ import {
   Dimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
-  interpolate,
 } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { commonStyles, colors } from '../styles/commonStyles';
+import { colors, commonStyles } from '../styles/commonStyles';
+import * as Haptics from 'expo-haptics';
+
+const { width } = Dimensions.get('window');
 
 interface PremiumConfirmModalProps {
   visible: boolean;
   title: string;
   message: string;
-  confirmText: string;
-  cancelText: string;
+  confirmText?: string;
+  cancelText?: string;
   onConfirm: () => void;
   onCancel: () => void;
-  isDestructive?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
+  type?: 'success' | 'warning' | 'error' | 'info';
 }
 
-const PremiumConfirmModal: React.FC<PremiumConfirmModalProps> = ({
+export default function PremiumConfirmModal({
   visible,
   title,
   message,
-  confirmText,
-  cancelText,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
   onConfirm,
   onCancel,
-  isDestructive = false,
-  icon = 'alert-circle'
-}) => {
-  const scaleAnim = useSharedValue(0);
+  type = 'info'
+}: PremiumConfirmModalProps) {
   const fadeAnim = useSharedValue(0);
+  const scaleAnim = useSharedValue(0.8);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scaleAnim.value }],
-    opacity: fadeAnim.value,
-  }));
-
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
-  }));
-
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
       fadeAnim.value = withTiming(1, { duration: 300 });
       scaleAnim.value = withSpring(1, { tension: 300, friction: 8 });
@@ -64,6 +54,30 @@ const PremiumConfirmModal: React.FC<PremiumConfirmModalProps> = ({
       scaleAnim.value = withTiming(0.8, { duration: 200 });
     }
   }, [visible, fadeAnim, scaleAnim]);
+
+  const backgroundAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+  }));
+
+  const modalAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+    transform: [{ scale: scaleAnim.value }],
+  }));
+
+  const getIconAndColor = () => {
+    switch (type) {
+      case 'success':
+        return { icon: 'checkmark-circle', color: colors.neonGreen };
+      case 'warning':
+        return { icon: 'warning', color: colors.neonYellow };
+      case 'error':
+        return { icon: 'close-circle', color: colors.neonRed };
+      default:
+        return { icon: 'information-circle', color: colors.neonTeal };
+    }
+  };
+
+  const { icon, color } = getIconAndColor();
 
   const handleConfirm = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -80,142 +94,148 @@ const PremiumConfirmModal: React.FC<PremiumConfirmModalProps> = ({
       visible={visible}
       transparent
       animationType="none"
-      statusBarTranslucent
+      onRequestClose={onCancel}
     >
       <Animated.View style={[
         {
           flex: 1,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
           justifyContent: 'center',
           alignItems: 'center',
-          padding: 20,
+          paddingHorizontal: 24,
         },
-        backdropStyle
+        backgroundAnimatedStyle
       ]}>
-        <TouchableOpacity
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-          }}
-          onPress={handleCancel}
-        />
-
         <Animated.View style={[
           {
-            backgroundColor: colors.glassBackground,
-            borderRadius: 28,
-            padding: 32,
-            width: '100%',
+            width: width * 0.85,
             maxWidth: 400,
-            borderWidth: 1,
-            borderColor: colors.glassBorder,
           },
-          animatedStyle
+          modalAnimatedStyle
         ]}>
-          <BlurView intensity={20} style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            borderRadius: 28,
-          }} />
-
-          {/* Icon */}
-          <View style={{
-            alignItems: 'center',
-            marginBottom: 20,
+          <BlurView intensity={40} style={{
+            borderRadius: 24,
+            overflow: 'hidden',
+            borderWidth: 2,
+            borderColor: colors.glassBorderUltra,
           }}>
-            <View style={{
-              backgroundColor: isDestructive ? colors.error + '20' : colors.warning + '20',
-              borderRadius: 30,
-              padding: 16,
-              borderWidth: 2,
-              borderColor: isDestructive ? colors.error + '40' : colors.warning + '40',
-            }}>
-              <Ionicons 
-                name={icon} 
-                size={32} 
-                color={isDestructive ? colors.error : colors.warning} 
-              />
-            </View>
-          </View>
-
-          {/* Title */}
-          <Text style={[
-            commonStyles.title,
-            { 
-              textAlign: 'center', 
-              marginBottom: 12,
-              fontSize: 22
-            }
-          ]}>
-            {title}
-          </Text>
-
-          {/* Message */}
-          <Text style={[
-            commonStyles.text,
-            { 
-              textAlign: 'center', 
-              marginBottom: 32,
-              color: colors.textSecondary,
-              lineHeight: 22
-            }
-          ]}>
-            {message}
-          </Text>
-
-          {/* Buttons */}
-          <View style={{
-            flexDirection: 'row',
-            gap: 12,
-          }}>
-            {/* Cancel Button */}
-            <TouchableOpacity
-              style={[
-                commonStyles.secondaryButton,
-                { flex: 1 }
+            <LinearGradient
+              colors={[
+                colors.glassBackgroundUltra + 'F0',
+                colors.background + 'E6',
               ]}
-              onPress={handleCancel}
-              activeOpacity={0.8}
+              style={{
+                padding: 32,
+                alignItems: 'center',
+              }}
             >
-              <Text style={commonStyles.secondaryButtonText}>
-                {cancelText}
-              </Text>
-            </TouchableOpacity>
+              {/* Icon */}
+              <View style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: color + '20',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 24,
+                shadowColor: color,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.4,
+                shadowRadius: 12,
+                elevation: 8,
+              }}>
+                <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={36} color={color} />
+              </View>
 
-            {/* Confirm Button */}
-            <TouchableOpacity
-              style={[
-                commonStyles.premiumButton,
-                { 
-                  flex: 1,
-                  backgroundColor: 'transparent',
-                  borderWidth: 2,
-                  borderColor: isDestructive ? colors.error : colors.accent,
+              {/* Title */}
+              <Text style={[
+                commonStyles.headerTitle,
+                {
+                  fontSize: 24,
+                  textAlign: 'center',
+                  marginBottom: 12,
+                  color: colors.text,
                 }
-              ]}
-              onPress={handleConfirm}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={isDestructive ? [colors.error, colors.error] : [colors.gradientStart, colors.gradientEnd]}
-                style={[commonStyles.premiumButton, { margin: 0 }]}
-              >
-                <Text style={commonStyles.buttonText}>
-                  {confirmText}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+              ]}>
+                {title}
+              </Text>
+
+              {/* Message */}
+              <Text style={[
+                commonStyles.text,
+                {
+                  textAlign: 'center',
+                  color: colors.textSecondary,
+                  lineHeight: 22,
+                  marginBottom: 32,
+                }
+              ]}>
+                {message}
+              </Text>
+
+              {/* Buttons */}
+              <View style={{
+                flexDirection: 'row',
+                gap: 12,
+                width: '100%',
+              }}>
+                {/* Cancel Button */}
+                <TouchableOpacity
+                  style={[
+                    commonStyles.secondaryButton,
+                    {
+                      flex: 1,
+                      backgroundColor: colors.backgroundSecondary,
+                      borderWidth: 1,
+                      borderColor: colors.glassBorder,
+                    }
+                  ]}
+                  onPress={handleCancel}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    commonStyles.secondaryButtonText,
+                    {
+                      color: colors.text,
+                      fontWeight: '600',
+                    }
+                  ]}>
+                    {cancelText}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Confirm Button */}
+                <TouchableOpacity
+                  style={[
+                    commonStyles.primaryButton,
+                    {
+                      flex: 1,
+                      backgroundColor: color,
+                      shadowColor: color,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.4,
+                      shadowRadius: 8,
+                      elevation: 6,
+                    }
+                  ]}
+                  onPress={handleConfirm}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    commonStyles.primaryButtonText,
+                    {
+                      color: colors.background,
+                      fontWeight: '700',
+                    }
+                  ]}>
+                    {confirmText}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </BlurView>
         </Animated.View>
       </Animated.View>
     </Modal>
   );
-};
-
-export default PremiumConfirmModal;
+}

@@ -1,27 +1,25 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Modal,
-  StyleSheet,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
-  interpolate,
 } from 'react-native-reanimated';
+import { colors, commonStyles } from '../styles/commonStyles';
 import * as Haptics from 'expo-haptics';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface LogoutModalProps {
   visible: boolean;
@@ -29,16 +27,16 @@ interface LogoutModalProps {
   onCancel: () => void;
 }
 
-const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel }) => {
+export default function LogoutModal({ visible, onConfirm, onCancel }: LogoutModalProps) {
   const backgroundOpacity = useSharedValue(0);
   const modalScale = useSharedValue(0.8);
   const modalOpacity = useSharedValue(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
-      backgroundOpacity.value = withTiming(1, { duration: 200 });
-      modalScale.value = withSpring(1, { damping: 15, stiffness: 200 });
-      modalOpacity.value = withTiming(1, { duration: 300 });
+      backgroundOpacity.value = withTiming(1, { duration: 300 });
+      modalScale.value = withSpring(1, { tension: 300, friction: 8 });
+      modalOpacity.value = withTiming(1, { duration: 400 });
     } else {
       backgroundOpacity.value = withTiming(0, { duration: 200 });
       modalScale.value = withTiming(0.8, { duration: 200 });
@@ -51,8 +49,8 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel 
   }));
 
   const modalAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: modalScale.value }],
     opacity: modalOpacity.value,
+    transform: [{ scale: modalScale.value }],
   }));
 
   const handleConfirm = () => {
@@ -72,53 +70,140 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel 
       animationType="none"
       onRequestClose={onCancel}
     >
-      <Animated.View style={[styles.overlay, backgroundAnimatedStyle]}>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFillObject}
-          onPress={onCancel}
-          activeOpacity={1}
-        />
-        
-        <Animated.View style={[styles.modalContainer, modalAnimatedStyle]}>
-          <BlurView intensity={20} tint="dark" style={styles.modalBlur}>
+      <Animated.View style={[
+        {
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: 24,
+        },
+        backgroundAnimatedStyle
+      ]}>
+        <Animated.View style={[
+          {
+            width: width * 0.85,
+            maxWidth: 400,
+          },
+          modalAnimatedStyle
+        ]}>
+          <BlurView intensity={40} style={{
+            borderRadius: 24,
+            overflow: 'hidden',
+            borderWidth: 2,
+            borderColor: colors.glassBorderUltra,
+          }}>
             <LinearGradient
-              colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']}
-              style={styles.modalContent}
+              colors={[
+                colors.glassBackgroundUltra + 'F0',
+                colors.background + 'E6',
+              ]}
+              style={{
+                padding: 32,
+                alignItems: 'center',
+              }}
             >
               {/* Icon */}
-              <View style={styles.iconContainer}>
-                <LinearGradient
-                  colors={['#EF4444', '#DC2626']}
-                  style={styles.iconBackground}
-                >
-                  <Ionicons name="log-out-outline" size={32} color="#FFFFFF" />
-                </LinearGradient>
+              <View style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: colors.neonRed + '20',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 24,
+                shadowColor: colors.neonRed,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.4,
+                shadowRadius: 12,
+                elevation: 8,
+              }}>
+                <Ionicons name="log-out-outline" size={36} color={colors.neonRed} />
               </View>
 
               {/* Title */}
-              <Text style={styles.title}>Are you sure you want to log out?</Text>
-              
+              <Text style={[
+                commonStyles.headerTitle,
+                {
+                  fontSize: 24,
+                  textAlign: 'center',
+                  marginBottom: 12,
+                  color: colors.text,
+                }
+              ]}>
+                Sign Out
+              </Text>
+
               {/* Message */}
-              <Text style={styles.message}>
-                This will sign you out completely and clear all local data. You&apos;ll need to sign in again or choose guest mode to continue using the app.
+              <Text style={[
+                commonStyles.text,
+                {
+                  textAlign: 'center',
+                  color: colors.textSecondary,
+                  lineHeight: 22,
+                  marginBottom: 32,
+                }
+              ]}>
+                Are you sure you want to sign out? You&apos;ll need to sign in again to access your account.
               </Text>
 
               {/* Buttons */}
-              <View style={styles.buttonContainer}>
+              <View style={{
+                flexDirection: 'row',
+                gap: 12,
+                width: '100%',
+              }}>
+                {/* Cancel Button */}
                 <TouchableOpacity
-                  style={styles.cancelButton}
+                  style={[
+                    commonStyles.secondaryButton,
+                    {
+                      flex: 1,
+                      backgroundColor: colors.backgroundSecondary,
+                      borderWidth: 1,
+                      borderColor: colors.glassBorder,
+                    }
+                  ]}
                   onPress={handleCancel}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={[
+                    commonStyles.secondaryButtonText,
+                    {
+                      color: colors.text,
+                      fontWeight: '600',
+                    }
+                  ]}>
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
 
+                {/* Confirm Button */}
                 <TouchableOpacity
-                  style={styles.confirmButton}
+                  style={[
+                    commonStyles.primaryButton,
+                    {
+                      flex: 1,
+                      backgroundColor: colors.neonRed,
+                      shadowColor: colors.neonRed,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.4,
+                      shadowRadius: 8,
+                      elevation: 6,
+                    }
+                  ]}
                   onPress={handleConfirm}
+                  activeOpacity={0.8}
                 >
-                  <View style={styles.confirmButtonContent}>
-                    <Text style={styles.confirmButtonText}>Confirm</Text>
-                  </View>
+                  <Text style={[
+                    commonStyles.primaryButtonText,
+                    {
+                      color: colors.background,
+                      fontWeight: '700',
+                    }
+                  ]}>
+                    Sign Out
+                  </Text>
                 </TouchableOpacity>
               </View>
             </LinearGradient>
@@ -127,99 +212,4 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel 
       </Animated.View>
     </Modal>
   );
-};
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  modalContainer: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: 24,
-    overflow: 'hidden',
-  },
-  modalBlur: {
-    borderRadius: 24,
-  },
-  modalContent: {
-    padding: 32,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderRadius: 24,
-  },
-  iconContainer: {
-    marginBottom: 24,
-  },
-  iconBackground: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
-    elevation: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#E6EAF0',
-    marginBottom: 12,
-    textAlign: 'center',
-    lineHeight: 26,
-  },
-  message: {
-    fontSize: 14,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 20,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#E6EAF0',
-  },
-  confirmButton: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#EF4444',
-    backgroundColor: 'transparent',
-    overflow: 'hidden',
-  },
-  confirmButtonContent: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#EF4444',
-  },
-});
-
-export default LogoutModal;
+}

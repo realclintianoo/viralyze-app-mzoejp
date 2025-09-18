@@ -65,17 +65,6 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
 
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      loadConversations();
-    } else {
-      // Clear data when user logs out
-      setConversations([]);
-      setCurrentConversation(null);
-      setMessages([]);
-    }
-  }, [user, loadConversations]);
-
   const loadConversations = useCallback(async () => {
     if (!user) return;
 
@@ -102,7 +91,18 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
     }
   }, [user]);
 
-  const createConversation = async (title: string, emoji = '💬'): Promise<Conversation | null> => {
+  useEffect(() => {
+    if (user) {
+      loadConversations();
+    } else {
+      // Clear data when user logs out
+      setConversations([]);
+      setCurrentConversation(null);
+      setMessages([]);
+    }
+  }, [user, loadConversations]);
+
+  const createConversation = useCallback(async (title: string, emoji = '💬'): Promise<Conversation | null> => {
     if (!user) return null;
 
     setError(null);
@@ -141,9 +141,9 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       setError(err.message || 'Failed to create conversation');
       return null;
     }
-  };
+  }, [user]);
 
-  const selectConversation = async (conversationId: string) => {
+  const selectConversation = useCallback(async (conversationId: string) => {
     if (!user) return;
 
     setError(null);
@@ -185,9 +185,9 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       console.error('Error selecting conversation:', err);
       setError(err.message || 'Failed to select conversation');
     }
-  };
+  }, [user]);
 
-  const updateConversation = async (id: string, updates: Partial<Conversation>) => {
+  const updateConversation = useCallback(async (id: string, updates: Partial<Conversation>) => {
     if (!user) return;
 
     setError(null);
@@ -221,9 +221,9 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       console.error('Error updating conversation:', err);
       setError(err.message || 'Failed to update conversation');
     }
-  };
+  }, [user, currentConversation?.id]);
 
-  const deleteConversation = async (id: string) => {
+  const deleteConversation = useCallback(async (id: string) => {
     if (!user) return;
 
     setError(null);
@@ -249,9 +249,9 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       console.error('Error deleting conversation:', err);
       setError(err.message || 'Failed to delete conversation');
     }
-  };
+  }, [user, currentConversation?.id]);
 
-  const loadMessages = async (conversationId: string) => {
+  const loadMessages = useCallback(async (conversationId: string) => {
     if (!user) return;
 
     setError(null);
@@ -273,9 +273,9 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       console.error('Error loading messages:', err);
       setError(err.message || 'Failed to load messages');
     }
-  };
+  }, [user]);
 
-  const addMessage = async (conversationId: string, content: string, role: 'user' | 'assistant'): Promise<Message | null> => {
+  const addMessage = useCallback(async (conversationId: string, content: string, role: 'user' | 'assistant'): Promise<Message | null> => {
     if (!user) return null;
 
     setError(null);
@@ -310,12 +310,12 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       setError(err.message || 'Failed to add message');
       return null;
     }
-  };
+  }, [user, updateConversation]);
 
-  const clearCurrentConversation = () => {
+  const clearCurrentConversation = useCallback(() => {
     setCurrentConversation(null);
     setMessages([]);
-  };
+  }, []);
 
   const value: ConversationsContextType = {
     conversations,
