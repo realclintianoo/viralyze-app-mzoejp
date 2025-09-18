@@ -66,7 +66,7 @@ const PremiumCategoryChip: React.FC<PremiumCategoryChipProps> = ({
   useEffect(() => {
     opacity.value = withDelay(index * 50, withTiming(1, { duration: 400 }));
     translateY.value = withDelay(index * 50, withSpring(0, { damping: 15, stiffness: 200 }));
-  }, [index]);
+  }, [index, opacity, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -168,7 +168,7 @@ const PremiumSavedItem: React.FC<PremiumSavedItemProps> = ({
   useEffect(() => {
     opacity.value = withDelay(index * 100, withTiming(1, { duration: 600 }));
     translateY.value = withDelay(index * 100, withSpring(0, { damping: 15, stiffness: 100 }));
-  }, [index]);
+  }, [index, opacity, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -340,7 +340,7 @@ export default function SavedScreen() {
     headerTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
     searchOpacity.value = withDelay(200, withTiming(1, { duration: 600 }));
     searchTranslateY.value = withDelay(200, withSpring(0, { damping: 15, stiffness: 100 }));
-  }, []);
+  }, [headerOpacity, headerTranslateY, searchOpacity, searchTranslateY]);
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: headerOpacity.value,
