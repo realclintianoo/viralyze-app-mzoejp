@@ -17,6 +17,7 @@ import { commonStyles, colors } from '../../styles/commonStyles';
 import { storage } from '../../utils/storage';
 import { SavedItem } from '../../types';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -334,13 +335,25 @@ export default function SavedScreen() {
   const searchOpacity = useSharedValue(0);
   const searchTranslateY = useSharedValue(20);
 
-  useEffect(() => {
-    loadSavedItems();
-    headerOpacity.value = withTiming(1, { duration: 800 });
-    headerTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
-    searchOpacity.value = withDelay(200, withTiming(1, { duration: 600 }));
-    searchTranslateY.value = withDelay(200, withSpring(0, { damping: 15, stiffness: 100 }));
-  }, []);
+  // Use focus effect to reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('📱 Saved screen focused - reloading data');
+      loadSavedItems();
+      
+      // Reset animations when screen comes into focus
+      headerOpacity.value = 0;
+      headerTranslateY.value = -20;
+      searchOpacity.value = 0;
+      searchTranslateY.value = 20;
+      
+      // Animate in
+      headerOpacity.value = withTiming(1, { duration: 800 });
+      headerTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+      searchOpacity.value = withDelay(200, withTiming(1, { duration: 600 }));
+      searchTranslateY.value = withDelay(200, withSpring(0, { damping: 15, stiffness: 100 }));
+    }, [])
+  );
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: headerOpacity.value,
@@ -376,10 +389,12 @@ export default function SavedScreen() {
 
   const loadSavedItems = async () => {
     try {
+      console.log('🔄 Loading saved items...');
       const items = await storage.getSavedItems();
+      console.log(`📦 Loaded ${items.length} saved items`);
       setSavedItems(items);
     } catch (error) {
-      console.log('Error loading saved items:', error);
+      console.log('❌ Error loading saved items:', error);
     }
   };
 
@@ -401,7 +416,7 @@ export default function SavedScreen() {
 
   const copyItem = async (item: SavedItem) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Copied', 'Content copied to clipboard');
+    Alert.alert('✅ Copied', 'Content copied to clipboard');
   };
 
   const deleteItem = async (id: string) => {

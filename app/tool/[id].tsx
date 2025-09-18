@@ -209,15 +209,15 @@ function PremiumResultCard({ result, index, type, onCopy, onSave, onRefine, grad
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 8,
-                backgroundColor: colors.glassBackground,
+                backgroundColor: 'rgba(34, 197, 94, 0.2)',
                 paddingHorizontal: 16,
                 paddingVertical: 10,
                 borderRadius: 12,
                 borderWidth: 1,
-                borderColor: colors.glassBorder,
-                shadowColor: colors.neuDark,
+                borderColor: 'rgba(34, 197, 94, 0.4)',
+                shadowColor: colors.success,
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
+                shadowOpacity: 0.3,
                 shadowRadius: 8,
                 elevation: 6,
               }}
@@ -355,19 +355,54 @@ export default function ToolScreen() {
 
   const handleSave = async (content: string, index: number) => {
     try {
+      // Determine the correct type based on the tool
+      const toolTypeMap: Record<string, any> = {
+        'script-generator': 'script',
+        'hook-generator': 'hook',
+        'caption-generator': 'caption',
+        'calendar': 'calendar',
+        'rewriter': 'rewrite',
+        'image-maker': 'image',
+      };
+
+      const itemType = toolTypeMap[id as string] || 'caption';
+
       await storage.addSavedItem({
         id: Date.now().toString() + index,
-        type: config.type === 'image' ? 'image' : (id as any) || 'hook',
-        title: config.type === 'image' ? `Generated Image ${index + 1}` : content.substring(0, 50) + '...',
-        payload: { content, imageUrl: config.type === 'image' ? content : undefined },
+        type: itemType,
+        title: config.type === 'image' 
+          ? `Generated Image ${index + 1}` 
+          : content.substring(0, 50) + (content.length > 50 ? '...' : ''),
+        payload: { 
+          content, 
+          imageUrl: config.type === 'image' ? content : undefined 
+        },
         created_at: new Date().toISOString(),
       });
       
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('💾 Saved', 'Content saved to your collection');
+      
+      // Show success alert with option to view saved items
+      Alert.alert(
+        '💾 Saved Successfully!',
+        'Your content has been saved to your collection.',
+        [
+          { text: 'Generate More', style: 'cancel' },
+          { 
+            text: 'View Saved Items', 
+            onPress: () => {
+              // Navigate to the Saved tab
+              router.push('/(tabs)/saved');
+            }
+          },
+        ]
+      );
+      
+      console.log('✅ Content saved successfully:', content.substring(0, 50));
     } catch (error) {
-      console.log('Error saving content:', error);
-      Alert.alert('Error', 'Failed to save content');
+      console.log('❌ Error saving content:', error);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', 'Failed to save content. Please try again.');
     }
   };
 
