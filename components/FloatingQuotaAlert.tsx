@@ -46,7 +46,7 @@ const FloatingQuotaAlert: React.FC<FloatingQuotaAlertProps> = ({ visible, onClos
       slideAnim.value = withTiming(50, { duration: 300 });
       glowAnim.value = withTiming(0, { duration: 300 });
     }
-  }, [visible]);
+  }, [visible, fadeAnim, scaleAnim, slideAnim, glowAnim]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,

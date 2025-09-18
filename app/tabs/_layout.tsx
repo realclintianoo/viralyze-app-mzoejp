@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../styles/commonStyles';
@@ -26,9 +26,9 @@ export default function TabLayout() {
     if (user) {
       loadCurrentStreak();
     }
-  }, [user]);
+  }, [user, loadCurrentStreak]);
 
-  const loadCurrentStreak = async () => {
+  const loadCurrentStreak = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -44,7 +44,7 @@ export default function TabLayout() {
     } catch (error) {
       console.log('Error loading streak:', error);
     }
-  };
+  }, [user]);
   
   return (
     <Tab.Navigator

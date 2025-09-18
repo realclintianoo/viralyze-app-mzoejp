@@ -89,7 +89,7 @@ const PremiumProfileHeader: React.FC<PremiumProfileHeaderProps> = ({ profile, on
       -1,
       true
     );
-  }, []);
+  }, [glowAnim]);
 
   const handleEditPress = () => {
     scaleAnim.value = withSequence(
@@ -236,7 +236,7 @@ const PremiumProfileCard: React.FC<PremiumProfileCardProps> = ({ profile, user }
 
   useEffect(() => {
     scaleAnim.value = withDelay(200, withSpring(1, { tension: 300, friction: 8 }));
-  }, []);
+  }, [scaleAnim]);
 
   const handleCardPress = () => {
     scaleAnim.value = withSequence(
@@ -383,7 +383,7 @@ const PremiumStatsRow: React.FC<PremiumStatsRowProps> = ({ profile, quota }) => 
 
   useEffect(() => {
     fadeAnim.value = withDelay(400, withTiming(1, { duration: 600 }));
-  }, []);
+  }, [fadeAnim]);
 
   const formatFollowers = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -524,7 +524,7 @@ const PremiumSectionCard: React.FC<PremiumSectionCardProps> = ({
   useEffect(() => {
     slideAnim.value = withDelay(index * 100, withSpring(0, { tension: 300, friction: 8 }));
     fadeAnim.value = withDelay(index * 100, withTiming(1, { duration: 600 }));
-  }, [index]);
+  }, [index, slideAnim, fadeAnim]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: slideAnim.value }],
@@ -599,7 +599,7 @@ const PremiumActionCard: React.FC<PremiumActionCardProps> = ({
         true
       );
     }
-  }, [index, isDestructive]);
+  }, [index, isDestructive, scaleAnim, glowAnim]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scaleAnim.value }],
@@ -724,7 +724,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 500 });
     loadData();
-  }, []);
+  }, [fadeAnim]);
 
   const loadData = async () => {
     try {

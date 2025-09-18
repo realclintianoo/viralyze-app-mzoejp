@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -101,16 +101,16 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
       cardScale.value = withTiming(0.9, { duration: 200 });
       cardOpacity.value = withTiming(0, { duration: 200 });
     }
-  }, [visible]);
+  }, [visible, backgroundOpacity, cardScale, cardOpacity, animateStepContent]);
 
   useEffect(() => {
     if (visible) {
       animateStepContent();
       updateProgress();
     }
-  }, [currentStep, visible]);
+  }, [currentStep, visible, animateStepContent, updateProgress]);
 
-  const animateStepContent = () => {
+  const animateStepContent = useCallback(() => {
     // Reset animations
     titleOpacity.value = 0;
     titleTranslateY.value = 20;
@@ -124,12 +124,12 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ visible, onComplete, us
     iconScale.value = withDelay(400, withSpring(1, { damping: 12, stiffness: 150 }));
     iconRotation.value = withDelay(400, withSpring(360, { damping: 15, stiffness: 100 }));
     sliderOpacity.value = withDelay(600, withTiming(1, { duration: 600 }));
-  };
+  }, [titleOpacity, titleTranslateY, iconScale, iconRotation, sliderOpacity]);
 
-  const updateProgress = () => {
+  const updateProgress = useCallback(() => {
     const progress = ((currentStep + 1) / QUESTIONS.length) * 100;
     progressWidth.value = withSpring(progress, { damping: 15, stiffness: 100 });
-  };
+  }, [currentStep, progressWidth]);
 
   const showConfettiAnimation = () => {
     setShowConfetti(true);

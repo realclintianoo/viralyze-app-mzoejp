@@ -111,7 +111,7 @@ function PremiumResultCard({ result, index, type, onCopy, onSave, onRefine, grad
     opacity.value = withDelay(delay, withTiming(1, { duration: 600 }));
     scale.value = withDelay(delay, withSpring(1, { damping: 12, stiffness: 120 }));
     translateY.value = withDelay(delay, withSpring(0, { damping: 15, stiffness: 100 }));
-  }, [index]);
+  }, [index, opacity, scale, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -289,7 +289,7 @@ export default function ToolScreen() {
     
     contentOpacity.value = withDelay(200, withTiming(1, { duration: 800 }));
     contentTranslateY.value = withDelay(200, withSpring(0, { damping: 12, stiffness: 120 }));
-  }, []);
+  }, [headerOpacity, headerTranslateY, contentOpacity, contentTranslateY]);
 
   const loadProfile = async () => {
     try {
