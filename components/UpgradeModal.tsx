@@ -41,7 +41,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ visible, onClose, type }) =
       scale.value = withTiming(0.8, { duration: 200 });
       opacity.value = withTiming(0, { duration: 200 });
     }
-  }, [visible, opacity, scale]);
+  }, [visible]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

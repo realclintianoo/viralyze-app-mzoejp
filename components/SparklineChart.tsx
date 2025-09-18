@@ -34,7 +34,7 @@ const SparklineChart: React.FC<SparklineChartProps> = ({
     } else {
       animationProgress.value = 1;
     }
-  }, [animated, animationProgress]);
+  }, [animated]);
 
   const chartWidth = width * 0.3; // Adjust based on container
   const maxValue = Math.max(...data);

@@ -47,7 +47,7 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
 
   useEffect(() => {
     checkSystemOnStartup();
-  }, [checkSystemOnStartup]);
+  }, []);
 
   const showNotification = () => {
     setVisible(true);

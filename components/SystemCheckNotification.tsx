@@ -57,7 +57,7 @@ export default function SystemCheckNotification({ onOpenDebug }: SystemCheckNoti
     const interval = setInterval(runPeriodicCheck, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, [runInitialCheck, runPeriodicCheck]);
+  }, []);
 
   const showNotification = () => {
     setIsVisible(true);

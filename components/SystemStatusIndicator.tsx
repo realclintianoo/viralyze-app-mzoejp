@@ -108,7 +108,7 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
     // Run periodic checks every 30 seconds
     const interval = setInterval(runQuickCheck, 30000);
     return () => clearInterval(interval);
-  }, [runQuickCheck]);
+  }, []);
 
   const getStatusInfo = () => {
     if (isLoading) {
