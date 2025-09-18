@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../app/integrations/supabase/client';
 
@@ -40,6 +40,7 @@ interface ConversationsContextType {
   loadConversations: () => Promise<void>;
   loadMessages: (conversationId: string) => Promise<void>;
   clearCurrentConversation: () => void;
+  clearAllData: () => void;
 }
 
 const ConversationsContext = createContext<ConversationsContextType | undefined>(undefined);
@@ -57,6 +58,8 @@ interface ConversationsProviderProps {
 }
 
 export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ children }) => {
+  console.log('💬 ConversationsProvider initialized');
+  
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,19 +68,14 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
 
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      loadConversations();
-    } else {
-      // Clear data when user logs out
-      setConversations([]);
-      setCurrentConversation(null);
-      setMessages([]);
+  // Define loadConversations with useCallback to prevent dependency issues
+  const loadConversations = useCallback(async () => {
+    console.log('💬 Loading conversations for user:', user?.id);
+    
+    if (!user) {
+      console.log('💬 No user found, skipping conversation load');
+      return;
     }
-  }, [user, loadConversations]);
-
-  const loadConversations = async () => {
-    if (!user) return;
 
     setIsLoading(true);
     setError(null);
@@ -93,17 +91,46 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
         throw supabaseError;
       }
 
+      console.log('💬 Loaded conversations:', data?.length || 0);
       setConversations(data || []);
     } catch (err: any) {
-      console.error('Error loading conversations:', err);
+      console.error('❌ Error loading conversations:', err);
       setError(err.message || 'Failed to load conversations');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  // Clear all conversation data
+  const clearAllData = useCallback(() => {
+    console.log('💬 Clearing all conversation data');
+    setConversations([]);
+    setCurrentConversation(null);
+    setMessages([]);
+    setError(null);
+    setIsLoading(false);
+  }, []);
+
+  // Effect to handle user changes
+  useEffect(() => {
+    console.log('💬 User changed:', !!user);
+    
+    if (user) {
+      // User logged in, load their conversations
+      loadConversations();
+    } else {
+      // User logged out, clear all data
+      clearAllData();
+    }
+  }, [user, loadConversations, clearAllData]);
 
   const createConversation = async (title: string, emoji = '💬'): Promise<Conversation | null> => {
-    if (!user) return null;
+    console.log('💬 Creating conversation:', title);
+    
+    if (!user) {
+      console.log('❌ No user found for conversation creation');
+      return null;
+    }
 
     setError(null);
 
@@ -131,20 +158,27 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       }
 
       const newConversation = data as Conversation;
+      console.log('✅ Conversation created:', newConversation.id);
+      
       setConversations(prev => [newConversation, ...prev.map(c => ({ ...c, is_active: false }))]);
       setCurrentConversation(newConversation);
       setMessages([]);
 
       return newConversation;
     } catch (err: any) {
-      console.error('Error creating conversation:', err);
+      console.error('❌ Error creating conversation:', err);
       setError(err.message || 'Failed to create conversation');
       return null;
     }
   };
 
   const selectConversation = async (conversationId: string) => {
-    if (!user) return;
+    console.log('💬 Selecting conversation:', conversationId);
+    
+    if (!user) {
+      console.log('❌ No user found for conversation selection');
+      return;
+    }
 
     setError(null);
 
@@ -181,13 +215,17 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
 
       // Load messages for this conversation
       await loadMessages(conversationId);
+      
+      console.log('✅ Conversation selected:', conversationId);
     } catch (err: any) {
-      console.error('Error selecting conversation:', err);
+      console.error('❌ Error selecting conversation:', err);
       setError(err.message || 'Failed to select conversation');
     }
   };
 
   const updateConversation = async (id: string, updates: Partial<Conversation>) => {
+    console.log('💬 Updating conversation:', id);
+    
     if (!user) return;
 
     setError(null);
@@ -217,13 +255,17 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       if (currentConversation?.id === id) {
         setCurrentConversation(updatedConversation);
       }
+      
+      console.log('✅ Conversation updated:', id);
     } catch (err: any) {
-      console.error('Error updating conversation:', err);
+      console.error('❌ Error updating conversation:', err);
       setError(err.message || 'Failed to update conversation');
     }
   };
 
   const deleteConversation = async (id: string) => {
+    console.log('💬 Deleting conversation:', id);
+    
     if (!user) return;
 
     setError(null);
@@ -245,13 +287,17 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
         setCurrentConversation(null);
         setMessages([]);
       }
+      
+      console.log('✅ Conversation deleted:', id);
     } catch (err: any) {
-      console.error('Error deleting conversation:', err);
+      console.error('❌ Error deleting conversation:', err);
       setError(err.message || 'Failed to delete conversation');
     }
   };
 
   const loadMessages = async (conversationId: string) => {
+    console.log('💬 Loading messages for conversation:', conversationId);
+    
     if (!user) return;
 
     setError(null);
@@ -268,14 +314,17 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
         throw supabaseError;
       }
 
+      console.log('💬 Loaded messages:', data?.length || 0);
       setMessages(data || []);
     } catch (err: any) {
-      console.error('Error loading messages:', err);
+      console.error('❌ Error loading messages:', err);
       setError(err.message || 'Failed to load messages');
     }
   };
 
   const addMessage = async (conversationId: string, content: string, role: 'user' | 'assistant'): Promise<Message | null> => {
+    console.log('💬 Adding message to conversation:', conversationId);
+    
     if (!user) return null;
 
     setError(null);
@@ -304,15 +353,17 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
         last_message_at: new Date().toISOString(),
       });
 
+      console.log('✅ Message added:', newMessage.id);
       return newMessage;
     } catch (err: any) {
-      console.error('Error adding message:', err);
+      console.error('❌ Error adding message:', err);
       setError(err.message || 'Failed to add message');
       return null;
     }
   };
 
   const clearCurrentConversation = () => {
+    console.log('💬 Clearing current conversation');
     setCurrentConversation(null);
     setMessages([]);
   };
@@ -331,6 +382,7 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
     loadConversations,
     loadMessages,
     clearCurrentConversation,
+    clearAllData,
   };
 
   return (

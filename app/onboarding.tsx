@@ -1,19 +1,25 @@
 
+import AuthSheet from '../components/AuthSheet';
 import Slider from '@react-native-community/slider';
-import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
+import { commonStyles, colors, animations } from '../styles/commonStyles';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { storage } from '../utils/storage';
-import { router } from 'expo-router';
-import { OnboardingData } from '../types';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usePersonalization } from '../contexts/PersonalizationContext';
-import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, colors, animations } from '../styles/commonStyles';
-import AuthSheet from '../components/AuthSheet';
-import ConfettiCannon from 'react-native-confetti-cannon';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -24,214 +30,253 @@ import Animated, {
   interpolate,
   runOnJS,
 } from 'react-native-reanimated';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import ConfettiCannon from 'react-native-confetti-cannon';
+import { OnboardingData } from '../types';
+import { router } from 'expo-router';
 
 const PLATFORMS = [
-  { id: 'tiktok', name: 'TikTok', icon: 'logo-tiktok' },
-  { id: 'instagram', name: 'Instagram', icon: 'logo-instagram' },
-  { id: 'youtube', name: 'YouTube', icon: 'logo-youtube' },
-  { id: 'twitter', name: 'X (Twitter)', icon: 'logo-twitter' },
-  { id: 'linkedin', name: 'LinkedIn', icon: 'logo-linkedin' },
-  { id: 'all', name: 'All Platforms', icon: 'apps' },
+  { id: 'tiktok', name: 'TikTok', icon: 'logo-tiktok' as const },
+  { id: 'instagram', name: 'Instagram', icon: 'logo-instagram' as const },
+  { id: 'youtube', name: 'YouTube', icon: 'logo-youtube' as const },
+  { id: 'twitter', name: 'X (Twitter)', icon: 'logo-twitter' as const },
+  { id: 'linkedin', name: 'LinkedIn', icon: 'logo-linkedin' as const },
+  { id: 'all', name: 'All Platforms', icon: 'globe' as const },
 ];
 
 const NICHES = [
-  'Fitness', 'Tech', 'Fashion', 'Music', 'Food', 'Beauty', 
-  'Travel', 'Gaming', 'Business', 'Lifestyle', 'Education', 'Comedy'
+  'Fitness & Health',
+  'Technology',
+  'Fashion & Beauty',
+  'Music & Entertainment',
+  'Food & Cooking',
+  'Travel & Lifestyle',
+  'Gaming',
+  'Business & Finance',
+  'Education',
+  'Art & Design',
 ];
 
 export default function Onboarding() {
-  console.log('🎯 Onboarding component rendered');
+  console.log('🎯 Onboarding screen rendered');
   
   const [step, setStep] = useState(0);
   const [platforms, setPlatforms] = useState<string[]>([]);
   const [niche, setNiche] = useState('');
   const [customNiche, setCustomNiche] = useState('');
-  const [followers, setFollowers] = useState(0);
+  const [followers, setFollowers] = useState(1000);
   const [goal, setGoal] = useState('');
   const [showAuthSheet, setShowAuthSheet] = useState(false);
-  const [authLoading, setAuthLoading] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [isExistingUser, setIsExistingUser] = useState(false);
-
+  const [existingProfile, setExistingProfile] = useState<OnboardingData | null>(null);
+  
   const { session, user, loading: authContextLoading } = useAuth();
-  const { updateProfile, profile: existingProfile } = usePersonalization();
+  const { updatePersonalization } = usePersonalization();
   
   const slideAnim = useSharedValue(0);
-  const fadeAnim = useSharedValue(0);
+  const fadeAnim = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: slideAnim.value }],
     opacity: fadeAnim.value,
   }));
 
-  // Check if user has existing profile and is returning
+  // Check for existing profile on mount
   useEffect(() => {
-    const checkExistingUser = async () => {
-      if (session && user) {
-        console.log('🔍 Checking for existing user profile...');
-        
-        // Check if user has completed onboarding before
-        const hasExistingProfile = !!existingProfile;
-        setIsExistingUser(hasExistingProfile);
-        
-        if (hasExistingProfile) {
-          console.log('👤 Existing user detected, pre-filling onboarding with current data');
-          // Pre-fill with existing data for re-onboarding
-          setPlatforms(existingProfile.platforms || []);
-          setNiche(existingProfile.niche || '');
-          setFollowers(existingProfile.followers || 0);
-          setGoal(existingProfile.goal || '');
+    const checkExistingProfile = async () => {
+      try {
+        const profile = await storage.getOnboardingData();
+        if (profile) {
+          console.log('🎯 Found existing profile, redirecting to main app');
+          setExistingProfile(profile);
+          updatePersonalization(profile);
+          router.replace('/tabs');
         }
+      } catch (error) {
+        console.error('Error checking existing profile:', error);
       }
     };
+    
+    checkExistingProfile();
+  }, [updatePersonalization]);
 
-    if (!authContextLoading) {
-      checkExistingUser();
+  // Handle auth state changes
+  useEffect(() => {
+    console.log('🎯 Auth state changed:', { session: !!session, user: !!user, loading: authContextLoading });
+    
+    if (session && user && !authContextLoading && !existingProfile) {
+      console.log('🎯 User authenticated, checking for existing profile');
+      // User is authenticated, we can proceed with onboarding or check for existing data
     }
   }, [session, user, authContextLoading, existingProfile]);
 
+  // Animation effect for step changes
   useEffect(() => {
-    // Animate step content
-    slideAnim.value = withTiming(0, { duration: animations.normal });
-    fadeAnim.value = withTiming(1, { duration: animations.normal });
+    slideAnim.value = withSpring(0, { tension: 300, friction: 8 });
+    fadeAnim.value = withTiming(1, { duration: 300 });
   }, [step, slideAnim, fadeAnim]);
 
-  useEffect(() => {
-    // Initial animation
-    slideAnim.value = withSpring(0, animations.spring);
-    fadeAnim.value = withTiming(1, { duration: animations.slow });
-  }, [slideAnim, fadeAnim]);
-
-  const formatFollowers = (value: number): string => {
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}K`;
-    }
+  const formatFollowers = useCallback((value: number): string => {
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
     return value.toString();
-  };
+  }, []);
 
-  const togglePlatform = (platform: string) => {
+  const togglePlatform = useCallback((platform: string) => {
+    console.log('🎯 Toggling platform:', platform);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setPlatforms(prev => 
-      prev.includes(platform) 
-        ? prev.filter(p => p !== platform)
-        : [...prev, platform]
-    );
-  };
+    
+    if (platform === 'all') {
+      setPlatforms(prev => prev.includes('all') ? [] : ['all']);
+    } else {
+      setPlatforms(prev => {
+        const newPlatforms = prev.includes(platform)
+          ? prev.filter(p => p !== platform && p !== 'all')
+          : [...prev.filter(p => p !== 'all'), platform];
+        return newPlatforms;
+      });
+    }
+  }, []);
 
-  const selectNiche = (selectedNiche: string) => {
+  const selectNiche = useCallback((selectedNiche: string) => {
+    console.log('🎯 Selecting niche:', selectedNiche);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setNiche(selectedNiche);
     setCustomNiche('');
-  };
+  }, []);
 
-  const canProceed = () => {
+  const canProceed = useCallback(() => {
     switch (step) {
-      case 0: return platforms.length > 0;
-      case 1: return niche || customNiche;
-      case 2: return true; // Followers can be 0
+      case 0: return true; // Welcome step
+      case 1: return platforms.length > 0;
+      case 2: return niche || customNiche;
       case 3: return goal.trim().length > 0;
       default: return false;
     }
-  };
+  }, [step, platforms.length, niche, customNiche, goal]);
 
-  const handleNext = () => {
-    if (!canProceed()) return;
+  const handleNext = useCallback(() => {
+    console.log('🎯 Next button pressed, current step:', step);
     
+    if (!canProceed()) {
+      console.log('🎯 Cannot proceed from current step');
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     
     if (step < 3) {
       slideAnim.value = withSequence(
-        withTiming(-50, { duration: animations.fast }),
-        withTiming(0, { duration: animations.normal })
+        withTiming(-50, { duration: 150 }),
+        withTiming(50, { duration: 0 }),
+        withTiming(0, { duration: 150 })
       );
       setStep(step + 1);
     } else {
       handleComplete();
     }
-  };
+  }, [step, canProceed, slideAnim, handleComplete]);
 
-  const handleSignIn = () => {
+  const handleSignIn = useCallback(() => {
+    console.log('🎯 Sign in button pressed');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setShowAuthSheet(true);
-  };
+  }, []);
 
-  const handleContinueAsGuest = () => {
-    console.log('👤 Continuing as guest');
-    handleComplete();
-  };
+  const handleContinueAsGuest = useCallback(() => {
+    console.log('🎯 Continue as guest pressed');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setStep(1);
+  }, []);
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = useCallback(() => {
+    console.log('🎯 Auth success, closing sheet and proceeding');
     setShowAuthSheet(false);
-    // Continue with onboarding after successful auth
-  };
+    setStep(1);
+  }, []);
 
-  const handleComplete = async () => {
+  const handleComplete = useCallback(async () => {
+    console.log('🎯 Completing onboarding...');
+    
     try {
-      console.log('✅ Completing onboarding...');
-      
       const finalNiche = customNiche || niche;
       const onboardingData: OnboardingData = {
         platforms,
         niche: finalNiche,
         followers,
         goal,
+        completedAt: new Date().toISOString(),
       };
 
-      console.log('💾 Saving onboarding data:', onboardingData);
+      console.log('🎯 Saving onboarding data:', onboardingData);
       
       // Save to local storage
       await storage.saveOnboardingData(onboardingData);
       
       // Update personalization context
-      await updateProfile(onboardingData);
+      updatePersonalization(onboardingData);
       
-      // Show confetti animation
+      // Show success animation
       setShowConfetti(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       // Navigate to main app after a short delay
       setTimeout(() => {
-        console.log('🎉 Onboarding complete, navigating to main app');
-        router.replace('/tabs/chat');
+        console.log('🎯 Navigating to main app');
+        router.replace('/tabs');
       }, 2000);
       
     } catch (error) {
       console.error('❌ Error completing onboarding:', error);
       Alert.alert('Error', 'Failed to save your preferences. Please try again.');
     }
-  };
-
-  if (authContextLoading) {
-    return (
-      <View style={[commonStyles.container, commonStyles.center]}>
-        <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={[commonStyles.text, { marginTop: 16 }]}>
-          Loading...
-        </Text>
-      </View>
-    );
-  }
+  }, [platforms, niche, customNiche, followers, goal, updatePersonalization]);
 
   const renderStep0 = () => (
-    <View style={{ flex: 1 }}>
-      <Text style={commonStyles.headerTitle}>
-        {isExistingUser ? 'Update Your Platforms' : 'Choose Your Platforms'}
+    <View style={{ alignItems: 'center', paddingHorizontal: 20 }}>
+      <View style={{
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: colors.glassBackgroundStrong,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 32,
+        borderWidth: 2,
+        borderColor: colors.accent,
+      }}>
+        <Text style={{ fontSize: 48 }}>🚀</Text>
+      </View>
+      
+      <Text style={[commonStyles.title, { fontSize: 32, marginBottom: 16, textAlign: 'center' }]}>
+        Welcome to VIRALYZE
       </Text>
-      <Text style={[commonStyles.textSmall, { marginBottom: 32, textAlign: 'center' }]}>
-        {isExistingUser 
-          ? 'Let\'s make sure your platform preferences are up to date'
-          : 'Where do you create content? Select all that apply.'
-        }
+      
+      <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 40, lineHeight: 24 }]}>
+        Your AI-powered growth coach for social media success. Let&apos;s personalize your experience in just a few steps.
+      </Text>
+      
+      <TouchableOpacity
+        style={[commonStyles.primaryButton, { marginBottom: 16 }]}
+        onPress={handleSignIn}
+      >
+        <Text style={commonStyles.primaryButtonText}>Sign In / Sign Up</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={commonStyles.secondaryButton}
+        onPress={handleContinueAsGuest}
+      >
+        <Text style={commonStyles.secondaryButtonText}>Continue as Guest</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderStep1 = () => (
+    <View style={{ paddingHorizontal: 20 }}>
+      <Text style={[commonStyles.title, { marginBottom: 8, textAlign: 'center' }]}>
+        Which platforms do you create for?
+      </Text>
+      <Text style={[commonStyles.textSmall, { textAlign: 'center', marginBottom: 32, color: colors.textSecondary }]}>
+        Select all that apply to get personalized content suggestions
       </Text>
       
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -241,69 +286,63 @@ export default function Onboarding() {
             style={[
               commonStyles.chip,
               platforms.includes(platform.id) && commonStyles.chipSelected,
-              { margin: 8 }
+              { margin: 8, minWidth: 120 }
             ]}
             onPress={() => togglePlatform(platform.id)}
           >
-            <View style={[commonStyles.row, { alignItems: 'center' }]}>
-              <Ionicons 
-                name={platform.icon as any} 
-                size={20} 
-                color={platforms.includes(platform.id) ? colors.white : colors.text} 
-                style={{ marginRight: 8 }}
-              />
-              <Text style={[
-                commonStyles.chipText,
-                platforms.includes(platform.id) && commonStyles.chipTextSelected
-              ]}>
-                {platform.name}
-              </Text>
-            </View>
+            <Ionicons 
+              name={platform.icon} 
+              size={20} 
+              color={platforms.includes(platform.id) ? colors.white : colors.accent}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={[
+              commonStyles.chipText,
+              platforms.includes(platform.id) && commonStyles.chipTextSelected
+            ]}>
+              {platform.name}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
     </View>
   );
 
-  const renderStep1 = () => (
-    <View style={{ flex: 1 }}>
-      <Text style={commonStyles.headerTitle}>
-        {isExistingUser ? 'Update Your Niche' : 'What\'s Your Niche?'}
+  const renderStep2 = () => (
+    <View style={{ paddingHorizontal: 20 }}>
+      <Text style={[commonStyles.title, { marginBottom: 8, textAlign: 'center' }]}>
+        What&apos;s your niche?
       </Text>
-      <Text style={[commonStyles.textSmall, { marginBottom: 32, textAlign: 'center' }]}>
-        {isExistingUser 
-          ? 'Has your content focus changed? Update your niche below.'
-          : 'This helps us personalize your content suggestions.'
-        }
+      <Text style={[commonStyles.textSmall, { textAlign: 'center', marginBottom: 32, color: colors.textSecondary }]}>
+        This helps us tailor content suggestions to your audience
       </Text>
       
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 24 }}>
-        {NICHES.map((nicheOption, index) => (
-          <TouchableOpacity
-            key={nicheOption}
-            style={[
-              commonStyles.chip,
-              niche === nicheOption && commonStyles.chipSelected,
-              { margin: 4 }
-            ]}
-            onPress={() => selectNiche(nicheOption)}
-          >
-            <Text style={[
-              commonStyles.chipText,
-              niche === nicheOption && commonStyles.chipTextSelected
-            ]}>
-              {nicheOption}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ScrollView style={{ maxHeight: 300, marginBottom: 20 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {NICHES.map((nicheOption, index) => (
+            <TouchableOpacity
+              key={nicheOption}
+              style={[
+                commonStyles.chip,
+                niche === nicheOption && commonStyles.chipSelected,
+                { margin: 4 }
+              ]}
+              onPress={() => selectNiche(nicheOption)}
+            >
+              <Text style={[
+                commonStyles.chipText,
+                niche === nicheOption && commonStyles.chipTextSelected
+              ]}>
+                {nicheOption}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
       
-      <Text style={[commonStyles.textSmall, { marginBottom: 12, textAlign: 'center' }]}>
-        Or enter your own:
-      </Text>
       <TextInput
-        style={commonStyles.premiumInput}
-        placeholder="Enter your niche..."
+        style={[commonStyles.input, { marginTop: 16 }]}
+        placeholder="Or enter your own niche..."
         placeholderTextColor={colors.textSecondary}
         value={customNiche}
         onChangeText={setCustomNiche}
@@ -312,70 +351,18 @@ export default function Onboarding() {
     </View>
   );
 
-  const renderStep2 = () => (
-    <View style={{ flex: 1 }}>
-      <Text style={commonStyles.headerTitle}>
-        {isExistingUser ? 'Update Follower Count' : 'How Many Followers?'}
-      </Text>
-      <Text style={[commonStyles.textSmall, { marginBottom: 32, textAlign: 'center' }]}>
-        {isExistingUser 
-          ? 'Let\'s update your current follower count across all platforms.'
-          : 'This helps us tailor advice to your audience size.'
-        }
-      </Text>
-      
-      <View style={{ alignItems: 'center', marginBottom: 40 }}>
-        <Text style={[commonStyles.title, { fontSize: 48, marginBottom: 16 }]}>
-          {formatFollowers(followers)}
-        </Text>
-        <Text style={commonStyles.textSmall}>Followers</Text>
-      </View>
-      
-      <Slider
-        style={{ width: '100%', height: 40 }}
-        minimumValue={0}
-        maximumValue={10000000}
-        value={followers}
-        onValueChange={setFollowers}
-        minimumTrackTintColor={colors.accent}
-        maximumTrackTintColor={colors.backgroundSecondary}
-        thumbStyle={{ backgroundColor: colors.accent, width: 24, height: 24 }}
-      />
-      
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
-        <Text style={commonStyles.textSmall}>0</Text>
-        <Text style={commonStyles.textSmall}>10M+</Text>
-      </View>
-      
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 24 }}>
-        {[100, 1000, 10000, 100000, 1000000].map(count => (
-          <TouchableOpacity
-            key={count}
-            style={[commonStyles.chip, { margin: 4 }]}
-            onPress={() => setFollowers(count)}
-          >
-            <Text style={commonStyles.chipText}>{formatFollowers(count)}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-
   const renderStep3 = () => (
-    <View style={{ flex: 1 }}>
-      <Text style={commonStyles.headerTitle}>
-        {isExistingUser ? 'Update Your Goal' : 'What\'s Your Goal?'}
+    <View style={{ paddingHorizontal: 20 }}>
+      <Text style={[commonStyles.title, { marginBottom: 8, textAlign: 'center' }]}>
+        What&apos;s your main goal?
       </Text>
-      <Text style={[commonStyles.textSmall, { marginBottom: 32, textAlign: 'center' }]}>
-        {isExistingUser 
-          ? 'Have your goals evolved? Let us know what you\'re focusing on now.'
-          : 'What do you want to achieve with your content?'
-        }
+      <Text style={[commonStyles.textSmall, { textAlign: 'center', marginBottom: 32, color: colors.textSecondary }]}>
+        Tell us what you want to achieve with your content
       </Text>
       
       <TextInput
-        style={[commonStyles.premiumInput, { height: 120, textAlignVertical: 'top' }]}
-        placeholder="e.g., Grow to 100K followers, monetize my content, build a personal brand..."
+        style={[commonStyles.input, { height: 120, textAlignVertical: 'top' }]}
+        placeholder="e.g., Grow my following to 100K, increase engagement, monetize my content..."
         placeholderTextColor={colors.textSecondary}
         value={goal}
         onChangeText={setGoal}
@@ -383,152 +370,112 @@ export default function Onboarding() {
         numberOfLines={4}
       />
       
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 24 }}>
-        {[
-          'Grow my audience',
-          'Monetize my content',
-          'Build my brand',
-          'Go viral',
-          'Become an influencer',
-          'Start a business'
-        ].map(goalOption => (
-          <TouchableOpacity
-            key={goalOption}
-            style={[commonStyles.chip, { margin: 4 }]}
-            onPress={() => setGoal(goalOption)}
-          >
-            <Text style={commonStyles.chipText}>{goalOption}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={{ marginTop: 32, alignItems: 'center' }}>
+        <Text style={[commonStyles.textSmall, { color: colors.textSecondary, marginBottom: 16 }]}>
+          Current followers: {formatFollowers(followers)}
+        </Text>
+        
+        <Slider
+          style={{ width: '100%', height: 40 }}
+          minimumValue={0}
+          maximumValue={10000000}
+          value={followers}
+          onValueChange={setFollowers}
+          minimumTrackTintColor={colors.accent}
+          maximumTrackTintColor={colors.glassBackgroundStrong}
+          thumbStyle={{ backgroundColor: colors.accent }}
+        />
+        
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 8 }}>
+          <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>0</Text>
+          <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>10M+</Text>
+        </View>
       </View>
     </View>
   );
 
   return (
     <SafeAreaView style={commonStyles.safeArea}>
-      <LinearGradient
-        colors={[colors.background, colors.backgroundSecondary]}
-        style={commonStyles.container}
-      >
+      <View style={commonStyles.container}>
         {showConfetti && (
           <ConfettiCannon
             count={200}
             origin={{ x: -10, y: 0 }}
             fadeOut={true}
-            explosionSpeed={350}
-            fallSpeed={3000}
           />
+        )}
+        
+        {/* Progress Bar */}
+        {step > 0 && (
+          <View style={{
+            height: 4,
+            backgroundColor: colors.glassBackgroundStrong,
+            marginHorizontal: 20,
+            marginTop: 20,
+            borderRadius: 2,
+          }}>
+            <View style={{
+              height: '100%',
+              backgroundColor: colors.accent,
+              width: `${(step / 3) * 100}%`,
+              borderRadius: 2,
+            }} />
+          </View>
         )}
         
         <ScrollView 
           contentContainerStyle={{ 
             flexGrow: 1, 
-            paddingHorizontal: 24, 
-            paddingVertical: 40,
-            justifyContent: 'center'
+            justifyContent: 'center',
+            paddingVertical: 40 
           }}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={[{ flex: 1, justifyContent: 'center' }, animatedStyle]}>
-            {/* Progress indicator */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 40 }}>
-              {[0, 1, 2, 3].map(index => (
-                <View
-                  key={index}
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: index <= step ? colors.accent : colors.backgroundTertiary,
-                    marginHorizontal: 4,
-                  }}
-                />
-              ))}
-            </View>
-
+          <Animated.View style={animatedStyle}>
             {step === 0 && renderStep0()}
             {step === 1 && renderStep1()}
             {step === 2 && renderStep2()}
             {step === 3 && renderStep3()}
-
-            {/* Navigation buttons */}
-            <View style={{ marginTop: 40 }}>
-              {step < 3 ? (
-                <TouchableOpacity
-                  style={[
-                    commonStyles.premiumButton,
-                    !canProceed() && { opacity: 0.5 },
-                  ]}
-                  onPress={handleNext}
-                  disabled={!canProceed()}
-                >
-                  <LinearGradient
-                    colors={[colors.gradientStart, colors.gradientEnd]}
-                    style={[commonStyles.premiumButton, { margin: 0 }]}
-                  >
-                    <Text style={commonStyles.buttonText}>
-                      Continue
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              ) : (
-                <View>
-                  {!session ? (
-                    <View>
-                      <TouchableOpacity
-                        style={[commonStyles.premiumButton, { marginBottom: 16 }]}
-                        onPress={handleSignIn}
-                      >
-                        <LinearGradient
-                          colors={[colors.gradientStart, colors.gradientEnd]}
-                          style={[commonStyles.premiumButton, { margin: 0 }]}
-                        >
-                          <Text style={commonStyles.buttonText}>
-                            Sign In to Save Progress
-                          </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity
-                        style={commonStyles.secondaryButton}
-                        onPress={handleContinueAsGuest}
-                      >
-                        <Text style={commonStyles.secondaryButtonText}>
-                          Continue as Guest
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={[
-                        commonStyles.premiumButton,
-                        !canProceed() && { opacity: 0.5 },
-                      ]}
-                      onPress={handleComplete}
-                      disabled={!canProceed()}
-                    >
-                      <LinearGradient
-                        colors={[colors.gradientStart, colors.gradientEnd]}
-                        style={[commonStyles.premiumButton, { margin: 0 }]}
-                      >
-                        <Text style={commonStyles.buttonText}>
-                          {isExistingUser ? 'Update Profile' : 'Complete Setup'}
-                        </Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </View>
           </Animated.View>
         </ScrollView>
-
+        
+        {/* Navigation */}
+        {step > 0 && (
+          <View style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            paddingHorizontal: 20,
+            paddingBottom: 20,
+          }}>
+            <TouchableOpacity
+              style={[commonStyles.secondaryButton, { flex: 0.4 }]}
+              onPress={() => setStep(Math.max(0, step - 1))}
+            >
+              <Text style={commonStyles.secondaryButtonText}>Back</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                commonStyles.primaryButton,
+                { flex: 0.4 },
+                !canProceed() && { opacity: 0.5 }
+              ]}
+              onPress={handleNext}
+              disabled={!canProceed()}
+            >
+              <Text style={commonStyles.primaryButtonText}>
+                {step === 3 ? 'Complete' : 'Next'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
         <AuthSheet
           visible={showAuthSheet}
           onClose={() => setShowAuthSheet(false)}
-          onContinueAsGuest={handleContinueAsGuest}
+          onSuccess={handleAuthSuccess}
         />
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }

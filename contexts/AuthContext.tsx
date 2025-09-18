@@ -42,30 +42,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const syncLocalDataToRemote = useCallback(async (userId: string) => {
     try {
-      console.log('Syncing local data to remote for user:', userId);
+      console.log('🔄 Syncing local data to remote for user:', userId);
       
       // Sync profile data
       const localProfile = await storage.getOnboardingData();
       if (localProfile) {
         await upsertProfile(userId, localProfile);
+        console.log('✅ Profile data synced');
       }
 
       // Sync saved items
       const localSavedItems = await storage.getSavedItems();
       if (localSavedItems.length > 0) {
         await syncSavedItems(userId, localSavedItems);
+        console.log('✅ Saved items synced');
       }
 
-      console.log('Local data sync completed');
+      console.log('🎉 Local data sync completed');
     } catch (error) {
-      console.error('Error syncing local data:', error);
+      console.error('❌ Error syncing local data:', error);
     }
   }, []);
 
   useEffect(() => {
+    console.log('🔐 Setting up auth state listener');
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', !!session);
+      console.log('🔐 Initial session check:', !!session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -73,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
+      console.log('🔐 Auth state changed:', event, session?.user?.email);
       
       // Update state immediately
       setSession(session);
@@ -82,78 +86,117 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Handle different auth events
       if (event === 'SIGNED_IN' && session?.user) {
-        console.log('User signed in successfully, syncing data...');
+        console.log('🔐 User signed in successfully, syncing data...');
         await syncLocalDataToRemote(session.user.id);
       }
 
       // Clear local data when user signs out - this is crucial for proper logout
       if (event === 'SIGNED_OUT') {
-        console.log('Auth state changed to SIGNED_OUT, clearing all local data');
+        console.log('🔐 Auth state changed to SIGNED_OUT, clearing all local data');
         try {
           await storage.clearAll();
-          console.log('All local data cleared after sign out');
+          console.log('✅ All local data cleared after sign out');
         } catch (error) {
-          console.error('Error clearing data on sign out:', error);
+          console.error('❌ Error clearing data on sign out:', error);
         }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('🔐 Cleaning up auth state listener');
+      subscription.unsubscribe();
+    };
   }, [syncLocalDataToRemote]);
 
   const upsertProfile = async (userId: string, profile: OnboardingData) => {
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: userId,
-        user_id: userId,
-        platforms: profile.platforms,
-        niche: profile.niche,
-        followers: profile.followers,
-        goal: profile.goal,
-        updated_at: new Date().toISOString(),
-      });
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          user_id: userId,
+          platforms: profile.platforms,
+          niche: profile.niche,
+          followers: profile.followers,
+          goal: profile.goal,
+          updated_at: new Date().toISOString(),
+        });
 
-    if (error) {
-      console.error('Error upserting profile:', error);
+      if (error) {
+        console.error('❌ Error upserting profile:', error);
+      }
+    } catch (error) {
+      console.error('❌ Error in upsertProfile:', error);
     }
   };
 
   const syncSavedItems = async (userId: string, items: SavedItem[]) => {
-    const itemsToSync = items.map(item => ({
-      user_id: userId,
-      type: item.type,
-      title: item.title,
-      payload: item.payload,
-      created_at: item.created_at,
-    }));
+    try {
+      const itemsToSync = items.map(item => ({
+        user_id: userId,
+        type: item.type,
+        title: item.title,
+        payload: item.payload,
+        created_at: item.created_at,
+      }));
 
-    const { error } = await supabase
-      .from('saved_items')
-      .upsert(itemsToSync);
+      const { error } = await supabase
+        .from('saved_items')
+        .upsert(itemsToSync);
 
-    if (error) {
-      console.error('Error syncing saved items:', error);
+      if (error) {
+        console.error('❌ Error syncing saved items:', error);
+      }
+    } catch (error) {
+      console.error('❌ Error in syncSavedItems:', error);
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    console.log('🔐 Attempting sign in for:', email);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        console.error('❌ Sign in error:', error);
+      } else {
+        console.log('✅ Sign in successful');
+      }
+      
+      return { error };
+    } catch (error) {
+      console.error('❌ Sign in exception:', error);
+      return { error };
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: 'https://natively.dev/email-confirmed'
+    console.log('🔐 Attempting sign up for:', email);
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: 'https://natively.dev/email-confirmed'
+        }
+      });
+      
+      if (error) {
+        console.error('❌ Sign up error:', error);
+      } else {
+        console.log('✅ Sign up successful');
       }
-    });
-    return { error };
+      
+      return { error };
+    } catch (error) {
+      console.error('❌ Sign up exception:', error);
+      return { error };
+    }
   };
 
   const signOut = async () => {
@@ -189,7 +232,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Ensure local state is cleared even on error
       setSession(null);
       setUser(null);
-      await storage.clearAll().catch(e => console.error('Error clearing storage:', e));
+      try {
+        await storage.clearAll();
+      } catch (storageError) {
+        console.error('❌ Error clearing storage on error:', storageError);
+      }
       // Don't re-throw - we want sign out to always succeed from UI perspective
     }
   };

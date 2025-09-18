@@ -1,224 +1,210 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Modal,
   StyleSheet,
-  Dimensions,
+  Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
-  interpolate,
+  withDelay,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-
-const { width, height } = Dimensions.get('window');
+import { commonStyles, colors } from '../styles/commonStyles';
+import { useAuth } from '../contexts/AuthContext';
+import { router } from 'expo-router';
 
 interface LogoutModalProps {
   visible: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
+  onClose: () => void;
 }
 
-const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel }) => {
+const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onClose }) => {
+  console.log('🚪 LogoutModal rendered:', { visible });
+  
+  const { signOut } = useAuth();
+  
   const backgroundOpacity = useSharedValue(0);
-  const modalScale = useSharedValue(0.8);
   const modalOpacity = useSharedValue(0);
+  const modalScale = useSharedValue(0.8);
 
-  React.useEffect(() => {
-    if (visible) {
-      backgroundOpacity.value = withTiming(1, { duration: 200 });
-      modalScale.value = withSpring(1, { damping: 15, stiffness: 200 });
-      modalOpacity.value = withTiming(1, { duration: 300 });
-    } else {
-      backgroundOpacity.value = withTiming(0, { duration: 200 });
-      modalScale.value = withTiming(0.8, { duration: 200 });
-      modalOpacity.value = withTiming(0, { duration: 200 });
-    }
-  }, [visible]);
-
-  const backgroundAnimatedStyle = useAnimatedStyle(() => ({
+  const backgroundStyle = useAnimatedStyle(() => ({
     opacity: backgroundOpacity.value,
   }));
 
-  const modalAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: modalScale.value }],
+  const modalStyle = useAnimatedStyle(() => ({
     opacity: modalOpacity.value,
+    transform: [{ scale: modalScale.value }],
   }));
 
-  const handleConfirm = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onConfirm();
-  };
+  useEffect(() => {
+    if (visible) {
+      console.log('🚪 Animating logout modal in');
+      backgroundOpacity.value = withTiming(1, { duration: 200 });
+      modalOpacity.value = withDelay(100, withTiming(1, { duration: 300 }));
+      modalScale.value = withDelay(100, withSpring(1, { tension: 300, friction: 8 }));
+    } else {
+      console.log('🚪 Animating logout modal out');
+      backgroundOpacity.value = withTiming(0, { duration: 200 });
+      modalOpacity.value = withTiming(0, { duration: 200 });
+      modalScale.value = withTiming(0.8, { duration: 200 });
+    }
+  }, [visible, backgroundOpacity, modalOpacity, modalScale]);
 
   const handleCancel = () => {
+    console.log('🚪 Logout cancelled');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onCancel();
+    onClose();
   };
+
+  const handleConfirm = async () => {
+    console.log('🚪 Logout confirmed, performing sign out');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
+    try {
+      onClose(); // Close modal first
+      
+      console.log('🚪 Calling signOut...');
+      await signOut();
+      console.log('✅ Sign out completed');
+      
+      // Navigate to index
+      console.log('🚪 Navigating to index...');
+      router.replace('/');
+      
+    } catch (error) {
+      console.error('❌ Error during logout:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    }
+  };
+
+  if (!visible) return null;
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="none"
-      onRequestClose={onCancel}
+      statusBarTranslucent
     >
-      <Animated.View style={[styles.overlay, backgroundAnimatedStyle]}>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFillObject}
-          onPress={onCancel}
-          activeOpacity={1}
-        />
-        
-        <Animated.View style={[styles.modalContainer, modalAnimatedStyle]}>
-          <BlurView intensity={20} tint="dark" style={styles.modalBlur}>
-            <LinearGradient
-              colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']}
-              style={styles.modalContent}
-            >
-              {/* Icon */}
-              <View style={styles.iconContainer}>
-                <LinearGradient
-                  colors={['#EF4444', '#DC2626']}
-                  style={styles.iconBackground}
-                >
-                  <Ionicons name="log-out-outline" size={32} color="#FFFFFF" />
-                </LinearGradient>
-              </View>
+      <View style={styles.container}>
+        <Animated.View style={[styles.background, backgroundStyle]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={handleCancel}
+            activeOpacity={1}
+          />
+        </Animated.View>
 
-              {/* Title */}
-              <Text style={styles.title}>Are you sure you want to log out?</Text>
-              
-              {/* Message */}
-              <Text style={styles.message}>
-                This will sign you out completely and clear all local data. You&apos;ll need to sign in again or choose guest mode to continue using the app.
-              </Text>
+        <Animated.View style={[styles.modal, modalStyle]}>
+          <BlurView intensity={20} tint="dark" style={styles.content}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="log-out" size={48} color={colors.error} />
+            </View>
 
-              {/* Buttons */}
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={handleCancel}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
+            <Text style={styles.title}>Sign Out</Text>
+            <Text style={styles.message}>
+              Are you sure you want to sign out? Your local data will be cleared.
+            </Text>
 
-                <TouchableOpacity
-                  style={styles.confirmButton}
-                  onPress={handleConfirm}
-                >
-                  <View style={styles.confirmButtonContent}>
-                    <Text style={styles.confirmButtonText}>Confirm</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={handleCancel}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={handleConfirm}
+              >
+                <Text style={styles.confirmText}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
           </BlurView>
         </Animated.View>
-      </Animated.View>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
-  modalContainer: {
+  background: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  modal: {
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 400,
     borderRadius: 24,
     overflow: 'hidden',
   },
-  modalBlur: {
-    borderRadius: 24,
-  },
-  modalContent: {
+  content: {
     padding: 32,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderRadius: 24,
   },
   iconContainer: {
-    marginBottom: 24,
-  },
-  iconBackground: {
     width: 80,
     height: 80,
-    borderRadius: 20,
-    alignItems: 'center',
+    borderRadius: 40,
+    backgroundColor: colors.error + '20',
     justifyContent: 'center',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
-    elevation: 16,
+    alignItems: 'center',
+    marginBottom: 24,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#E6EAF0',
+    ...commonStyles.title,
+    fontSize: 24,
     marginBottom: 12,
     textAlign: 'center',
-    lineHeight: 26,
   },
   message: {
-    fontSize: 14,
-    color: '#94A3B8',
+    ...commonStyles.text,
     textAlign: 'center',
     marginBottom: 32,
-    lineHeight: 20,
+    lineHeight: 24,
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: 12,
     width: '100%',
   },
-  cancelButton: {
+  button: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
+    marginHorizontal: 6,
   },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#E6EAF0',
+  cancelButton: {
+    backgroundColor: colors.glassBackgroundStrong,
+    borderWidth: 1,
+    borderColor: colors.glassBorderStrong,
   },
   confirmButton: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#EF4444',
-    backgroundColor: 'transparent',
-    overflow: 'hidden',
+    backgroundColor: colors.error,
   },
-  confirmButtonContent: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  cancelText: {
+    ...commonStyles.textBold,
+    color: colors.text,
   },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#EF4444',
+  confirmText: {
+    ...commonStyles.textBold,
+    color: colors.white,
   },
 });
 

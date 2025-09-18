@@ -11,6 +11,7 @@ import { storage } from '../../utils/storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePersonalization } from '../../contexts/PersonalizationContext';
+import { useConversations } from '../../contexts/ConversationsContext';
 import { formatFollowers, getNicheEmoji } from '../../utils/personalization';
 import {
   View,
@@ -81,7 +82,7 @@ const PremiumProfileHeader: React.FC<PremiumProfileHeaderProps> = ({ profile, on
 
   useEffect(() => {
     fadeAnim.value = withDelay(100, withTiming(1, { duration: 600 }));
-  }, [fadeAnim]);
+  }, []);
 
   const handleEditPress = () => {
     console.log('🔧 Edit profile button pressed');
@@ -132,7 +133,7 @@ const PremiumProfileCard: React.FC<PremiumProfileCardProps> = ({ profile, user }
   useEffect(() => {
     fadeAnim.value = withDelay(200, withTiming(1, { duration: 600 }));
     scaleAnim.value = withDelay(200, withSpring(1, { tension: 300, friction: 8 }));
-  }, [fadeAnim, scaleAnim]);
+  }, []);
 
   const handleCardPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -277,7 +278,7 @@ const PremiumStatsRow: React.FC<PremiumStatsRowProps> = ({ profile, quota }) => 
   useEffect(() => {
     slideAnim.value = withDelay(400, withSpring(0, { tension: 300, friction: 8 }));
     fadeAnim.value = withDelay(400, withTiming(1, { duration: 600 }));
-  }, [slideAnim, fadeAnim]);
+  }, []);
 
   const formatFollowers = (count: number): string => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -375,7 +376,7 @@ const PremiumSectionCard: React.FC<PremiumSectionCardProps> = ({ title, children
   useEffect(() => {
     slideAnim.value = withDelay(index * 100 + 600, withSpring(0, { tension: 300, friction: 8 }));
     fadeAnim.value = withDelay(index * 100 + 600, withTiming(1, { duration: 600 }));
-  }, [index, slideAnim, fadeAnim]);
+  }, [index]);
 
   return (
     <Animated.View style={[commonStyles.ultraCard, { margin: 16 }, animatedStyle]}>
@@ -427,7 +428,7 @@ const PremiumActionCard: React.FC<PremiumActionCardProps> = ({
   useEffect(() => {
     slideAnim.value = withDelay(index * 50, withSpring(0, { tension: 300, friction: 8 }));
     fadeAnim.value = withDelay(index * 50, withTiming(1, { duration: 400 }));
-  }, [index, slideAnim, fadeAnim]);
+  }, [index]);
 
   const handlePressIn = () => {
     scaleAnim.value = withSpring(0.98);
@@ -537,6 +538,7 @@ export default function SettingsScreen() {
   
   const { user, signOut } = useAuth();
   const { profile, theme, isPersonalized, refreshPersonalization } = usePersonalization();
+  const { clearAllData: clearConversationData } = useConversations();
   
   const fadeAnim = useSharedValue(0);
 
@@ -547,7 +549,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 500 });
     loadData();
-  }, [fadeAnim]);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -638,6 +640,7 @@ export default function SettingsScreen() {
     console.log('🔧 Clearing all data...');
     try {
       await storage.clearAll();
+      clearConversationData();
       await refreshPersonalization();
       setQuota({ text: 0, image: 0 });
       
@@ -654,7 +657,12 @@ export default function SettingsScreen() {
       // Show loading state
       setIsLoading(true);
       
-      // Perform sign out
+      // Clear conversation data first
+      console.log('🔧 Clearing conversation data...');
+      clearConversationData();
+      
+      // Perform sign out (this will clear all other data)
+      console.log('🔧 Calling signOut...');
       await signOut();
       
       console.log('✅ Sign out completed successfully');
@@ -839,25 +847,6 @@ export default function SettingsScreen() {
               index={2}
               isDestructive
             />
-            
-            {/* Debug button for testing */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: colors.error,
-                padding: 16,
-                borderRadius: 12,
-                marginTop: 8,
-                alignItems: 'center',
-              }}
-              onPress={() => {
-                console.log('🔧 DEBUG: Direct sign out button pressed');
-                performSignOut();
-              }}
-            >
-              <Text style={[commonStyles.textBold, { color: colors.white }]}>
-                DEBUG: Direct Sign Out
-              </Text>
-            </TouchableOpacity>
           </PremiumSectionCard>
 
           {/* Bottom spacing */}
