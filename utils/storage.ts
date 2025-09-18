@@ -170,6 +170,19 @@ export const storage = {
     }
   },
 
+  // Profile methods (alias for onboarding data for backward compatibility)
+  async getProfile(): Promise<OnboardingData | null> {
+    return this.getOnboardingData();
+  },
+
+  async saveProfile(data: OnboardingData): Promise<void> {
+    return this.saveOnboardingData(data);
+  },
+
+  async clearProfile(): Promise<void> {
+    return this.clearOnboardingData();
+  },
+
   // Clear all data - Enhanced for better logout
   async clearAll(): Promise<void> {
     try {

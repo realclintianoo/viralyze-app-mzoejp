@@ -14,9 +14,11 @@ import { OnboardingData, QuotaUsage } from '../../types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { storage } from '../../utils/storage';
+import { safeStorage } from '../../utils/safeStorage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePersonalization } from '../../contexts/PersonalizationContext';
 import { commonStyles, colors } from '../../styles/commonStyles';
+import { useToast } from '../../contexts/ToastContext';
 import {
   View,
   Text,
@@ -25,6 +27,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { BlurView } from 'expo-blur';
@@ -35,6 +38,20 @@ import { Ionicons } from '@expo/vector-icons';
 import PremiumConfirmModal from '../../components/PremiumConfirmModal';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { router } from 'expo-router';
+
+// App Settings Type Definition
+type AppSettings = {
+  theme: "dark" | "light";
+  notifications: boolean;
+  niche?: string;
+  followersTier?: "starter" | "rising" | "influencer";
+};
+
+// Default Settings
+const DEFAULTS: AppSettings = {
+  theme: "dark",
+  notifications: true,
+};
 
 interface PremiumProfileHeaderProps {
   profile: OnboardingData | null;
@@ -69,6 +86,46 @@ interface PremiumActionCardProps {
   glowColor?: string;
   isDestructive?: boolean;
 }
+
+interface SkeletonLoaderProps {
+  height?: number;
+  width?: string;
+  borderRadius?: number;
+}
+
+const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ 
+  height = 20, 
+  width = '100%', 
+  borderRadius = 8 
+}) => {
+  const shimmerAnim = useSharedValue(0);
+
+  useEffect(() => {
+    shimmerAnim.value = withRepeat(
+      withTiming(1, { duration: 1500 }),
+      -1,
+      true
+    );
+  }, [shimmerAnim]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: 0.3 + shimmerAnim.value * 0.4,
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        {
+          height,
+          width,
+          backgroundColor: colors.textSecondary,
+          borderRadius,
+        },
+        animatedStyle,
+      ]}
+    />
+  );
+};
 
 const PremiumProfileHeader: React.FC<PremiumProfileHeaderProps> = ({ profile, onEditPress }) => {
   const scaleAnim = useSharedValue(1);
@@ -711,9 +768,12 @@ export default function SettingsScreen() {
   console.log('⚙️ Settings screen rendered');
   
   const { user, signOut } = useAuth();
+  const { showToast } = useToast();
   const [profile, setProfile] = useState<OnboardingData | null>(null);
   const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
-  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULTS);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasStorageError, setHasStorageError] = useState(false);
   const fadeAnim = useSharedValue(0);
   const { themeColors } = usePersonalization();
 
@@ -723,22 +783,56 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 500 });
-    loadData();
+    loadSettings();
   }, [fadeAnim]);
 
-  const loadData = async () => {
+  // Load settings using SafeStorage
+  const loadSettings = async () => {
     try {
+      console.log('🔄 Loading settings data...');
+      setIsLoading(true);
+      setHasStorageError(false);
+
+      // Load settings with SafeStorage
+      const storedSettings = await safeStorage.loadJSON<AppSettings>("app:settings", DEFAULTS);
+      console.log('✅ Settings loaded:', storedSettings);
+      setSettings(storedSettings);
+
+      // Load profile and quota data using existing storage
       const [profileData, quotaData] = await Promise.all([
-        storage.getProfile(),
+        storage.getOnboardingData(),
         storage.getQuotaUsage(),
       ]);
       
       setProfile(profileData);
       setQuota(quotaData);
+      
+      console.log('✅ All settings data loaded successfully');
     } catch (error) {
-      console.error('Error loading settings data:', error);
+      console.error('❌ Error loading settings data:', error);
+      setHasStorageError(true);
+      showToast("Settings unavailable. Using defaults.", "warning");
+      
+      // Use defaults if storage fails
+      setSettings(DEFAULTS);
+      setProfile(null);
+      setQuota({ text: 0, image: 0 });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  // Update a specific setting
+  const updateSetting = async (key: keyof AppSettings, value: any) => {
+    try {
+      const newSettings = { ...settings, [key]: value };
+      setSettings(newSettings);
+      
+      await safeStorage.saveJSON("app:settings", newSettings);
+      console.log('✅ Setting updated:', key, value);
+    } catch (error) {
+      console.error('❌ Failed to save setting:', error);
+      showToast("Failed to save settings.", "error");
     }
   };
 
@@ -771,8 +865,8 @@ export default function SettingsScreen() {
 
   const exportData = async () => {
     try {
-      // In a real app, this would export user data
-      console.log('Exporting user data...');
+      const exportedData = await storage.exportData();
+      console.log('Exporting user data:', exportedData);
       Alert.alert('Success', 'Your data has been exported successfully!');
     } catch (error) {
       console.error('Error exporting data:', error);
@@ -805,11 +899,14 @@ export default function SettingsScreen() {
   const clearAllData = async () => {
     try {
       await storage.clearAll();
-      Alert.alert('Success', 'All local data has been cleared.');
-      // Optionally restart the app or navigate to onboarding
+      await safeStorage.remove("app:settings");
+      setSettings(DEFAULTS);
+      setProfile(null);
+      setQuota({ text: 0, image: 0 });
+      showToast('All local data has been cleared.', 'success');
     } catch (error) {
       console.error('Error clearing data:', error);
-      Alert.alert('Error', 'Failed to clear data. Please try again.');
+      showToast('Failed to clear data. Please try again.', 'error');
     }
   };
 
@@ -819,15 +916,99 @@ export default function SettingsScreen() {
       // Navigation will be handled by the auth context
     } catch (error) {
       console.error('Error signing out:', error);
-      Alert.alert('Error', 'Failed to sign out. Please try again.');
+      showToast('Failed to sign out. Please try again.', 'error');
     }
   };
 
-  if (loading) {
+  // Loading state with skeleton
+  if (isLoading) {
     return (
       <SafeAreaView style={commonStyles.safeArea}>
-        <View style={[commonStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={commonStyles.text}>Loading settings...</Text>
+        <View style={[commonStyles.container, { padding: 16 }]}>
+          {/* Header Skeleton */}
+          <View style={{
+            backgroundColor: colors.glassBackground,
+            borderRadius: 28,
+            padding: 24,
+            marginBottom: 16,
+          }}>
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <SkeletonLoader height={40} width="60%" borderRadius={12} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flex: 1 }}>
+                <SkeletonLoader height={24} width="80%" borderRadius={8} />
+                <View style={{ height: 8 }} />
+                <SkeletonLoader height={16} width="60%" borderRadius={6} />
+              </View>
+              <SkeletonLoader height={44} width="44" borderRadius={16} />
+            </View>
+          </View>
+
+          {/* Profile Card Skeleton */}
+          <View style={[commonStyles.glassCard, { padding: 20, marginBottom: 16 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SkeletonLoader height={60} width="60" borderRadius={30} />
+              <View style={{ flex: 1, marginLeft: 16 }}>
+                <SkeletonLoader height={20} width="70%" borderRadius={8} />
+                <View style={{ height: 8 }} />
+                <SkeletonLoader height={16} width="50%" borderRadius={6} />
+                <View style={{ height: 4 }} />
+                <SkeletonLoader height={14} width="80%" borderRadius={6} />
+              </View>
+            </View>
+          </View>
+
+          {/* Stats Row Skeleton */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+            {[1, 2, 3].map((i) => (
+              <View key={i} style={{
+                flex: 1,
+                backgroundColor: colors.glassBackground,
+                borderRadius: 20,
+                padding: 16,
+                alignItems: 'center',
+              }}>
+                <SkeletonLoader height={32} width="32" borderRadius={12} />
+                <View style={{ height: 8 }} />
+                <SkeletonLoader height={20} width="60%" borderRadius={8} />
+                <View style={{ height: 4 }} />
+                <SkeletonLoader height={12} width="80%" borderRadius={6} />
+              </View>
+            ))}
+          </View>
+
+          {/* Loading indicator */}
+          <View style={{ 
+            flex: 1, 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            marginTop: 40,
+          }}>
+            <ActivityIndicator size="large" color={colors.neonTeal} />
+            <Text style={[
+              commonStyles.textSmall,
+              {
+                color: colors.textSecondary,
+                marginTop: 16,
+                textAlign: 'center',
+              }
+            ]}>
+              Loading your settings...
+            </Text>
+            {hasStorageError && (
+              <Text style={[
+                commonStyles.textSmall,
+                {
+                  color: colors.warning,
+                  marginTop: 8,
+                  textAlign: 'center',
+                }
+              ]}>
+                Using default settings due to storage issues
+              </Text>
+            )}
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -859,10 +1040,61 @@ export default function SettingsScreen() {
             quota={quota}
           />
 
+          {/* App Settings Section */}
+          <PremiumSectionCard
+            title="App Settings"
+            index={0}
+            gradient={[colors.neonPurple + '12', colors.neonPurple + '06']}
+          >
+            <PremiumActionCard
+              icon="moon-outline"
+              title="Theme"
+              subtitle={`Currently: ${settings.theme === 'dark' ? 'Dark' : 'Light'} mode`}
+              onPress={() => updateSetting('theme', settings.theme === 'dark' ? 'light' : 'dark')}
+              rightElement={
+                <View style={{
+                  backgroundColor: settings.theme === 'dark' ? colors.neonTeal + '20' : colors.warning + '20',
+                  borderRadius: 12,
+                  padding: 8,
+                }}>
+                  <Ionicons 
+                    name={settings.theme === 'dark' ? 'moon' : 'sunny'} 
+                    size={16} 
+                    color={settings.theme === 'dark' ? colors.neonTeal : colors.warning} 
+                  />
+                </View>
+              }
+              index={0}
+              glowColor={colors.glowNeonPurple}
+            />
+            
+            <PremiumActionCard
+              icon="notifications-outline"
+              title="Notifications"
+              subtitle={settings.notifications ? 'Enabled' : 'Disabled'}
+              onPress={() => updateSetting('notifications', !settings.notifications)}
+              rightElement={
+                <View style={{
+                  backgroundColor: settings.notifications ? colors.neonGreen + '20' : colors.textSecondary + '20',
+                  borderRadius: 12,
+                  padding: 8,
+                }}>
+                  <Ionicons 
+                    name={settings.notifications ? 'notifications' : 'notifications-off'} 
+                    size={16} 
+                    color={settings.notifications ? colors.neonGreen : colors.textSecondary} 
+                  />
+                </View>
+              }
+              index={1}
+              glowColor={colors.glowNeonGreen}
+            />
+          </PremiumSectionCard>
+
           {/* Account Section */}
           <PremiumSectionCard
             title="Account & Subscription"
-            index={0}
+            index={1}
             gradient={[colors.neonGreen + '12', colors.neonGreen + '06']}
           >
             <PremiumActionCard
@@ -870,7 +1102,7 @@ export default function SettingsScreen() {
               title="Upgrade to Pro"
               subtitle="Unlock unlimited AI requests and premium features"
               onPress={handleUpgradeToPro}
-              index={0}
+              index={2}
               glowColor={colors.glowNeonGreen}
             />
             
@@ -879,7 +1111,7 @@ export default function SettingsScreen() {
               title="Edit Profile"
               subtitle="Update your niche, followers, and goals"
               onPress={handleEditProfile}
-              index={1}
+              index={3}
               glowColor={colors.glowNeonTeal}
             />
             
@@ -888,7 +1120,7 @@ export default function SettingsScreen() {
               title="Followers"
               subtitle={`${formatFollowers(profile?.followers || 0)} followers`}
               onPress={handleFollowersPress}
-              index={2}
+              index={4}
               glowColor={colors.glowNeonPurple}
             />
           </PremiumSectionCard>
@@ -896,7 +1128,7 @@ export default function SettingsScreen() {
           {/* Data & Privacy Section */}
           <PremiumSectionCard
             title="Data & Privacy"
-            index={1}
+            index={2}
             gradient={[colors.neonTeal + '12', colors.neonTeal + '06']}
           >
             <PremiumActionCard
@@ -904,7 +1136,7 @@ export default function SettingsScreen() {
               title="Export Data"
               subtitle="Download your VIRALYZE data"
               onPress={handleExportData}
-              index={3}
+              index={5}
               glowColor={colors.glowNeonTeal}
             />
             
@@ -913,7 +1145,7 @@ export default function SettingsScreen() {
               title="Clear Local Data"
               subtitle="Remove all saved content and settings"
               onPress={handleClearData}
-              index={4}
+              index={6}
               glowColor={colors.error}
               isDestructive={true}
             />
@@ -922,7 +1154,7 @@ export default function SettingsScreen() {
           {/* Account Actions Section */}
           <PremiumSectionCard
             title="Account Actions"
-            index={2}
+            index={3}
             gradient={[colors.error + '12', colors.error + '06']}
           >
             <PremiumActionCard
@@ -930,11 +1162,38 @@ export default function SettingsScreen() {
               title="Sign Out"
               subtitle="Sign out of your VIRALYZE account"
               onPress={handleSignOut}
-              index={5}
+              index={7}
               glowColor={colors.error}
               isDestructive={true}
             />
           </PremiumSectionCard>
+
+          {/* Storage Status Indicator */}
+          {hasStorageError && (
+            <View style={{
+              backgroundColor: colors.warning + '20',
+              borderRadius: 16,
+              padding: 16,
+              marginHorizontal: 16,
+              marginTop: 16,
+              borderWidth: 1,
+              borderColor: colors.warning + '40',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="warning" size={20} color={colors.warning} />
+                <Text style={[
+                  commonStyles.textSmall,
+                  {
+                    color: colors.warning,
+                    marginLeft: 8,
+                    flex: 1,
+                  }
+                ]}>
+                  Storage unavailable. Settings may not persist between sessions.
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* App Info */}
           <View style={{
