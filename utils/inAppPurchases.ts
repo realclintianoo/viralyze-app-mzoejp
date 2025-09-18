@@ -12,7 +12,7 @@ const isDevelopmentEnvironment = __DEV__ || Platform.OS === 'web' || !Constants.
 if (!isDevelopmentEnvironment) {
   try {
     // Dynamic import to avoid build-time issues
-    InAppPurchases = await import('expo-in-app-purchases');
+    InAppPurchases = require('expo-in-app-purchases');
     
     // Verify the module has the expected API
     if (InAppPurchases && typeof InAppPurchases.connectAsync === 'function') {

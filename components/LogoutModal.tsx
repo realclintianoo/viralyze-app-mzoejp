@@ -44,7 +44,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onConfirm, onCancel 
       modalScale.value = withTiming(0.8, { duration: 200 });
       modalOpacity.value = withTiming(0, { duration: 200 });
     }
-  }, [visible, backgroundOpacity, modalScale, modalOpacity]);
+  }, [visible]);
 
   const backgroundAnimatedStyle = useAnimatedStyle(() => ({
     opacity: backgroundOpacity.value,

@@ -55,7 +55,7 @@ const PremiumFeatureLock: React.FC<PremiumFeatureLockProps> = ({
       -1,
       true
     );
-  }, [glowAnim]);
+  }, []);
 
   const handleUpgrade = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

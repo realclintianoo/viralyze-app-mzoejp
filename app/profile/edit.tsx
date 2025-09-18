@@ -80,7 +80,7 @@ const PremiumInputField: React.FC<PremiumInputFieldProps> = ({
   useEffect(() => {
     fieldOpacity.value = withDelay(index * 100, withTiming(1, { duration: 600 }));
     fieldTranslateY.value = withDelay(index * 100, withSpring(0, { damping: 15, stiffness: 100 }));
-  }, [index, fieldOpacity, fieldTranslateY]);
+  }, [index]);
 
   const fieldAnimatedStyle = useAnimatedStyle(() => ({
     opacity: fieldOpacity.value,
@@ -163,7 +163,7 @@ const PremiumChip: React.FC<PremiumChipProps> = ({ title, isSelected, onPress, i
   useEffect(() => {
     chipOpacity.value = withDelay(index * 50, withTiming(1, { duration: 400 }));
     chipTranslateX.value = withDelay(index * 50, withSpring(0, { damping: 15, stiffness: 100 }));
-  }, [index, chipOpacity, chipTranslateX]);
+  }, [index]);
 
   const chipAnimatedStyle = useAnimatedStyle(() => ({
     opacity: chipOpacity.value,
@@ -276,7 +276,7 @@ export default function EditProfileScreen() {
     loadProfile();
     headerOpacity.value = withTiming(1, { duration: 800 });
     headerTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
-  }, [headerOpacity, headerTranslateY]);
+  }, []);
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: headerOpacity.value,

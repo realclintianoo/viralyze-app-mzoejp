@@ -74,7 +74,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ visible, onClose, onSuccess }) => {
       logoGlow.value = withTiming(0, { duration: 200 });
       formOpacity.value = withTiming(0, { duration: 200 });
     }
-  }, [visible, backgroundOpacity, contentTranslateY, logoScale, logoGlow, formOpacity]);
+  }, [visible]);
 
   const backgroundAnimatedStyle = useAnimatedStyle(() => ({
     opacity: backgroundOpacity.value,
