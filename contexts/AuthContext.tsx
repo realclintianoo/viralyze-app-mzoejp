@@ -158,37 +158,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      console.log('Starting complete logout process...');
+      console.log('🚪 Starting complete logout process...');
       
-      // Step 1: Clear all local storage data FIRST - this is the most important step
-      console.log('Clearing all local storage data...');
-      await storage.clearAll();
-      console.log('✅ All local storage cleared successfully');
-      
-      // Step 2: Sign out from Supabase
-      console.log('Signing out from Supabase...');
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('❌ Error signing out from Supabase:', error);
-        throw error;
-      } else {
-        console.log('✅ Successfully signed out from Supabase');
-      }
-      
-      // Step 3: Force clear session state immediately to ensure UI updates
-      console.log('Clearing session state...');
+      // Step 1: Clear session state FIRST to trigger UI updates immediately
+      console.log('🚪 Clearing session state...');
       setSession(null);
       setUser(null);
       console.log('✅ Session state cleared');
+      
+      // Step 2: Clear all local storage data
+      console.log('🚪 Clearing all local storage data...');
+      await storage.clearAll();
+      console.log('✅ All local storage cleared successfully');
+      
+      // Step 3: Sign out from Supabase (this will trigger the auth state change)
+      console.log('🚪 Signing out from Supabase...');
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('❌ Error signing out from Supabase:', error);
+        // Don't throw here - we've already cleared local state
+        console.log('⚠️ Supabase sign out failed, but local state is cleared');
+      } else {
+        console.log('✅ Successfully signed out from Supabase');
+      }
       
       console.log('🎉 Complete logout process finished successfully');
       
     } catch (error) {
       console.error('❌ Error during logout process:', error);
-      // Even if there's an error, try to clear local state
+      // Ensure local state is cleared even on error
       setSession(null);
       setUser(null);
-      throw error;
+      await storage.clearAll().catch(e => console.error('Error clearing storage:', e));
+      // Don't re-throw - we want sign out to always succeed from UI perspective
     }
   };
 

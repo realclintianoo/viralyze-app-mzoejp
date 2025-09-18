@@ -20,6 +20,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -83,6 +84,7 @@ const PremiumProfileHeader: React.FC<PremiumProfileHeaderProps> = ({ profile, on
   }, [fadeAnim]);
 
   const handleEditPress = () => {
+    console.log('🔧 Edit profile button pressed');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onEditPress();
   };
@@ -436,8 +438,19 @@ const PremiumActionCard: React.FC<PremiumActionCardProps> = ({
   };
 
   const handlePress = () => {
+    console.log(`🔧 Action card pressed: ${title}`);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onPress?.();
+    if (onPress) {
+      console.log(`🔧 Calling onPress for: ${title}`);
+      try {
+        onPress();
+        console.log(`✅ onPress executed successfully for: ${title}`);
+      } catch (error) {
+        console.error(`❌ Error executing onPress for ${title}:`, error);
+      }
+    } else {
+      console.log(`⚠️ No onPress handler for: ${title}`);
+    }
   };
 
   return (
@@ -520,6 +533,7 @@ export default function SettingsScreen() {
   
   const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
   const [showConfetti, setShowConfetti] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const { user, signOut } = useAuth();
   const { profile, theme, isPersonalized, refreshPersonalization } = usePersonalization();
@@ -545,14 +559,17 @@ export default function SettingsScreen() {
   };
 
   const handleEditProfile = () => {
+    console.log('🔧 Navigating to edit profile');
     router.push('/profile/edit');
   };
 
   const handleUpgradeToPro = () => {
+    console.log('🔧 Navigating to paywall');
     router.push('/paywall');
   };
 
   const handleFollowersPress = () => {
+    console.log('🔧 Showing followers info');
     Alert.alert(
       'Follower Count',
       `You currently have ${formatFollowers(profile?.followers || 0)} followers across all platforms.\n\nTier: ${profile ? 'Rising Star' : 'Starter'}`,
@@ -561,6 +578,7 @@ export default function SettingsScreen() {
   };
 
   const handleExportData = async () => {
+    console.log('🔧 Export data button pressed');
     try {
       const data = await exportData();
       Alert.alert(
@@ -569,26 +587,43 @@ export default function SettingsScreen() {
         [{ text: 'OK' }]
       );
     } catch (error) {
+      console.error('❌ Error exporting data:', error);
       Alert.alert('Error', 'Failed to export data. Please try again.');
     }
   };
 
   const exportData = async () => {
+    console.log('🔧 Exporting data...');
     return await storage.exportData();
   };
 
   const handleSignOut = () => {
+    console.log('🔧 Sign out button pressed - showing confirmation dialog');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out? Your local data will be cleared.',
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: performSignOut },
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => console.log('🔧 Sign out cancelled by user')
+        },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive', 
+          onPress: () => {
+            console.log('🔧 User confirmed sign out');
+            performSignOut();
+          }
+        },
       ]
     );
   };
 
   const handleClearData = () => {
+    console.log('🔧 Clear data button pressed');
     Alert.alert(
       'Clear All Data',
       'This will permanently delete all your saved items, chat history, and preferences. This action cannot be undone.',
@@ -600,6 +635,7 @@ export default function SettingsScreen() {
   };
 
   const clearAllData = async () => {
+    console.log('🔧 Clearing all data...');
     try {
       await storage.clearAll();
       await refreshPersonalization();
@@ -607,18 +643,38 @@ export default function SettingsScreen() {
       
       Alert.alert('Success', 'All data has been cleared.');
     } catch (error) {
-      console.error('Error clearing data:', error);
+      console.error('❌ Error clearing data:', error);
       Alert.alert('Error', 'Failed to clear data. Please try again.');
     }
   };
 
   const performSignOut = async () => {
+    console.log('🔧 Performing sign out...');
     try {
+      // Show loading state
+      setIsLoading(true);
+      
+      // Perform sign out
       await signOut();
+      
       console.log('✅ Sign out completed successfully');
+      
+      // Force navigation to index which will redirect to onboarding
+      console.log('🔧 Attempting to navigate to index...');
+      try {
+        router.replace('/');
+        console.log('✅ Navigation command executed');
+      } catch (navError) {
+        console.error('❌ Navigation error:', navError);
+        // Fallback navigation
+        router.push('/');
+      }
+      
     } catch (error) {
       console.error('❌ Error during sign out:', error);
       Alert.alert('Error', 'Failed to sign out. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -631,6 +687,32 @@ export default function SettingsScreen() {
             origin={{ x: Dimensions.get('window').width / 2, y: 0 }}
             fadeOut={true}
           />
+        )}
+        
+        {/* Loading overlay during sign out */}
+        {isLoading && (
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+          }}>
+            <BlurView intensity={20} tint="dark" style={{
+              padding: 32,
+              borderRadius: 24,
+              alignItems: 'center',
+            }}>
+              <ActivityIndicator size="large" color={colors.accent} />
+              <Text style={[commonStyles.text, { marginTop: 16, textAlign: 'center' }]}>
+                Signing out...
+              </Text>
+            </BlurView>
+          </View>
         )}
         
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -757,6 +839,25 @@ export default function SettingsScreen() {
               index={2}
               isDestructive
             />
+            
+            {/* Debug button for testing */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.error,
+                padding: 16,
+                borderRadius: 12,
+                marginTop: 8,
+                alignItems: 'center',
+              }}
+              onPress={() => {
+                console.log('🔧 DEBUG: Direct sign out button pressed');
+                performSignOut();
+              }}
+            >
+              <Text style={[commonStyles.textBold, { color: colors.white }]}>
+                DEBUG: Direct Sign Out
+              </Text>
+            </TouchableOpacity>
           </PremiumSectionCard>
 
           {/* Bottom spacing */}

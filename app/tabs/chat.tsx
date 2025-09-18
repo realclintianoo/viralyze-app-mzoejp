@@ -609,8 +609,8 @@ export default function ChatScreen() {
           { 
             text: 'View Saved Items', 
             onPress: () => {
-              // Navigate to the Saved tab
-              router.push('/(tabs)/saved');
+              // Navigate to the Saved tab using the correct path
+              router.push('/tabs/saved');
             }
           },
         ]

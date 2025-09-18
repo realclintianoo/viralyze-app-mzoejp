@@ -74,7 +74,7 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       setCurrentConversation(null);
       setMessages([]);
     }
-  }, [user]);
+  }, [user, loadConversations]);
 
   const loadConversations = async () => {
     if (!user) return;

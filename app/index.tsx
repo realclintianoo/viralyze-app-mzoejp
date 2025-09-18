@@ -25,29 +25,40 @@ export default function Index() {
       // Perform system check
       logSystemCheck();
       
-      // Always show onboarding for personalization - this is the key change
-      // Even existing users should go through onboarding to update their preferences
-      console.log('🎯 Checking personalization status:', { 
+      console.log('🎯 Checking app state:', { 
         hasProfile: !!profile, 
         isPersonalized,
-        user: !!user 
+        user: !!user,
+        session: !!session
       });
       
-      // Show onboarding if:
-      // 1. No profile exists (new user)
-      // 2. User is logged in but we want to refresh their preferences
-      // 3. Guest user without profile
-      const needsOnboarding = !isPersonalized || (user && !profile);
+      // If user is signed out (no user and no session), always show onboarding
+      // This ensures proper flow after sign-out
+      if (!user && !session) {
+        console.log('🎯 No user/session - showing onboarding');
+        setShouldShowOnboarding(true);
+        return;
+      }
       
-      console.log('🎯 Needs onboarding:', needsOnboarding);
-      setShouldShowOnboarding(needsOnboarding);
+      // If user exists but no personalization, show onboarding
+      if ((user || session) && !isPersonalized) {
+        console.log('🎯 User exists but no personalization - showing onboarding');
+        setShouldShowOnboarding(true);
+        return;
+      }
+      
+      // If everything is set up, go to main app
+      console.log('🎯 User personalized - going to main app');
+      setShouldShowOnboarding(false);
       
     } catch (error) {
       console.error('Error initializing app:', error);
+      // On error, show onboarding as fallback
+      setShouldShowOnboarding(true);
     } finally {
       setIsLoading(false);
     }
-  }, [isPersonalized, profile, user]);
+  }, [isPersonalized, profile, user, session]);
 
   // Check if user needs onboarding on every app launch
   useFocusEffect(
