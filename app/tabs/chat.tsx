@@ -107,72 +107,135 @@ interface StreakData {
 
 const InputModeToggle: React.FC<InputModeToggleProps> = ({ modes, activeMode, onModeChange }) => {
   const slideAnim = useSharedValue(0);
+  const glowAnim = useSharedValue(0);
   
   useEffect(() => {
-    slideAnim.value = withSpring(activeMode === 'text' ? 0 : 1, { tension: 300, friction: 8 });
+    slideAnim.value = withSpring(activeMode === 'text' ? 0 : 1, { 
+      tension: 400, 
+      friction: 8 
+    });
+    
+    // Continuous glow animation
+    glowAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 2000 }),
+        withTiming(0, { duration: 2000 })
+      ),
+      -1,
+      true
+    );
   }, [activeMode]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(slideAnim.value, [0, 1], [0, 50]) }],
+    transform: [{ translateX: interpolate(slideAnim.value, [0, 1], [0, 60]) }],
+  }));
+
+  const containerGlowStyle = useAnimatedStyle(() => ({
+    shadowOpacity: 0.4 + glowAnim.value * 0.6,
+    shadowRadius: 16 + glowAnim.value * 12,
   }));
 
   return (
-    <View style={{
-      flexDirection: 'row',
-      backgroundColor: colors.glassBackgroundStrong,
-      borderRadius: 16,
-      padding: 4,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: colors.glassBorderStrong,
-    }}>
+    <Animated.View style={[
+      {
+        flexDirection: 'row',
+        backgroundColor: colors.glassBackgroundUltra,
+        borderRadius: 20,
+        padding: 6,
+        marginBottom: 16,
+        borderWidth: 2,
+        borderColor: colors.glassBorderUltra,
+        shadowColor: colors.glowNeonTeal,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 12,
+        overflow: 'hidden',
+      },
+      containerGlowStyle
+    ]}>
+      {/* Background gradient */}
+      <LinearGradient
+        colors={[colors.neonTeal + '08', colors.neonGreen + '08']}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          borderRadius: 20,
+        }}
+      />
+      
+      {/* Animated selector background */}
       <Animated.View style={[
         {
           position: 'absolute',
-          top: 4,
-          left: 4,
-          width: 46,
-          height: 32,
-          backgroundColor: colors.neonGreen,
-          borderRadius: 12,
+          top: 6,
+          left: 6,
+          width: 56,
+          height: 40,
+          borderRadius: 16,
+          overflow: 'hidden',
           shadowColor: colors.glowNeonGreen,
           shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.8,
-          shadowRadius: 12,
-          elevation: 8,
+          shadowOpacity: 0.9,
+          shadowRadius: 16,
+          elevation: 12,
         },
         animatedStyle
-      ]} />
+      ]}>
+        <LinearGradient
+          colors={[colors.neonGreen, colors.neonTeal]}
+          style={{
+            flex: 1,
+            borderRadius: 16,
+          }}
+        />
+      </Animated.View>
       
-      {modes.map((mode) => (
+      {modes.map((mode, index) => (
         <TouchableOpacity
           key={mode.id}
           style={{
             flex: 1,
             alignItems: 'center',
             justifyContent: 'center',
-            paddingVertical: 8,
-            zIndex: 1,
+            paddingVertical: 10,
+            paddingHorizontal: 8,
+            zIndex: 2,
+            borderRadius: 16,
           }}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             onModeChange(mode.id);
           }}
         >
-          <Text style={{ fontSize: 16 }}>{mode.icon}</Text>
+          <Text style={{ 
+            fontSize: 18, 
+            marginBottom: 2,
+            textShadowColor: activeMode === mode.id ? colors.background : 'transparent',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 4,
+          }}>
+            {mode.icon}
+          </Text>
           <Text style={[
             commonStyles.textBold,
             { 
-              fontSize: 10, 
+              fontSize: 11, 
               color: activeMode === mode.id ? colors.background : colors.text,
-              marginTop: 2
+              fontWeight: activeMode === mode.id ? '800' : '600',
+              letterSpacing: 0.5,
+              textTransform: 'uppercase',
+              textShadowColor: activeMode === mode.id ? 'rgba(0,0,0,0.3)' : 'transparent',
+              textShadowOffset: { width: 0, height: 1 },
+              textShadowRadius: 2,
             }
           ]}>
             {mode.title}
           </Text>
         </TouchableOpacity>
       ))}
-    </View>
+    </Animated.View>
   );
 };
 
