@@ -44,8 +44,6 @@ import PremiumSidebar from '../../components/PremiumSidebar';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { supabase } from '../../lib/supabase';
 import FloatingQuotaAlert from '../../components/FloatingQuotaAlert';
-import AdBanner from '../../components/AdBanner';
-import RewardedAdButton from '../../components/RewardedAdButton';
 
 interface PremiumSuggestionTileProps {
   action: any;
@@ -2249,17 +2247,6 @@ export default function ChatScreen() {
           visible={quotaAlertVisible}
           onClose={() => setQuotaAlertVisible(false)}
         />
-
-        {/* AdMob Banner Ad */}
-        <View style={{ 
-          position: 'absolute', 
-          bottom: 90, 
-          left: 0, 
-          right: 0,
-          paddingHorizontal: 16,
-        }}>
-          <AdBanner size="BANNER" />
-        </View>
       </Animated.View>
     </SafeAreaView>
   );

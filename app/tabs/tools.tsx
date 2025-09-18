@@ -31,8 +31,6 @@ import React, { useState, useEffect } from 'react';
 import { getPersonalizedRecommendations } from '../../utils/personalization';
 import { router } from 'expo-router';
 import PremiumFeatureLock from '../../components/PremiumFeatureLock';
-import AdBanner from '../../components/AdBanner';
-import RewardedAdButton from '../../components/RewardedAdButton';
 
 interface PremiumToolCardProps {
   tool: typeof TOOLS[0];
