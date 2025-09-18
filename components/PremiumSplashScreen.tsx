@@ -52,21 +52,23 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
   }));
 
   // Create dot animated styles outside of useEffect
-  const dotAnimatedStyles = [0, 1, 2].map((index) => 
-    useAnimatedStyle(() => ({
-      opacity: withDelay(
-        index * 200,
-        withRepeat(
-          withSequence(
-            withTiming(0.3, { duration: 600 }),
-            withTiming(1, { duration: 600 })
-          ),
-          -1,
-          true
-        )
-      ),
-    }))
-  );
+  const dotOpacity1 = useSharedValue(0);
+  const dotOpacity2 = useSharedValue(0);
+  const dotOpacity3 = useSharedValue(0);
+
+  const dotAnimatedStyle1 = useAnimatedStyle(() => ({
+    opacity: dotOpacity1.value,
+  }));
+
+  const dotAnimatedStyle2 = useAnimatedStyle(() => ({
+    opacity: dotOpacity2.value,
+  }));
+
+  const dotAnimatedStyle3 = useAnimatedStyle(() => ({
+    opacity: dotOpacity3.value,
+  }));
+
+  const dotAnimatedStyles = [dotAnimatedStyle1, dotAnimatedStyle2, dotAnimatedStyle3];
 
   useEffect(() => {
     // Start the splash animation sequence
@@ -95,6 +97,43 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
       // Text fade in after logo
       textFadeAnim.value = withDelay(600, withTiming(1, { duration: 600 }));
       
+      // Dot animations
+      dotOpacity1.value = withDelay(
+        0 * 200,
+        withRepeat(
+          withSequence(
+            withTiming(0.3, { duration: 600 }),
+            withTiming(1, { duration: 600 })
+          ),
+          -1,
+          true
+        )
+      );
+      
+      dotOpacity2.value = withDelay(
+        1 * 200,
+        withRepeat(
+          withSequence(
+            withTiming(0.3, { duration: 600 }),
+            withTiming(1, { duration: 600 })
+          ),
+          -1,
+          true
+        )
+      );
+      
+      dotOpacity3.value = withDelay(
+        2 * 200,
+        withRepeat(
+          withSequence(
+            withTiming(0.3, { duration: 600 }),
+            withTiming(1, { duration: 600 })
+          ),
+          -1,
+          true
+        )
+      );
+      
       // Auto finish after 3 seconds
       setTimeout(() => {
         onFinish();
@@ -102,7 +141,7 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
     };
 
     startAnimation();
-  }, [fadeAnim, glowAnim, logoRotateAnim, onFinish, scaleAnim, textFadeAnim]);
+  }, [fadeAnim, glowAnim, logoRotateAnim, onFinish, scaleAnim, textFadeAnim, dotOpacity1, dotOpacity2, dotOpacity3]);
 
   return (
     <View style={{
