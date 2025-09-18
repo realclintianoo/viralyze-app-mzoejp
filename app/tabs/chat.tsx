@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPersonalizedQuickActions } from '../../utils/personalization';
 import { LinearGradient } from 'expo-linear-gradient';
 import { aiComplete, checkOpenAIConfig } from '../../lib/ai';
+import { router } from 'expo-router';
 import {
   View,
   Text,
@@ -33,6 +34,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Modal,
 } from 'react-native';
 import { ChatMessage, QuotaUsage, OnboardingData } from '../../types';
 import { quickHealthCheck } from '../../utils/systemCheck';
@@ -63,6 +65,367 @@ interface SuggestionTilesProps {
   onActionPress: (actionId: string) => void;
   disabled: boolean;
 }
+
+interface NotificationModalProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+interface ProfileMenuProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose }) => {
+  const fadeAnim = useSharedValue(0);
+  const slideAnim = useSharedValue(-50);
+
+  useEffect(() => {
+    if (visible) {
+      fadeAnim.value = withTiming(1, { duration: 300 });
+      slideAnim.value = withSpring(0, { tension: 300, friction: 8 });
+    } else {
+      fadeAnim.value = withTiming(0, { duration: 200 });
+      slideAnim.value = withTiming(-50, { duration: 200 });
+    }
+  }, [visible]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+    transform: [{ translateY: slideAnim.value }],
+  }));
+
+  const notifications = [
+    {
+      id: '1',
+      title: 'Welcome to VIRALYZE!',
+      message: 'Start creating viral content with AI assistance',
+      time: '2m ago',
+      type: 'welcome',
+      unread: true,
+    },
+    {
+      id: '2',
+      title: 'Daily Quota Reset',
+      message: 'Your free AI requests have been refreshed',
+      time: '1h ago',
+      type: 'quota',
+      unread: false,
+    },
+    {
+      id: '3',
+      title: 'Pro Tip',
+      message: 'Try using specific keywords in your prompts for better results',
+      time: '1d ago',
+      type: 'tip',
+      unread: false,
+    },
+  ];
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'welcome': return 'hand-right-outline';
+      case 'quota': return 'refresh-outline';
+      case 'tip': return 'bulb-outline';
+      default: return 'notifications-outline';
+    }
+  };
+
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'welcome': return colors.accent;
+      case 'quota': return colors.warning;
+      case 'tip': return colors.success;
+      default: return colors.textSecondary;
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      <TouchableOpacity
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          justifyContent: 'flex-start',
+          paddingTop: 100,
+        }}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <Animated.View style={[
+          {
+            marginHorizontal: 16,
+            backgroundColor: colors.glassBackgroundStrong,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: colors.glassBorderStrong,
+            maxHeight: 400,
+          },
+          animatedStyle
+        ]}>
+          <BlurView intensity={20} style={{
+            borderRadius: 20,
+            overflow: 'hidden',
+          }}>
+            <View style={{ padding: 20 }}>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 16,
+              }}>
+                <Text style={[commonStyles.subtitle, { fontSize: 18 }]}>
+                  Notifications
+                </Text>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: colors.glassBackgroundStrong,
+                    borderRadius: 12,
+                    padding: 8,
+                    borderWidth: 1,
+                    borderColor: colors.glassBorderStrong,
+                  }}
+                  onPress={onClose}
+                >
+                  <Ionicons name="close" size={16} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {notifications.map((notification, index) => (
+                  <TouchableOpacity
+                    key={notification.id}
+                    style={{
+                      backgroundColor: notification.unread 
+                        ? colors.glassBackground 
+                        : 'transparent',
+                      borderRadius: 12,
+                      padding: 16,
+                      marginBottom: 8,
+                      borderWidth: notification.unread ? 1 : 0,
+                      borderColor: notification.unread 
+                        ? colors.glassBorder 
+                        : 'transparent',
+                    }}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      // Handle notification tap
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                      <View style={{
+                        backgroundColor: getNotificationColor(notification.type) + '20',
+                        borderRadius: 12,
+                        padding: 8,
+                        marginRight: 12,
+                      }}>
+                        <Ionicons 
+                          name={getNotificationIcon(notification.type) as any} 
+                          size={16} 
+                          color={getNotificationColor(notification.type)} 
+                        />
+                      </View>
+                      
+                      <View style={{ flex: 1 }}>
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          marginBottom: 4,
+                        }}>
+                          <Text style={[
+                            commonStyles.textBold,
+                            { 
+                              flex: 1,
+                              fontSize: 14,
+                              color: notification.unread ? colors.text : colors.textSecondary,
+                            }
+                          ]}>
+                            {notification.title}
+                          </Text>
+                          {notification.unread && (
+                            <View style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: colors.accent,
+                            }} />
+                          )}
+                        </View>
+                        
+                        <Text style={[
+                          commonStyles.textSmall,
+                          { 
+                            marginBottom: 4,
+                            color: notification.unread ? colors.textSecondary : colors.textTertiary,
+                          }
+                        ]}>
+                          {notification.message}
+                        </Text>
+                        
+                        <Text style={[
+                          commonStyles.textSmall,
+                          { 
+                            fontSize: 11,
+                            color: colors.textTertiary,
+                          }
+                        ]}>
+                          {notification.time}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {notifications.length === 0 && (
+                <View style={{ alignItems: 'center', padding: 40 }}>
+                  <Ionicons name="notifications-off-outline" size={48} color={colors.textSecondary} />
+                  <Text style={[commonStyles.textSmall, { marginTop: 16, textAlign: 'center' }]}>
+                    No notifications yet
+                  </Text>
+                </View>
+              )}
+            </View>
+          </BlurView>
+        </Animated.View>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
+
+const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose }) => {
+  const slideAnim = useSharedValue(100);
+
+  useEffect(() => {
+    if (visible) {
+      slideAnim.value = withSpring(0, { tension: 300, friction: 8 });
+    } else {
+      slideAnim.value = withTiming(100, { duration: 200 });
+    }
+  }, [visible]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: slideAnim.value }],
+  }));
+
+  const menuItems = [
+    { 
+      icon: 'person-outline', 
+      title: 'Edit Profile', 
+      subtitle: 'Update your niche and goals',
+      onPress: () => {
+        onClose();
+        router.push('/profile/edit');
+      }
+    },
+    { 
+      icon: 'settings-outline', 
+      title: 'Settings', 
+      subtitle: 'Manage your account',
+      onPress: () => {
+        onClose();
+        router.push('/tabs/settings');
+      }
+    },
+    { 
+      icon: 'diamond-outline', 
+      title: 'Upgrade to Pro', 
+      subtitle: 'Unlock unlimited features',
+      onPress: () => {
+        onClose();
+        router.push('/paywall');
+      }
+    },
+  ];
+
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      <TouchableOpacity
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'flex-end',
+        }}
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <Animated.View style={[animatedStyle]}>
+          <BlurView intensity={20} style={{
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            overflow: 'hidden',
+          }}>
+            <LinearGradient
+              colors={['rgba(26, 31, 38, 0.95)', 'rgba(11, 15, 20, 0.95)']}
+              style={{ padding: 24, paddingBottom: 40 }}
+            >
+              <View style={{
+                alignItems: 'center',
+                marginBottom: 24,
+              }}>
+                <View style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: colors.textSecondary,
+                  marginBottom: 20,
+                }} />
+                <Text style={[commonStyles.subtitle, { fontSize: 18 }]}>
+                  Quick Actions
+                </Text>
+              </View>
+
+              {menuItems.map((item, index) => (
+                <TouchableOpacity
+                  key={item.title}
+                  style={[
+                    commonStyles.glassCard,
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: 20,
+                      marginVertical: 6,
+                    }
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    item.onPress();
+                  }}
+                >
+                  <View style={{
+                    backgroundColor: colors.glowTeal + '20',
+                    borderRadius: 16,
+                    padding: 12,
+                    marginRight: 16,
+                  }}>
+                    <Ionicons 
+                      name={item.icon as any} 
+                      size={20} 
+                      color={colors.tealPrimary} 
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[commonStyles.textBold, { marginBottom: 2 }]}>
+                      {item.title}
+                    </Text>
+                    <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>
+                      {item.subtitle}
+                    </Text>
+                  </View>
+                  <Ionicons 
+                    name="chevron-forward" 
+                    size={16} 
+                    color={colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+              ))}
+            </LinearGradient>
+          </BlurView>
+        </Animated.View>
+      </TouchableOpacity>
+    </Modal>
+  );
+};
 
 const PremiumQuotaPill: React.FC<PremiumQuotaPillProps> = ({ remaining, total }) => {
   const glowAnim = useSharedValue(0);
@@ -392,6 +755,8 @@ export default function ChatScreen() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+  const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   
   const scrollViewRef = useRef<ScrollView>(null);
   const idleTimerRef = useRef<NodeJS.Timeout>();
@@ -544,7 +909,7 @@ export default function ChatScreen() {
       'You\'ve used all 10 of your free AI requests today. Upgrade to Pro for unlimited access!',
       [
         { text: 'Maybe Later', style: 'cancel' },
-        { text: 'Upgrade to Pro', onPress: () => console.log('Navigate to upgrade') },
+        { text: 'Upgrade to Pro', onPress: () => router.push('/paywall') },
       ]
     );
   };
@@ -574,6 +939,16 @@ export default function ChatScreen() {
     } catch (error) {
       console.error('Error saving message:', error);
     }
+  };
+
+  const handleNotificationPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setNotificationModalVisible(true);
+  };
+
+  const handleProfilePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setProfileMenuVisible(true);
   };
 
   const getNicheEmoji = () => {
@@ -714,23 +1089,29 @@ export default function ChatScreen() {
           <Text style={[commonStyles.headerTitle, { fontSize: 24 }]}>VIRALYZE</Text>
           
           <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity style={{
-              padding: 8,
-              borderRadius: 12,
-              backgroundColor: colors.glassBackgroundStrong,
-              borderWidth: 1,
-              borderColor: colors.glassBorderStrong,
-              marginRight: 8,
-            }}>
+            <TouchableOpacity 
+              style={{
+                padding: 8,
+                borderRadius: 12,
+                backgroundColor: colors.glassBackgroundStrong,
+                borderWidth: 1,
+                borderColor: colors.glassBorderStrong,
+                marginRight: 8,
+              }}
+              onPress={handleNotificationPress}
+            >
               <Ionicons name="notifications-outline" size={20} color={colors.text} />
             </TouchableOpacity>
-            <TouchableOpacity style={{
-              padding: 8,
-              borderRadius: 12,
-              backgroundColor: colors.glassBackgroundStrong,
-              borderWidth: 1,
-              borderColor: colors.glassBorderStrong,
-            }}>
+            <TouchableOpacity 
+              style={{
+                padding: 8,
+                borderRadius: 12,
+                backgroundColor: colors.glassBackgroundStrong,
+                borderWidth: 1,
+                borderColor: colors.glassBorderStrong,
+              }}
+              onPress={handleProfilePress}
+            >
               <Ionicons name="person-circle-outline" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
@@ -875,6 +1256,18 @@ export default function ChatScreen() {
         <PremiumSidebar
           visible={sidebarVisible}
           onClose={() => setSidebarVisible(false)}
+        />
+
+        {/* Notification Modal */}
+        <NotificationModal
+          visible={notificationModalVisible}
+          onClose={() => setNotificationModalVisible(false)}
+        />
+
+        {/* Profile Menu */}
+        <ProfileMenu
+          visible={profileMenuVisible}
+          onClose={() => setProfileMenuVisible(false)}
         />
       </Animated.View>
     </SafeAreaView>
