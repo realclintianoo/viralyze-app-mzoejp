@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -77,7 +77,7 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
     // Run periodic checks every 30 seconds
     const interval = setInterval(runQuickCheck, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [runQuickCheck]);
 
   const runCheck = async () => {
     setIsLoading(true);
@@ -94,7 +94,7 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
     }
   };
 
-  const runQuickCheck = async () => {
+  const runQuickCheck = useCallback(async () => {
     try {
       const health = await quickHealthCheck();
       if (systemCheck) {
@@ -108,7 +108,7 @@ export default function SystemStatusIndicator({ onPress }: SystemStatusIndicator
     } catch (error) {
       console.log('Quick health check failed:', error);
     }
-  };
+  }, [systemCheck]);
 
   const getStatusInfo = () => {
     if (isLoading) {

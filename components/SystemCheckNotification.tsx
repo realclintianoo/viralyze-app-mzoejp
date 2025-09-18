@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -28,9 +28,9 @@ export default function SystemCheckNotification({ onOpenDebug }: SystemCheckNoti
     const interval = setInterval(runPeriodicCheck, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [runInitialCheck, runPeriodicCheck]);
 
-  const runInitialCheck = async () => {
+  const runInitialCheck = useCallback(async () => {
     try {
       const result = await performSystemCheck();
       setSystemCheck(result);
@@ -42,9 +42,9 @@ export default function SystemCheckNotification({ onOpenDebug }: SystemCheckNoti
     } catch (error) {
       console.error('Initial system check failed:', error);
     }
-  };
+  }, [isDismissed]);
 
-  const runPeriodicCheck = async () => {
+  const runPeriodicCheck = useCallback(async () => {
     try {
       const healthCheck = await quickHealthCheck();
       
@@ -57,7 +57,7 @@ export default function SystemCheckNotification({ onOpenDebug }: SystemCheckNoti
     } catch (error) {
       console.error('Periodic health check failed:', error);
     }
-  };
+  }, [isDismissed, isVisible]);
 
   const showNotification = () => {
     setIsVisible(true);

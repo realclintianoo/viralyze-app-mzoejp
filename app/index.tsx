@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { Redirect, useFocusEffect } from 'expo-router';
 import { storage } from '../utils/storage';
@@ -7,7 +7,6 @@ import { logSystemCheck } from '../utils/systemCheck';
 import { colors, commonStyles } from '../styles/commonStyles';
 import { useAuth } from '../contexts/AuthContext';
 import { usePersonalization } from '../contexts/PersonalizationContext';
-import { useCallback } from 'react';
 
 export default function Index() {
   console.log('🏠 Index component rendered');
@@ -24,16 +23,16 @@ export default function Index() {
       if (!authLoading) {
         initializeApp();
       }
-    }, [authLoading, isPersonalized, user, session])
+    }, [authLoading, isPersonalized, user, session, initializeApp])
   );
 
   useEffect(() => {
     if (!authLoading) {
       initializeApp();
     }
-  }, [authLoading, isPersonalized, user, session]);
+  }, [authLoading, isPersonalized, user, session, initializeApp]);
 
-  const initializeApp = async () => {
+  const initializeApp = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -63,7 +62,7 @@ export default function Index() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isPersonalized, profile, user, session]);
 
   if (authLoading || isLoading) {
     return (

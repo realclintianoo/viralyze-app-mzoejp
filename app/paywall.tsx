@@ -72,7 +72,7 @@ const BenefitItem: React.FC<BenefitItemProps> = ({ icon, text, index }) => {
         true
       )
     );
-  }, [index]);
+  }, [index, slideAnim, fadeAnim, glowAnim]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: slideAnim.value }],
@@ -166,7 +166,7 @@ const ToggleOption: React.FC<ToggleOptionProps> = ({
     } else {
       glowAnim.value = withTiming(0, { duration: 300 });
     }
-  }, [isSelected]);
+  }, [isSelected, glowAnim]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scaleAnim.value }],
@@ -352,7 +352,7 @@ export default function PaywallScreen() {
     );
     
     initializeInAppPurchases();
-  }, []);
+  }, [fadeAnim, slideAnim, logoGlowAnim]);
 
   const initializeInAppPurchases = async () => {
     try {
@@ -367,21 +367,22 @@ export default function PaywallScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       
       const productId = selectedPlan === 'monthly' 
-        ? PRODUCT_IDS.MONTHLY_PRO 
-        : PRODUCT_IDS.YEARLY_PRO;
+        ? PRODUCT_IDS.PRO_MONTHLY 
+        : PRODUCT_IDS.PRO_YEARLY;
       
       const result = await inAppPurchaseManager.purchaseProduct(productId);
       
       if (result.success) {
-        showPurchaseAlert(true, selectedPlan);
-        // Navigate back or to main app
-        router.back();
+        showPurchaseAlert(result, () => {
+          // Navigate back or to main app
+          router.back();
+        });
       } else {
-        showPurchaseAlert(false, selectedPlan);
+        showPurchaseAlert(result);
       }
     } catch (error) {
       console.error('Purchase failed:', error);
-      showPurchaseAlert(false, selectedPlan);
+      showPurchaseAlert({ success: false, error: 'Purchase failed' });
     }
   };
 
@@ -390,10 +391,10 @@ export default function PaywallScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
       const result = await inAppPurchaseManager.restorePurchases();
-      showRestoreAlert(result.success, result.restoredCount || 0);
+      showRestoreAlert(result);
     } catch (error) {
       console.error('Restore failed:', error);
-      showRestoreAlert(false, 0);
+      showRestoreAlert({ success: false, error: 'Restore failed' });
     }
   };
 

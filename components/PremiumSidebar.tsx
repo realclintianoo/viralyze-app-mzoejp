@@ -67,7 +67,7 @@ const NewProjectModal: React.FC<NewProjectModalProps> = ({ visible, onClose, onS
       fadeAnim.value = withTiming(0, { duration: 200 });
       scaleAnim.value = withTiming(0.8, { duration: 200 });
     }
-  }, [visible]);
+  }, [visible, fadeAnim, scaleAnim]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
@@ -186,7 +186,7 @@ const UserProfileMenu: React.FC<UserProfileMenuProps> = ({
     } else {
       slideAnim.value = withTiming(100, { duration: 200 });
     }
-  }, [visible]);
+  }, [visible, slideAnim]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: slideAnim.value }],
@@ -308,7 +308,7 @@ const PremiumSidebar: React.FC<PremiumSidebarProps> = ({
       slideAnim.value = withTiming(-SIDEBAR_WIDTH, { duration: 250 });
       overlayAnim.value = withTiming(0, { duration: 250 });
     }
-  }, [visible]);
+  }, [visible, overlayAnim, slideAnim]);
 
   const sidebarAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: slideAnim.value }],

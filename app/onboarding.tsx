@@ -103,13 +103,13 @@ export default function Onboarding() {
     // Animate step content
     slideAnim.value = withTiming(0, { duration: animations.normal });
     fadeAnim.value = withTiming(1, { duration: animations.normal });
-  }, [step]);
+  }, [step, slideAnim, fadeAnim]);
 
   useEffect(() => {
     // Initial animation
     slideAnim.value = withSpring(0, animations.spring);
     fadeAnim.value = withTiming(1, { duration: animations.slow });
-  }, []);
+  }, [slideAnim, fadeAnim]);
 
   const formatFollowers = (value: number): string => {
     if (value >= 1000000) {

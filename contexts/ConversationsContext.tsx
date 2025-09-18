@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../app/integrations/supabase/client';
 
@@ -74,9 +74,9 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
       setCurrentConversation(null);
       setMessages([]);
     }
-  }, [user]);
+  }, [user, loadConversations]);
 
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     if (!user) return;
 
     setIsLoading(true);
@@ -100,7 +100,7 @@ export const ConversationsProvider: React.FC<ConversationsProviderProps> = ({ ch
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
 
   const createConversation = async (title: string, emoji = '💬'): Promise<Conversation | null> => {
     if (!user) return null;

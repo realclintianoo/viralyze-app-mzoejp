@@ -21,6 +21,45 @@ interface PremiumSplashScreenProps {
   onFinish: () => void;
 }
 
+interface LoadingDotProps {
+  index: number;
+}
+
+const LoadingDot: React.FC<LoadingDotProps> = ({ index }) => {
+  const dotAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: withDelay(
+      index * 200,
+      withRepeat(
+        withSequence(
+          withTiming(0.3, { duration: 600 }),
+          withTiming(1, { duration: 600 })
+        ),
+        -1,
+        true
+      )
+    ),
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: colors.neonTeal,
+          shadowColor: colors.glowNeonTeal,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.8,
+          shadowRadius: 6,
+          elevation: 6,
+        },
+        dotAnimatedStyle
+      ]}
+    />
+  );
+};
+
 const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) => {
   const fadeAnim = useSharedValue(0);
   const scaleAnim = useSharedValue(0.3);
@@ -62,7 +101,7 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
     };
 
     startAnimation();
-  }, []);
+  }, [fadeAnim, glowAnim, logoRotateAnim, onFinish, scaleAnim, textFadeAnim]);
 
   const logoAnimatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
@@ -216,37 +255,9 @@ const PremiumSplashScreen: React.FC<PremiumSplashScreenProps> = ({ onFinish }) =
         },
         textAnimatedStyle
       ]}>
-        {[0, 1, 2].map((index) => (
-          <Animated.View
-            key={index}
-            style={[
-              {
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: colors.neonTeal,
-                shadowColor: colors.glowNeonTeal,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.8,
-                shadowRadius: 6,
-                elevation: 6,
-              },
-              useAnimatedStyle(() => ({
-                opacity: withDelay(
-                  index * 200,
-                  withRepeat(
-                    withSequence(
-                      withTiming(0.3, { duration: 600 }),
-                      withTiming(1, { duration: 600 })
-                    ),
-                    -1,
-                    true
-                  )
-                ),
-              }))
-            ]}
-          />
-        ))}
+        <LoadingDot index={0} />
+        <LoadingDot index={1} />
+        <LoadingDot index={2} />
       </Animated.View>
     </View>
   );

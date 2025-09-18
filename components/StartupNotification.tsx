@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,9 +25,9 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
 
   useEffect(() => {
     checkSystemOnStartup();
-  }, []);
+  }, [checkSystemOnStartup]);
 
-  const checkSystemOnStartup = async () => {
+  const checkSystemOnStartup = useCallback(async () => {
     try {
       console.log('🚀 Running startup system check...');
       const health = await quickHealthCheck();
@@ -47,7 +47,7 @@ export default function StartupNotification({ onDismiss }: StartupNotificationPr
       setCriticalIssues(['System check failed to run']);
       showNotification();
     }
-  };
+  }, []);
 
   const showNotification = () => {
     setVisible(true);
