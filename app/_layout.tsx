@@ -9,12 +9,16 @@ import { PersonalizationProvider } from '../contexts/PersonalizationContext';
 import { ConversationsProvider } from '../contexts/ConversationsContext';
 import { ToastProvider } from '../contexts/ToastContext';
 import { colors } from '../styles/commonStyles';
+import { adMobService } from '../utils/admob';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useEffect(() => {
+    // Initialize AdMob
+    adMobService.initialize().catch(console.error);
+    
     // Hide splash screen after a short delay
     const timer = setTimeout(() => {
       SplashScreen.hideAsync();
