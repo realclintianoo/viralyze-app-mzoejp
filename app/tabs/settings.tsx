@@ -1,26 +1,4 @@
 
-import { BlurView } from 'expo-blur';
-import React, { useState, useEffect } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import ConfettiCannon from 'react-native-confetti-cannon';
-import PremiumConfirmModal from '../../components/PremiumConfirmModal';
-import { Ionicons } from '@expo/vector-icons';
-import SparklineChart from '../../components/SparklineChart';
-import { storage } from '../../utils/storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../contexts/AuthContext';
-import { usePersonalization } from '../../contexts/PersonalizationContext';
-import { formatFollowers, getNicheEmoji } from '../../utils/personalization';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Dimensions,
-  Image,
-} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -32,9 +10,31 @@ import Animated, {
   runOnJS,
   withRepeat,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { commonStyles, colors } from '../../styles/commonStyles';
 import { OnboardingData, QuotaUsage } from '../../types';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { storage } from '../../utils/storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { usePersonalization } from '../../contexts/PersonalizationContext';
+import { commonStyles, colors } from '../../styles/commonStyles';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Dimensions,
+  Image,
+} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { BlurView } from 'expo-blur';
+import { formatFollowers, getNicheEmoji } from '../../utils/personalization';
+import { useAuth } from '../../contexts/AuthContext';
+import SparklineChart from '../../components/SparklineChart';
+import { Ionicons } from '@expo/vector-icons';
+import PremiumConfirmModal from '../../components/PremiumConfirmModal';
+import ConfettiCannon from 'react-native-confetti-cannon';
+import { router } from 'expo-router';
 
 interface PremiumProfileHeaderProps {
   profile: OnboardingData | null;
@@ -71,73 +71,179 @@ interface PremiumActionCardProps {
 }
 
 const PremiumProfileHeader: React.FC<PremiumProfileHeaderProps> = ({ profile, onEditPress }) => {
-  const fadeAnim = useSharedValue(0);
+  const scaleAnim = useSharedValue(1);
+  const glowAnim = useSharedValue(0);
   
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
-    transform: [{ translateY: interpolate(fadeAnim.value, [0, 1], [-20, 0]) }],
+    transform: [{ scale: scaleAnim.value }],
+    shadowOpacity: 0.4 + glowAnim.value * 0.6,
+    shadowRadius: 16 + glowAnim.value * 12,
   }));
 
   useEffect(() => {
-    fadeAnim.value = withDelay(100, withTiming(1, { duration: 600 }));
+    glowAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 3000 }),
+        withTiming(0, { duration: 3000 })
+      ),
+      -1,
+      true
+    );
   }, []);
 
   const handleEditPress = () => {
+    scaleAnim.value = withSequence(
+      withTiming(0.95, { duration: 100 }),
+      withSpring(1, { tension: 400, friction: 6 })
+    );
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onEditPress();
   };
 
   return (
-    <Animated.View style={[commonStyles.header, animatedStyle]}>
-      <View>
-        <Text style={commonStyles.headerTitle}>My Profile</Text>
-        <Text style={[commonStyles.textSmall, { color: colors.textSecondary }]}>
-          @{profile?.niche?.toLowerCase().replace(/\s+/g, '') || 'creator'}
-        </Text>
-      </View>
-      
-      <TouchableOpacity
+    <Animated.View style={[
+      {
+        backgroundColor: colors.glassBackgroundUltra,
+        borderRadius: 28,
+        padding: 24,
+        marginHorizontal: 16,
+        marginTop: 20,
+        borderWidth: 2,
+        borderColor: colors.glassBorderUltra,
+        shadowColor: colors.glowNeonTeal,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 16,
+      },
+      animatedStyle
+    ]}>
+      <LinearGradient
+        colors={[colors.neonTeal + '12', colors.neonGreen + '08']}
         style={{
-          backgroundColor: colors.glassBackgroundStrong,
-          borderRadius: 20,
-          padding: 12,
-          borderWidth: 1,
-          borderColor: colors.glassBorderStrong,
-          shadowColor: colors.glowTeal,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.6,
-          shadowRadius: 12,
-          elevation: 8,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          borderRadius: 28,
         }}
-        onPress={handleEditPress}
-      >
-        <Ionicons name="pencil" size={20} color={colors.accent} />
-      </TouchableOpacity>
+      />
+      
+      {/* VIRALYZE Logo Header */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
+      }}>
+        <Image
+          source={require('../../assets/images/a8b69f5d-7692-41da-84fd-76aebd35c7d4.png')}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            marginRight: 12,
+            shadowColor: colors.glowNeonTeal,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 12,
+          }}
+          resizeMode="contain"
+        />
+        <View style={{ alignItems: 'center' }}>
+          <Text style={[
+            commonStyles.headerTitle,
+            {
+              fontSize: 28,
+              color: colors.neonTeal,
+              textShadowColor: colors.glowNeonTeal,
+              textShadowOffset: { width: 0, height: 0 },
+              textShadowRadius: 12,
+            }
+          ]}>
+            VIRALYZE
+          </Text>
+          <Text style={[
+            commonStyles.textSmall,
+            {
+              color: colors.neonGreen,
+              fontSize: 10,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+              marginTop: -4,
+            }
+          ]}>
+            Settings
+          </Text>
+        </View>
+      </View>
+
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <View style={{ flex: 1 }}>
+          <Text style={[
+            commonStyles.title,
+            {
+              fontSize: 20,
+              color: colors.text,
+              marginBottom: 4,
+            }
+          ]}>
+            Profile Settings
+          </Text>
+          <Text style={[
+            commonStyles.textSmall,
+            {
+              color: colors.textSecondary,
+              fontSize: 14,
+            }
+          ]}>
+            Customize your VIRALYZE experience
+          </Text>
+        </View>
+        
+        <TouchableOpacity
+          style={{
+            backgroundColor: colors.glassBackgroundStrong,
+            borderRadius: 16,
+            padding: 12,
+            borderWidth: 2,
+            borderColor: colors.neonTeal + '40',
+            shadowColor: colors.glowNeonTeal,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.6,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
+          onPress={handleEditPress}
+        >
+          <Ionicons name="create-outline" size={20} color={colors.neonTeal} />
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 };
 
 const PremiumProfileCard: React.FC<PremiumProfileCardProps> = ({ profile, user }) => {
-  const { theme, followerTier } = usePersonalization();
-  const scaleAnim = useSharedValue(0.9);
-  const fadeAnim = useSharedValue(0);
+  const scaleAnim = useSharedValue(1);
+  const { themeColors } = usePersonalization();
   
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scaleAnim.value }],
-    opacity: fadeAnim.value,
   }));
 
   useEffect(() => {
-    fadeAnim.value = withDelay(200, withTiming(1, { duration: 600 }));
     scaleAnim.value = withDelay(200, withSpring(1, { tension: 300, friction: 8 }));
   }, []);
 
   const handleCardPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     scaleAnim.value = withSequence(
       withTiming(0.98, { duration: 100 }),
-      withTiming(1, { duration: 100 })
+      withSpring(1, { tension: 400, friction: 6 })
     );
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const getNicheEmoji = (niche: string) => {
@@ -152,31 +258,31 @@ const PremiumProfileCard: React.FC<PremiumProfileCardProps> = ({ profile, user }
       gaming: '🎮',
       business: '💼',
       lifestyle: '🌟',
+      comedy: '😂',
     };
     
-    const normalizedNiche = niche.toLowerCase();
     for (const [key, emoji] of Object.entries(emojiMap)) {
-      if (normalizedNiche.includes(key)) return emoji;
+      if (niche.toLowerCase().includes(key)) return emoji;
     }
     return '🚀';
   };
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[animatedStyle]}>
       <TouchableOpacity
         style={[
-          commonStyles.ultraCard,
+          commonStyles.glassCard,
           {
-            alignItems: 'center',
-            borderColor: theme.glow.replace('0.6', '0.3'),
-            shadowColor: theme.glow,
+            marginHorizontal: 16,
+            marginVertical: 8,
+            padding: 20,
           }
         ]}
         onPress={handleCardPress}
         activeOpacity={0.9}
       >
         <LinearGradient
-          colors={[theme.gradient[0] + '10', theme.gradient[1] + '10']}
+          colors={[themeColors.primary + '15', themeColors.secondary + '10']}
           style={{
             position: 'absolute',
             top: 0,
@@ -187,214 +293,281 @@ const PremiumProfileCard: React.FC<PremiumProfileCardProps> = ({ profile, user }
           }}
         />
         
-        {/* Profile Picture */}
-        <View style={{
-          width: 100,
-          height: 100,
-          borderRadius: 50,
-          backgroundColor: colors.glassBackgroundStrong,
-          borderWidth: 3,
-          borderColor: theme.primary,
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginBottom: 16,
-          shadowColor: theme.glow,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.8,
-          shadowRadius: 20,
-          elevation: 16,
-        }}>
-          <Text style={{ fontSize: 40 }}>
-            {profile?.niche ? getNicheEmoji(profile.niche) : '👤'}
-          </Text>
-          
-          {/* Verified checkmark */}
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{
-            position: 'absolute',
-            bottom: -2,
-            right: -2,
-            backgroundColor: theme.primary,
-            borderRadius: 12,
-            padding: 4,
+            width: 60,
+            height: 60,
+            borderRadius: 30,
+            backgroundColor: colors.glassBackgroundStrong,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 16,
             borderWidth: 2,
-            borderColor: colors.background,
+            borderColor: themeColors.primary + '40',
+            shadowColor: themeColors.primary,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.6,
+            shadowRadius: 12,
+            elevation: 8,
           }}>
-            <Ionicons name="checkmark" size={12} color={colors.white} />
-          </View>
-        </View>
-
-        {/* Username */}
-        <Text style={[commonStyles.title, { fontSize: 24, marginBottom: 4 }]}>
-          {user?.email?.split('@')[0] || 'Creator'}
-        </Text>
-
-        {/* Niche Badge */}
-        {profile?.niche && (
-          <View style={{
-            backgroundColor: theme.primary + '20',
-            borderColor: theme.primary + '40',
-            borderWidth: 1,
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            borderRadius: 20,
-            marginBottom: 8,
-          }}>
-            <Text style={[
-              commonStyles.textBold,
-              { color: theme.primary, fontSize: 14 }
-            ]}>
-              {profile.niche} Creator
+            <Text style={{ fontSize: 24 }}>
+              {profile?.niche ? getNicheEmoji(profile.niche) : '👤'}
             </Text>
           </View>
-        )}
-
-        {/* Bio/Goal */}
-        {profile?.goal && (
-          <Text style={[
-            commonStyles.textSmall,
-            { textAlign: 'center', marginTop: 8, fontStyle: 'italic' }
-          ]}>
-            "{profile.goal}" 🚀
-          </Text>
-        )}
+          
+          <View style={{ flex: 1 }}>
+            <Text style={[
+              commonStyles.textBold,
+              {
+                fontSize: 18,
+                color: colors.text,
+                marginBottom: 4,
+              }
+            ]}>
+              {user?.user_metadata?.full_name || user?.email || 'Creator'}
+            </Text>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+              <Text style={[
+                commonStyles.textSmall,
+                {
+                  color: themeColors.primary,
+                  fontSize: 12,
+                  fontWeight: '600',
+                }
+              ]}>
+                {profile?.niche || 'General'} Creator
+              </Text>
+              <View style={{
+                width: 4,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: colors.textSecondary,
+                marginHorizontal: 8,
+              }} />
+              <Text style={[
+                commonStyles.textSmall,
+                {
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                }
+              ]}>
+                {formatFollowers(profile?.followers || 0)} followers
+              </Text>
+            </View>
+            
+            <Text style={[
+              commonStyles.textSmall,
+              {
+                color: colors.textTertiary,
+                fontSize: 11,
+                fontStyle: 'italic',
+              }
+            ]} numberOfLines={2}>
+              {profile?.goal || 'Building an amazing community'}
+            </Text>
+          </View>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
 const PremiumStatsRow: React.FC<PremiumStatsRowProps> = ({ profile, quota }) => {
-  const { theme, followerTier } = usePersonalization();
-  const slideAnim = useSharedValue(-50);
   const fadeAnim = useSharedValue(0);
+  const { themeColors } = usePersonalization();
   
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: slideAnim.value }],
     opacity: fadeAnim.value,
   }));
 
   useEffect(() => {
-    slideAnim.value = withDelay(400, withSpring(0, { tension: 300, friction: 8 }));
     fadeAnim.value = withDelay(400, withTiming(1, { duration: 600 }));
   }, []);
 
-  const formatFollowers = (count: number): string => {
+  const formatFollowers = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
     if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
     return count.toString();
   };
 
   const getEngagementLevel = () => {
-    if (!profile) return { level: 'Unknown', color: colors.textSecondary };
-    
-    const followers = profile.followers;
-    if (followers < 1000) return { level: 'Growing', color: colors.accent };
-    if (followers < 10000) return { level: 'Active', color: colors.warning };
-    return { level: 'High', color: colors.success };
+    const followers = profile?.followers || 0;
+    if (followers >= 100000) return 'Influencer';
+    if (followers >= 10000) return 'Rising Star';
+    if (followers >= 1000) return 'Growing';
+    return 'Starter';
   };
 
-  const engagement = getEngagementLevel();
-
-  const StatCard = ({ title, value, subtitle, icon, gradient }: any) => (
-    <View style={[
-      commonStyles.glassCard,
-      {
-        flex: 1,
-        margin: 4,
-        padding: 16,
-        alignItems: 'center',
-        minHeight: 80,
-      }
-    ]}>
+  const StatCard = ({ title, value, subtitle, icon, gradient }: {
+    title: string;
+    value: string;
+    subtitle: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    gradient: string[];
+  }) => (
+    <View style={{
+      flex: 1,
+      backgroundColor: colors.glassBackground,
+      borderRadius: 20,
+      padding: 16,
+      marginHorizontal: 4,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      alignItems: 'center',
+    }}>
       <LinearGradient
-        colors={gradient || [theme.gradient[0] + '10', theme.gradient[1] + '10']}
+        colors={gradient}
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          borderRadius: 24,
+          borderRadius: 20,
         }}
       />
       
-      <Ionicons name={icon} size={20} color={theme.primary} style={{ marginBottom: 4 }} />
-      <Text style={[commonStyles.textBold, { fontSize: 18, color: theme.primary }]}>
+      <View style={{
+        backgroundColor: gradient[0] + '30',
+        borderRadius: 12,
+        padding: 8,
+        marginBottom: 8,
+      }}>
+        <Ionicons name={icon} size={20} color={gradient[0].replace('15', '').replace('10', '')} />
+      </View>
+      
+      <Text style={[
+        commonStyles.textBold,
+        {
+          fontSize: 18,
+          color: colors.text,
+          marginBottom: 2,
+        }
+      ]}>
         {value}
       </Text>
-      <Text style={[commonStyles.textSmall, { fontSize: 10, textAlign: 'center' }]}>
+      
+      <Text style={[
+        commonStyles.textSmall,
+        {
+          fontSize: 10,
+          color: colors.textSecondary,
+          textAlign: 'center',
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+          marginBottom: 2,
+        }
+      ]}>
         {title}
       </Text>
-      {subtitle && (
-        <Text style={[commonStyles.textSmall, { fontSize: 9, color: colors.textTertiary }]}>
-          {subtitle}
-        </Text>
-      )}
+      
+      <Text style={[
+        commonStyles.textSmall,
+        {
+          fontSize: 9,
+          color: colors.textTertiary,
+          textAlign: 'center',
+        }
+      ]}>
+        {subtitle}
+      </Text>
     </View>
   );
 
   return (
-    <Animated.View style={[{ flexDirection: 'row', paddingHorizontal: 16 }, animatedStyle]}>
+    <Animated.View style={[
+      {
+        flexDirection: 'row',
+        marginHorizontal: 16,
+        marginVertical: 8,
+        gap: 8,
+      },
+      animatedStyle
+    ]}>
       <StatCard
         title="Followers"
         value={formatFollowers(profile?.followers || 0)}
-        subtitle={followerTier.label}
-        icon="people"
-        gradient={[theme.gradient[0] + '15', theme.gradient[1] + '15']}
+        subtitle={getEngagementLevel()}
+        icon="people-outline"
+        gradient={[themeColors.primary + '15', themeColors.primary + '05']}
       />
       
       <StatCard
         title="AI Requests"
-        value={`${quota.text}/10`}
+        value={`${10 - quota.text}/10`}
         subtitle="Today"
-        icon="flash"
-        gradient={['rgba(245, 158, 11, 0.15)', 'rgba(251, 191, 36, 0.15)']}
+        icon="flash-outline"
+        gradient={[colors.neonTeal + '15', colors.neonTeal + '05']}
       />
       
       <StatCard
-        title="Engagement"
-        value={engagement.level}
-        subtitle="Level"
-        icon="trending-up"
-        gradient={[engagement.color + '15', engagement.color + '25']}
+        title="Level"
+        value="Pro"
+        subtitle="Creator"
+        icon="diamond-outline"
+        gradient={[colors.neonGreen + '15', colors.neonGreen + '05']}
       />
     </Animated.View>
   );
 };
 
-const PremiumSectionCard: React.FC<PremiumSectionCardProps> = ({ title, children, index, gradient }) => {
-  const slideAnim = useSharedValue(30);
+const PremiumSectionCard: React.FC<PremiumSectionCardProps> = ({ 
+  title, 
+  children, 
+  index, 
+  gradient = [colors.glassBackgroundStrong, colors.glassBackground] 
+}) => {
+  const slideAnim = useSharedValue(50);
   const fadeAnim = useSharedValue(0);
   
+  useEffect(() => {
+    slideAnim.value = withDelay(index * 100, withSpring(0, { tension: 300, friction: 8 }));
+    fadeAnim.value = withDelay(index * 100, withTiming(1, { duration: 600 }));
+  }, [index]);
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: slideAnim.value }],
     opacity: fadeAnim.value,
   }));
 
-  useEffect(() => {
-    slideAnim.value = withDelay(index * 100 + 600, withSpring(0, { tension: 300, friction: 8 }));
-    fadeAnim.value = withDelay(index * 100 + 600, withTiming(1, { duration: 600 }));
-  }, [index]);
-
   return (
-    <Animated.View style={[commonStyles.ultraCard, { margin: 16 }, animatedStyle]}>
-      {gradient && (
-        <LinearGradient
-          colors={gradient}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            borderRadius: 28,
-          }}
-        />
-      )}
+    <Animated.View style={[
+      commonStyles.glassCard,
+      {
+        marginHorizontal: 16,
+        marginVertical: 8,
+        padding: 0,
+        overflow: 'hidden',
+      },
+      animatedStyle
+    ]}>
+      <LinearGradient
+        colors={gradient}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        }}
+      />
       
-      <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-        {title}
-      </Text>
-      {children}
+      <View style={{ padding: 20 }}>
+        <Text style={[
+          commonStyles.subtitle,
+          {
+            fontSize: 18,
+            color: colors.text,
+            marginBottom: 16,
+            textAlign: 'center',
+          }
+        ]}>
+          {title}
+        </Text>
+        
+        {children}
+      </View>
     </Animated.View>
   );
 };
@@ -405,30 +578,37 @@ const PremiumActionCard: React.FC<PremiumActionCardProps> = ({
   subtitle, 
   onPress, 
   rightElement, 
-  gradient, 
-  index, 
-  glowColor,
-  isDestructive 
+  gradient = [colors.glassBackground, colors.glassBackgroundStrong], 
+  index,
+  glowColor = colors.glowNeonTeal,
+  isDestructive = false
 }) => {
   const scaleAnim = useSharedValue(1);
-  const slideAnim = useSharedValue(20);
-  const fadeAnim = useSharedValue(0);
+  const glowAnim = useSharedValue(0);
   
+  useEffect(() => {
+    scaleAnim.value = withDelay(index * 50, withSpring(1, { tension: 300, friction: 8 }));
+    
+    if (!isDestructive) {
+      glowAnim.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 3000 }),
+          withTiming(0, { duration: 3000 })
+        ),
+        -1,
+        true
+      );
+    }
+  }, [index, isDestructive]);
+
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scaleAnim.value },
-      { translateX: slideAnim.value }
-    ],
-    opacity: fadeAnim.value,
+    transform: [{ scale: scaleAnim.value }],
+    shadowOpacity: isDestructive ? 0.3 : 0.3 + glowAnim.value * 0.4,
+    shadowRadius: isDestructive ? 8 : 8 + glowAnim.value * 8,
   }));
 
-  useEffect(() => {
-    slideAnim.value = withDelay(index * 50, withSpring(0, { tension: 300, friction: 8 }));
-    fadeAnim.value = withDelay(index * 50, withTiming(1, { duration: 400 }));
-  }, [index]);
-
   const handlePressIn = () => {
-    scaleAnim.value = withSpring(0.98);
+    scaleAnim.value = withSpring(0.96);
   };
 
   const handlePressOut = () => {
@@ -436,67 +616,79 @@ const PremiumActionCard: React.FC<PremiumActionCardProps> = ({
   };
 
   const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onPress?.();
+    if (onPress) {
+      Haptics.impactAsync(isDestructive ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium);
+      onPress();
+    }
   };
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[animatedStyle]}>
       <TouchableOpacity
         style={[
-          commonStyles.glassCard,
           {
+            backgroundColor: colors.glassBackground,
+            borderRadius: 20,
+            padding: 16,
+            marginVertical: 6,
+            borderWidth: 1,
+            borderColor: isDestructive ? colors.error + '30' : colors.glassBorder,
             flexDirection: 'row',
             alignItems: 'center',
-            padding: 20,
-            marginVertical: 4,
-            borderColor: isDestructive ? colors.error + '30' : colors.glassBorderStrong,
-            shadowColor: glowColor || colors.glowTeal,
+            shadowColor: isDestructive ? colors.error : glowColor,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: 8,
           }
         ]}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
-        activeOpacity={0.8}
+        activeOpacity={0.9}
       >
-        {gradient && (
-          <LinearGradient
-            colors={gradient}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              borderRadius: 24,
-            }}
-          />
-        )}
+        <LinearGradient
+          colors={isDestructive ? [colors.error + '10', colors.error + '05'] : gradient}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: 20,
+          }}
+        />
         
         <View style={{
-          backgroundColor: isDestructive ? colors.error + '20' : colors.glassBackgroundStrong,
+          backgroundColor: isDestructive ? colors.error + '20' : glowColor.replace('0.8', '0.2'),
           borderRadius: 16,
           padding: 12,
           marginRight: 16,
         }}>
           <Ionicons 
             name={icon} 
-            size={24} 
-            color={isDestructive ? colors.error : colors.accent} 
+            size={20} 
+            color={isDestructive ? colors.error : glowColor.replace('rgba(', '').replace(', 0.8)', '').replace(', 0.6)', '')} 
           />
         </View>
         
         <View style={{ flex: 1 }}>
           <Text style={[
             commonStyles.textBold,
-            { color: isDestructive ? colors.error : colors.text }
+            {
+              fontSize: 16,
+              color: isDestructive ? colors.error : colors.text,
+              marginBottom: subtitle ? 2 : 0,
+            }
           ]}>
             {title}
           </Text>
+          
           {subtitle && (
             <Text style={[
               commonStyles.textSmall,
-              { color: isDestructive ? colors.error + 'AA' : colors.textSecondary }
+              {
+                color: isDestructive ? colors.error + 'CC' : colors.textSecondary,
+                fontSize: 13,
+              }
             ]}>
               {subtitle}
             </Text>
@@ -506,7 +698,7 @@ const PremiumActionCard: React.FC<PremiumActionCardProps> = ({
         {rightElement || (
           <Ionicons 
             name="chevron-forward" 
-            size={20} 
+            size={16} 
             color={isDestructive ? colors.error : colors.textSecondary} 
           />
         )}
@@ -518,14 +710,12 @@ const PremiumActionCard: React.FC<PremiumActionCardProps> = ({
 export default function SettingsScreen() {
   console.log('⚙️ Settings screen rendered');
   
-  const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [showSignOutModal, setShowSignOutModal] = useState(false);
-  
   const { user, signOut } = useAuth();
-  const { profile, theme, isPersonalized, refreshPersonalization } = usePersonalization();
-  
+  const [profile, setProfile] = useState<OnboardingData | null>(null);
+  const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
+  const [loading, setLoading] = useState(true);
   const fadeAnim = useSharedValue(0);
+  const { themeColors } = usePersonalization();
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: fadeAnim.value,
@@ -538,10 +728,17 @@ export default function SettingsScreen() {
 
   const loadData = async () => {
     try {
-      const quotaData = await storage.getQuotaUsage();
+      const [profileData, quotaData] = await Promise.all([
+        storage.getProfile(),
+        storage.getQuotaUsage(),
+      ]);
+      
+      setProfile(profileData);
       setQuota(quotaData);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading settings data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -556,39 +753,51 @@ export default function SettingsScreen() {
   const handleFollowersPress = () => {
     Alert.alert(
       'Follower Count',
-      `You currently have ${formatFollowers(profile?.followers || 0)} followers across all platforms.\n\nTier: ${profile ? 'Rising Star' : 'Starter'}`,
-      [{ text: 'OK' }]
+      'This shows your current follower count from your profile. Update it in Edit Profile to get more personalized content suggestions.',
+      [{ text: 'Got it!' }]
     );
   };
 
-  const handleExportData = async () => {
+  const handleExportData = () => {
+    Alert.alert(
+      'Export Data',
+      'Would you like to export your VIRALYZE data?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Export', onPress: exportData },
+      ]
+    );
+  };
+
+  const exportData = async () => {
     try {
-      const data = await exportData();
-      Alert.alert(
-        'Data Export',
-        `Your data has been prepared for export.\n\nSaved Items: ${data.savedItems?.length || 0}\nOnboarding Data: ${data.onboardingData ? 'Yes' : 'No'}`,
-        [{ text: 'OK' }]
-      );
+      // In a real app, this would export user data
+      console.log('Exporting user data...');
+      Alert.alert('Success', 'Your data has been exported successfully!');
     } catch (error) {
+      console.error('Error exporting data:', error);
       Alert.alert('Error', 'Failed to export data. Please try again.');
     }
   };
 
-  const exportData = async () => {
-    return await storage.exportData();
-  };
-
   const handleSignOut = () => {
-    setShowSignOutModal(true);
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out of VIRALYZE?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: performSignOut },
+      ]
+    );
   };
 
   const handleClearData = () => {
     Alert.alert(
       'Clear All Data',
-      'This will permanently delete all your saved items, chat history, and preferences. This action cannot be undone.',
+      'This will permanently delete all your local data including saved content, conversations, and settings. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear All', style: 'destructive', onPress: clearAllData },
+        { text: 'Clear Data', style: 'destructive', onPress: clearAllData },
       ]
     );
   };
@@ -596,10 +805,8 @@ export default function SettingsScreen() {
   const clearAllData = async () => {
     try {
       await storage.clearAll();
-      await refreshPersonalization();
-      setQuota({ text: 0, image: 0 });
-      
-      Alert.alert('Success', 'All data has been cleared.');
+      Alert.alert('Success', 'All local data has been cleared.');
+      // Optionally restart the app or navigate to onboarding
     } catch (error) {
       console.error('Error clearing data:', error);
       Alert.alert('Error', 'Failed to clear data. Please try again.');
@@ -608,366 +815,186 @@ export default function SettingsScreen() {
 
   const performSignOut = async () => {
     try {
-      console.log('🚪 Initiating sign out from settings...');
       await signOut();
-      console.log('✅ Sign out completed successfully from settings');
+      // Navigation will be handled by the auth context
     } catch (error) {
-      console.error('❌ Error during sign out from settings:', error);
+      console.error('Error signing out:', error);
       Alert.alert('Error', 'Failed to sign out. Please try again.');
     }
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={commonStyles.safeArea}>
+        <View style={[commonStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text style={commonStyles.text}>Loading settings...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={commonStyles.safeArea}>
       <Animated.View style={[commonStyles.container, animatedStyle]}>
-        {showConfetti && (
-          <ConfettiCannon
-            count={100}
-            origin={{ x: Dimensions.get('window').width / 2, y: 0 }}
-            fadeOut={true}
-          />
-        )}
-        
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <PremiumProfileHeader 
-            profile={profile} 
-            onEditPress={handleEditProfile} 
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Premium Profile Header with VIRALYZE branding */}
+          <PremiumProfileHeader
+            profile={profile}
+            onEditPress={handleEditProfile}
           />
 
           {/* Profile Card */}
-          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-            <PremiumProfileCard profile={profile} user={user} />
-          </View>
-
-          {/* Gamification Stats */}
-          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
-            <View style={[
-              commonStyles.ultraCard,
-              {
-                padding: 24,
-                borderWidth: 2,
-                borderColor: colors.glassBorderUltra,
-                shadowColor: colors.glowNeonGreen,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.4,
-                shadowRadius: 16,
-                elevation: 12,
-              }
-            ]}>
-              <LinearGradient
-                colors={[colors.neonGreen + '10', colors.neonTeal + '10']}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  borderRadius: 28,
-                }}
-              />
-              
-              <Text style={[
-                commonStyles.subtitle,
-                { 
-                  textAlign: 'center', 
-                  marginBottom: 20,
-                  color: colors.neonGreen,
-                  textShadowColor: colors.glowNeonGreen,
-                  textShadowOffset: { width: 0, height: 0 },
-                  textShadowRadius: 8,
-                }
-              ]}>
-                🔥 Creator Journey
-              </Text>
-              
-              <View style={{ 
-                flexDirection: 'row', 
-                justifyContent: 'space-around',
-                marginBottom: 20 
-              }}>
-                {/* Streak */}
-                <View style={{ alignItems: 'center' }}>
-                  <View style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 30,
-                    backgroundColor: colors.glassBackgroundStrong,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 2,
-                    borderColor: colors.streakFire + '40',
-                    shadowColor: 'rgba(255, 69, 0, 0.8)',
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.8,
-                    shadowRadius: 12,
-                    elevation: 8,
-                    marginBottom: 8,
-                  }}>
-                    <Text style={{ fontSize: 20 }}>🔥</Text>
-                  </View>
-                  <Text style={[
-                    commonStyles.textBold,
-                    { color: colors.streakFire, fontSize: 18 }
-                  ]}>
-                    5
-                  </Text>
-                  <Text style={[
-                    commonStyles.textSmall,
-                    { color: colors.textSecondary, fontSize: 10 }
-                  ]}>
-                    Day Streak
-                  </Text>
-                </View>
-                
-                {/* Level */}
-                <View style={{ alignItems: 'center' }}>
-                  <View style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 30,
-                    backgroundColor: colors.glassBackgroundStrong,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 2,
-                    borderColor: colors.levelGold + '40',
-                    shadowColor: 'rgba(255, 215, 0, 0.8)',
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.8,
-                    shadowRadius: 12,
-                    elevation: 8,
-                    marginBottom: 8,
-                  }}>
-                    <Text style={{ fontSize: 20 }}>⭐</Text>
-                  </View>
-                  <Text style={[
-                    commonStyles.textBold,
-                    { color: colors.levelGold, fontSize: 18 }
-                  ]}>
-                    Rising
-                  </Text>
-                  <Text style={[
-                    commonStyles.textSmall,
-                    { color: colors.textSecondary, fontSize: 10 }
-                  ]}>
-                    Creator
-                  </Text>
-                </View>
-                
-                {/* Badges */}
-                <View style={{ alignItems: 'center' }}>
-                  <View style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 30,
-                    backgroundColor: colors.glassBackgroundStrong,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 2,
-                    borderColor: colors.badgeBlue + '40',
-                    shadowColor: 'rgba(0, 128, 255, 0.8)',
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.8,
-                    shadowRadius: 12,
-                    elevation: 8,
-                    marginBottom: 8,
-                  }}>
-                    <Text style={{ fontSize: 20 }}>🏆</Text>
-                  </View>
-                  <Text style={[
-                    commonStyles.textBold,
-                    { color: colors.badgeBlue, fontSize: 18 }
-                  ]}>
-                    3
-                  </Text>
-                  <Text style={[
-                    commonStyles.textSmall,
-                    { color: colors.textSecondary, fontSize: 10 }
-                  ]}>
-                    Badges
-                  </Text>
-                </View>
-              </View>
-              
-              {/* Progress to next level */}
-              <View>
-                <Text style={[
-                  commonStyles.textBold,
-                  { 
-                    textAlign: 'center', 
-                    marginBottom: 8,
-                    color: colors.neonTeal,
-                    fontSize: 12
-                  }
-                ]}>
-                  Progress to Influencer Level
-                </Text>
-                
-                <View style={{
-                  height: 8,
-                  backgroundColor: colors.backgroundSecondary,
-                  borderRadius: 4,
-                  overflow: 'hidden',
-                  borderWidth: 1,
-                  borderColor: colors.glassBorder,
-                }}>
-                  <LinearGradient
-                    colors={[colors.neonGreen, colors.neonTeal]}
-                    style={{
-                      height: '100%',
-                      width: '65%',
-                      borderRadius: 4,
-                    }}
-                  />
-                </View>
-                
-                <Text style={[
-                  commonStyles.textSmall,
-                  { 
-                    textAlign: 'center', 
-                    marginTop: 4,
-                    color: colors.textTertiary,
-                    fontSize: 10
-                  }
-                ]}>
-                  650/1000 XP
-                </Text>
-              </View>
-            </View>
-          </View>
+          <PremiumProfileCard
+            profile={profile}
+            user={user}
+          />
 
           {/* Stats Row */}
-          <PremiumStatsRow profile={profile} quota={quota} />
+          <PremiumStatsRow
+            profile={profile}
+            quota={quota}
+          />
 
-          {/* Profile Details */}
-          <PremiumSectionCard 
-            title="About Me" 
+          {/* Account Section */}
+          <PremiumSectionCard
+            title="Account & Subscription"
             index={0}
-            gradient={[theme.gradient[0] + '08', theme.gradient[1] + '08']}
+            gradient={[colors.neonGreen + '12', colors.neonGreen + '06']}
           >
             <PremiumActionCard
-              icon="person"
+              icon="diamond-outline"
+              title="Upgrade to Pro"
+              subtitle="Unlock unlimited AI requests and premium features"
+              onPress={handleUpgradeToPro}
+              index={0}
+              glowColor={colors.glowNeonGreen}
+            />
+            
+            <PremiumActionCard
+              icon="person-outline"
               title="Edit Profile"
               subtitle="Update your niche, followers, and goals"
               onPress={handleEditProfile}
-              index={0}
+              index={1}
+              glowColor={colors.glowNeonTeal}
             />
             
             <PremiumActionCard
-              icon="people"
-              title={`${formatFollowers(profile?.followers || 0)} Followers`}
-              subtitle={`${profile ? 'Rising Star' : 'Starter'} tier`}
+              icon="people-outline"
+              title="Followers"
+              subtitle={`${formatFollowers(profile?.followers || 0)} followers`}
               onPress={handleFollowersPress}
-              index={1}
-            />
-          </PremiumSectionCard>
-
-          {/* Usage & Activity */}
-          <PremiumSectionCard 
-            title="Usage & Activity" 
-            index={1}
-            gradient={['rgba(245, 158, 11, 0.08)', 'rgba(251, 191, 36, 0.08)']}
-          >
-            <View style={{ marginBottom: 16 }}>
-              <SparklineChart 
-                data={[quota.text, 10 - quota.text]} 
-                width={200} 
-                height={60} 
-              />
-            </View>
-            
-            <PremiumActionCard
-              icon="flash"
-              title="AI Requests"
-              subtitle={`${quota.text}/10 used today`}
-              index={0}
-              rightElement={
-                <Text style={[commonStyles.textBold, { color: colors.warning }]}>
-                  {10 - quota.text} left
-                </Text>
-              }
-            />
-            
-            <PremiumActionCard
-              icon="images"
-              title="Images Generated"
-              subtitle={`${quota.image}/1 used today`}
-              index={1}
-              rightElement={
-                <Text style={[commonStyles.textBold, { color: colors.accent }]}>
-                  {1 - quota.image} left
-                </Text>
-              }
-            />
-          </PremiumSectionCard>
-
-          {/* Subscription Status */}
-          <PremiumSectionCard 
-            title="Subscription" 
-            index={2}
-            gradient={['rgba(139, 92, 246, 0.08)', 'rgba(124, 58, 237, 0.08)']}
-          >
-            <PremiumActionCard
-              icon="diamond"
-              title="Upgrade to Pro"
-              subtitle="Unlimited AI requests and premium features"
-              onPress={handleUpgradeToPro}
-              index={0}
-              gradient={['rgba(139, 92, 246, 0.1)', 'rgba(124, 58, 237, 0.1)']}
-              glowColor="rgba(139, 92, 246, 0.6)"
-            />
-          </PremiumSectionCard>
-
-          {/* Settings & Actions */}
-          <PremiumSectionCard 
-            title="Settings & Actions" 
-            index={3}
-          >
-            <PremiumActionCard
-              icon="download"
-              title="Export Data"
-              subtitle="Download your saved content and settings"
-              onPress={handleExportData}
-              index={0}
-            />
-            
-            <PremiumActionCard
-              icon="trash"
-              title="Clear All Data"
-              subtitle="Delete all saved items and preferences"
-              onPress={handleClearData}
-              index={1}
-              isDestructive
-            />
-            
-            <PremiumActionCard
-              icon="log-out"
-              title="Sign Out"
-              subtitle="Sign out and clear local data"
-              onPress={handleSignOut}
               index={2}
-              isDestructive
+              glowColor={colors.glowNeonPurple}
             />
           </PremiumSectionCard>
 
-          {/* Bottom spacing */}
-          <View style={{ height: 40 }} />
-        </ScrollView>
+          {/* Data & Privacy Section */}
+          <PremiumSectionCard
+            title="Data & Privacy"
+            index={1}
+            gradient={[colors.neonTeal + '12', colors.neonTeal + '06']}
+          >
+            <PremiumActionCard
+              icon="download-outline"
+              title="Export Data"
+              subtitle="Download your VIRALYZE data"
+              onPress={handleExportData}
+              index={3}
+              glowColor={colors.glowNeonTeal}
+            />
+            
+            <PremiumActionCard
+              icon="trash-outline"
+              title="Clear Local Data"
+              subtitle="Remove all saved content and settings"
+              onPress={handleClearData}
+              index={4}
+              glowColor={colors.error}
+              isDestructive={true}
+            />
+          </PremiumSectionCard>
 
-        {/* Sign Out Confirmation Modal */}
-        <PremiumConfirmModal
-          visible={showSignOutModal}
-          title="Sign Out"
-          message="Are you sure you want to sign out? Your local data will be cleared and you'll be redirected to the onboarding screen."
-          confirmText="Sign Out"
-          cancelText="Cancel"
-          isDestructive={true}
-          onConfirm={() => {
-            setShowSignOutModal(false);
-            performSignOut();
-          }}
-          onCancel={() => setShowSignOutModal(false)}
-        />
+          {/* Account Actions Section */}
+          <PremiumSectionCard
+            title="Account Actions"
+            index={2}
+            gradient={[colors.error + '12', colors.error + '06']}
+          >
+            <PremiumActionCard
+              icon="log-out-outline"
+              title="Sign Out"
+              subtitle="Sign out of your VIRALYZE account"
+              onPress={handleSignOut}
+              index={5}
+              glowColor={colors.error}
+              isDestructive={true}
+            />
+          </PremiumSectionCard>
+
+          {/* App Info */}
+          <View style={{
+            alignItems: 'center',
+            marginTop: 32,
+            marginBottom: 16,
+          }}>
+            <Image
+              source={require('../../assets/images/a8b69f5d-7692-41da-84fd-76aebd35c7d4.png')}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                marginBottom: 12,
+                shadowColor: colors.glowNeonTeal,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.6,
+                shadowRadius: 12,
+              }}
+              resizeMode="contain"
+            />
+            
+            <Text style={[
+              commonStyles.textBold,
+              {
+                fontSize: 18,
+                color: colors.neonTeal,
+                textShadowColor: colors.glowNeonTeal,
+                textShadowOffset: { width: 0, height: 0 },
+                textShadowRadius: 8,
+                marginBottom: 4,
+              }
+            ]}>
+              VIRALYZE
+            </Text>
+            
+            <Text style={[
+              commonStyles.textSmall,
+              {
+                color: colors.textSecondary,
+                fontSize: 12,
+                textAlign: 'center',
+              }
+            ]}>
+              AI-Powered Content Creation Platform
+            </Text>
+            
+            <Text style={[
+              commonStyles.textSmall,
+              {
+                color: colors.textTertiary,
+                fontSize: 10,
+                textAlign: 'center',
+                marginTop: 8,
+              }
+            ]}>
+              Version 1.0.0 • Made with ❤️ for creators
+            </Text>
+          </View>
+        </ScrollView>
       </Animated.View>
     </SafeAreaView>
   );

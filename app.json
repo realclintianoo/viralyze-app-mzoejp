@@ -1,35 +1,35 @@
 
 {
   "expo": {
-    "name": "Natively",
-    "slug": "Natively",
+    "name": "VIRALYZE",
+    "slug": "viralyze",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/natively-dark.png",
+    "icon": "./assets/images/a8b69f5d-7692-41da-84fd-76aebd35c7d4.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/natively-dark.png",
+      "image": "./assets/images/a8b69f5d-7692-41da-84fd-76aebd35c7d4.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#0B0F14"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Natively",
+      "bundleIdentifier": "com.viralyze.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/natively-dark.png",
-        "backgroundColor": "#000000"
+        "foregroundImage": "./assets/images/a8b69f5d-7692-41da-84fd-76aebd35c7d4.png",
+        "backgroundColor": "#0B0F14"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Natively"
+      "package": "com.viralyze.app"
     },
     "web": {
-      "favicon": "./assets/images/final_quest_240x240.png",
+      "favicon": "./assets/images/a8b69f5d-7692-41da-84fd-76aebd35c7d4.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -37,7 +37,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "natively",
+    "scheme": "viralyze",
     "experiments": {
       "typedRoutes": true
     },

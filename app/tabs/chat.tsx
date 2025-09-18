@@ -36,23 +36,20 @@ import {
   Alert,
   Dimensions,
   Modal,
+  Image,
 } from 'react-native';
 import { ChatMessage, QuotaUsage, OnboardingData, InputMode, PresetPrompt } from '../../types';
 import { quickHealthCheck } from '../../utils/systemCheck';
 import PremiumSidebar from '../../components/PremiumSidebar';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { supabase } from '../../lib/supabase';
+import FloatingQuotaAlert from '../../components/FloatingQuotaAlert';
 
 interface PremiumSuggestionTileProps {
   action: any;
   index: number;
   onPress: () => void;
   disabled: boolean;
-}
-
-interface PremiumQuotaPillProps {
-  remaining: number;
-  total: number;
 }
 
 interface WelcomeBlockProps {
@@ -585,7 +582,7 @@ const StreakPopup: React.FC<StreakPopupProps> = ({ visible, streakCount, onSave,
     if (count >= 30) return 'Legendary creator! You\'re unstoppable!';
     if (count >= 14) return 'Two weeks strong! You\'re building amazing habits!';
     if (count >= 7) return 'One week streak! You\'re on fire!';
-    if (count >= 3) return 'Keep creating daily to grow your audience!';
+    if (count >= 3) return 'Keep going and unlock more daily rewards!';
     return 'Every day counts towards your success!';
   };
 
@@ -908,113 +905,6 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose }) => {
   );
 };
 
-const PremiumQuotaPill: React.FC<PremiumQuotaPillProps> = ({ remaining, total }) => {
-  const glowAnim = useSharedValue(0);
-  const pulseAnim = useSharedValue(1);
-  
-  const animatedStyle = useAnimatedStyle(() => ({
-    shadowOpacity: 0.4 + glowAnim.value * 0.6,
-    shadowRadius: 12 + glowAnim.value * 8,
-    transform: [{ scale: pulseAnim.value }],
-  }));
-
-  useEffect(() => {
-    glowAnim.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 2000 }),
-        withTiming(0, { duration: 2000 })
-      ),
-      -1,
-      true
-    );
-    
-    if (remaining <= 2) {
-      pulseAnim.value = withRepeat(
-        withSequence(
-          withTiming(1.05, { duration: 800 }),
-          withTiming(1, { duration: 800 })
-        ),
-        -1,
-        true
-      );
-    }
-  }, [remaining]);
-
-  const getColor = () => {
-    const percentage = remaining / total;
-    if (percentage > 0.6) return colors.neonGreen;
-    if (percentage > 0.3) return colors.warning;
-    return colors.error;
-  };
-
-  const getGlowColor = () => {
-    const percentage = remaining / total;
-    if (percentage > 0.6) return colors.glowNeonGreen;
-    if (percentage > 0.3) return 'rgba(245, 158, 11, 0.8)';
-    return 'rgba(239, 68, 68, 0.8)';
-  };
-
-  return (
-    <Animated.View style={[
-      {
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        zIndex: 1000,
-        backgroundColor: colors.glassBackgroundUltra,
-        borderRadius: 24,
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderWidth: 2,
-        borderColor: getColor() + '40',
-        shadowColor: getGlowColor(),
-        shadowOffset: { width: 0, height: 0 },
-        elevation: 12,
-      },
-      animatedStyle
-    ]}>
-      <LinearGradient
-        colors={[getColor() + '20', getColor() + '10']}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          borderRadius: 24,
-        }}
-      />
-      
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <View style={{
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: getColor(),
-          marginRight: 8,
-          shadowColor: getGlowColor(),
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 1,
-          shadowRadius: 6,
-          elevation: 6,
-        }} />
-        
-        <Text style={[
-          commonStyles.textBold,
-          { 
-            color: getColor(), 
-            fontSize: 11,
-            letterSpacing: 0.5,
-            textTransform: 'uppercase'
-          }
-        ]}>
-          {remaining}/{total} Free Left Today
-        </Text>
-      </View>
-    </Animated.View>
-  );
-};
-
 const WelcomeBlock: React.FC<WelcomeBlockProps> = ({ 
   visible, 
   profile, 
@@ -1068,10 +958,10 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
     <Animated.View style={[
       {
         margin: 16,
-        marginTop: 100,
-        padding: 20,
+        marginTop: 20, // Reduced from 100 to make it smaller and lower
+        padding: 16, // Reduced from 20
         backgroundColor: colors.glassBackgroundUltra,
-        borderRadius: 24,
+        borderRadius: 20, // Reduced from 24
         borderWidth: 2,
         borderColor: colors.glassBorderUltra,
         shadowColor: colors.glowNeonTeal,
@@ -1090,12 +980,12 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          borderRadius: 24,
+          borderRadius: 20,
         }}
       />
       
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-        <Text style={{ fontSize: 28, marginRight: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <Text style={{ fontSize: 24, marginRight: 10 }}>
           {getNicheEmoji()}
         </Text>
         
@@ -1103,8 +993,8 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
           <Text style={[
             commonStyles.title, 
             { 
-              fontSize: 18, 
-              lineHeight: 22,
+              fontSize: 16, // Reduced from 18
+              lineHeight: 20, // Reduced from 22
               color: colors.text,
               marginBottom: 2,
             }
@@ -1116,7 +1006,7 @@ const WelcomeBlock: React.FC<WelcomeBlockProps> = ({
             commonStyles.textSmall,
             { 
               color: colors.neonTeal, 
-              fontSize: 12,
+              fontSize: 11, // Reduced from 12
               textTransform: 'uppercase',
               letterSpacing: 0.8,
               fontWeight: '600',
@@ -1139,21 +1029,27 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
   const scaleAnim = useSharedValue(1);
   const fadeAnim = useSharedValue(0);
   const glowAnim = useSharedValue(0);
-  const shimmerAnim = useSharedValue(0);
+  const pulseAnim = useSharedValue(1);
   
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scaleAnim.value }],
+    transform: [{ scale: scaleAnim.value * pulseAnim.value }],
     opacity: fadeAnim.value,
     shadowOpacity: 0.3 + glowAnim.value * 0.5,
     shadowRadius: 12 + glowAnim.value * 8,
   }));
 
-  const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(shimmerAnim.value, [0, 1], [-100, 100]) }],
-  }));
-
   useEffect(() => {
     fadeAnim.value = withDelay(index * 150, withTiming(1, { duration: 600 }));
+    
+    // Continuous subtle pulse animation
+    pulseAnim.value = withRepeat(
+      withSequence(
+        withTiming(1.02, { duration: 2000 }),
+        withTiming(1, { duration: 2000 })
+      ),
+      -1,
+      true
+    );
     
     // Continuous glow animation
     glowAnim.value = withRepeat(
@@ -1163,15 +1059,6 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
       ),
       -1,
       true
-    );
-    
-    // Shimmer effect - only once on load
-    shimmerAnim.value = withDelay(
-      index * 200,
-      withSequence(
-        withTiming(1, { duration: 1500 }),
-        withTiming(0, { duration: 500 })
-      )
     );
   }, [index]);
 
@@ -1243,8 +1130,8 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
             borderWidth: 2,
             borderColor: disabled ? colors.backgroundTertiary : getAccentColor() + '30',
             opacity: disabled ? 0.5 : 1,
-            width: 90,
-            height: 90,
+            width: 80, // Reduced from 90
+            height: 80, // Reduced from 90
             justifyContent: 'center',
             shadowColor: disabled ? colors.neuDark : getGlowColor(),
             shadowOffset: { width: 0, height: 0 },
@@ -1274,27 +1161,11 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
           }}
         />
         
-        {/* Shimmer effect */}
-        {!disabled && (
-          <Animated.View style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: -50,
-              width: 50,
-              height: '100%',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              transform: [{ skewX: '-20deg' }],
-            },
-            shimmerStyle
-          ]} />
-        )}
-        
         {/* Icon container */}
         <View style={{
-          width: 32,
-          height: 32,
-          borderRadius: 16,
+          width: 28, // Reduced from 32
+          height: 28, // Reduced from 32
+          borderRadius: 14, // Reduced from 16
           backgroundColor: disabled ? colors.backgroundTertiary : getAccentColor() + '20',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1309,7 +1180,7 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
         }}>
           <Ionicons 
             name={getIconName(action.id)} 
-            size={16} 
+            size={14} // Reduced from 16
             color={disabled ? colors.textTertiary : getAccentColor()} 
           />
         </View>
@@ -1317,10 +1188,10 @@ const PremiumSuggestionTile: React.FC<PremiumSuggestionTileProps> = ({
         <Text style={[
           commonStyles.textBold,
           { 
-            fontSize: 10, 
+            fontSize: 9, // Reduced from 10
             textAlign: 'center',
             color: disabled ? colors.textTertiary : colors.text,
-            lineHeight: 12,
+            lineHeight: 11, // Reduced from 12
             letterSpacing: 0.2,
           }
         ]}>
@@ -1370,7 +1241,7 @@ const SuggestionTiles: React.FC<SuggestionTilesProps> = ({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        gap: 8,
+        gap: 6, // Reduced gap
       }}>
         {actions.slice(0, 3).map((action, index) => (
           <PremiumSuggestionTile
@@ -1438,6 +1309,7 @@ export default function ChatScreen() {
   const [activeInputMode, setActiveInputMode] = useState<'text' | 'image'>('text');
   const [streakPopupVisible, setStreakPopupVisible] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
+  const [quotaAlertVisible, setQuotaAlertVisible] = useState(false);
   
   const scrollViewRef = useRef<ScrollView>(null);
   const idleTimerRef = useRef<NodeJS.Timeout>();
@@ -1651,7 +1523,7 @@ export default function ChatScreen() {
 
     // Check quota - Updated to use 10 instead of 2
     if (quota.text >= 10) {
-      showUpgradeModal();
+      setQuotaAlertVisible(true);
       return;
     }
 
@@ -1714,17 +1586,6 @@ export default function ChatScreen() {
       'Configuration Error',
       'AI features are not properly configured. Please check your OpenAI settings.',
       [{ text: 'OK' }]
-    );
-  };
-
-  const showUpgradeModal = () => {
-    Alert.alert(
-      'Daily Limit Reached',
-      'You\'ve used all 10 of your free AI requests today. Upgrade to Pro for unlimited access!',
-      [
-        { text: 'Maybe Later', style: 'cancel' },
-        { text: 'Upgrade to Pro', onPress: () => router.push('/paywall') },
-      ]
     );
   };
 
@@ -2015,7 +1876,7 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={commonStyles.safeArea}>
       <Animated.View style={[commonStyles.container, animatedStyle]}>
-        {/* Premium Header */}
+        {/* Premium Header with VIRALYZE branding */}
         <View style={[
           commonStyles.header,
           {
@@ -2047,31 +1908,48 @@ export default function ChatScreen() {
             <Ionicons name="menu" size={20} color={colors.neonTeal} />
           </TouchableOpacity>
           
-          <View style={{ alignItems: 'center' }}>
-            <Text style={[
-              commonStyles.headerTitle, 
-              { 
-                fontSize: 28,
-                color: colors.neonTeal,
-                textShadowColor: colors.glowNeonTeal,
-                textShadowOffset: { width: 0, height: 0 },
-                textShadowRadius: 12,
-              }
-            ]}>
-              VIRALYZE
-            </Text>
-            <Text style={[
-              commonStyles.textSmall,
-              { 
-                color: colors.neonGreen, 
-                fontSize: 10,
-                letterSpacing: 2,
-                textTransform: 'uppercase',
-                marginTop: -4
-              }
-            ]}>
-              AI Coach
-            </Text>
+          {/* VIRALYZE Logo and Title */}
+          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+            <Image
+              source={require('../../assets/images/a8b69f5d-7692-41da-84fd-76aebd35c7d4.png')}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                marginRight: 12,
+                shadowColor: colors.glowNeonTeal,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,
+                shadowRadius: 8,
+              }}
+              resizeMode="contain"
+            />
+            <View style={{ alignItems: 'center' }}>
+              <Text style={[
+                commonStyles.headerTitle, 
+                { 
+                  fontSize: 24,
+                  color: colors.neonTeal,
+                  textShadowColor: colors.glowNeonTeal,
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 12,
+                }
+              ]}>
+                VIRALYZE
+              </Text>
+              <Text style={[
+                commonStyles.textSmall,
+                { 
+                  color: colors.neonGreen, 
+                  fontSize: 9,
+                  letterSpacing: 2,
+                  textTransform: 'uppercase',
+                  marginTop: -4
+                }
+              ]}>
+                AI Coach
+              </Text>
+            </View>
           </View>
           
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -2141,9 +2019,6 @@ export default function ChatScreen() {
           </View>
         </View>
 
-        {/* Premium Quota Pill */}
-        <PremiumQuotaPill remaining={remainingQuota} total={10} />
-
         {/* Chat Content */}
         <KeyboardAvoidingView 
           style={{ flex: 1 }} 
@@ -2155,7 +2030,7 @@ export default function ChatScreen() {
             contentContainerStyle={{ paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
           >
-            {/* Welcome Block */}
+            {/* Welcome Block - Smaller and positioned lower */}
             <WelcomeBlock
               visible={showWelcome}
               profile={profile}
@@ -2229,7 +2104,7 @@ export default function ChatScreen() {
             )}
           </ScrollView>
 
-          {/* Premium Suggestion Tiles */}
+          {/* Premium Suggestion Tiles - Smaller and more compact */}
           <SuggestionTiles
             visible={showSuggestions}
             actions={quickActions}
@@ -2365,6 +2240,12 @@ export default function ChatScreen() {
           streakCount={currentStreak}
           onSave={handleStreakSave}
           onMaybeLater={handleStreakMaybeLater}
+        />
+
+        {/* Floating Quota Alert - Replaces permanent banner */}
+        <FloatingQuotaAlert
+          visible={quotaAlertVisible}
+          onClose={() => setQuotaAlertVisible(false)}
         />
       </Animated.View>
     </SafeAreaView>
