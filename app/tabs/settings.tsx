@@ -19,6 +19,7 @@ import { storage } from '../../utils/storage';
 import { commonStyles, colors } from '../../styles/commonStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import LogoutModal from '../../components/LogoutModal';
+import ProfileCard from '../../components/ProfileCard';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -338,94 +339,78 @@ export default function SettingsScreen() {
         colors={[colors.background, colors.backgroundSecondary]}
         style={{ flex: 1 }}
       >
-        {/* Header */}
-        <Animated.View style={[commonStyles.header, headerAnimatedStyle]}>
-          <Text style={commonStyles.headerTitle}>Settings</Text>
-        </Animated.View>
+        {/* Profile Card - Full Screen */}
+        <ProfileCard onEditPress={handleEditProfile} />
 
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Profile Section */}
-          <View style={{ marginBottom: 32 }}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16, opacity: 0.8 }]}>
-              Profile
-            </Text>
-            <PremiumSettingCard
-              icon="person-outline"
-              title="Edit Profile"
-              subtitle={profile ? `${profile.platforms?.join(', ')} • ${profile.niche}` : 'Complete your profile'}
-              onPress={handleEditProfile}
-              index={0}
-            />
-            <PremiumSettingCard
-              icon="stats-chart-outline"
-              title="Usage Stats"
-              subtitle={`${quota.text} text requests • ${quota.image} images generated`}
-              index={1}
-            />
-          </View>
+        {/* Settings Overlay */}
+        <View style={styles.settingsOverlay}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Usage Stats */}
+            <View style={{ marginBottom: 24 }}>
+              <PremiumSettingCard
+                icon="stats-chart-outline"
+                title="Usage Statistics"
+                subtitle={`${quota.text} text requests • ${quota.image} images generated`}
+                index={0}
+              />
+            </View>
 
-          {/* Subscription Section */}
-          <View style={{ marginBottom: 32 }}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16, opacity: 0.8 }]}>
-              Subscription
-            </Text>
-            <PremiumSettingCard
-              icon="diamond-outline"
-              title="Upgrade to Pro"
-              subtitle="Unlimited requests and premium features"
-              onPress={handleUpgradeToPro}
-              gradient={[colors.primary, colors.gradientEnd]}
-              index={2}
-              isPro
-            />
-            <PremiumSettingCard
-              icon="card-outline"
-              title="Billing"
-              subtitle="Manage your subscription"
-              onPress={() => Alert.alert('Coming Soon', 'Billing management coming soon!')}
-              index={3}
-            />
-          </View>
+            {/* Subscription Section */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={[commonStyles.subtitle, { marginBottom: 16, opacity: 0.8 }]}>
+                Subscription
+              </Text>
+              <PremiumSettingCard
+                icon="diamond-outline"
+                title="Upgrade to Pro"
+                subtitle="Unlimited requests and premium features"
+                onPress={handleUpgradeToPro}
+                gradient={[colors.primary, colors.gradientEnd]}
+                index={1}
+                isPro
+              />
+            </View>
 
-          {/* Data Section */}
-          <View style={{ marginBottom: 32 }}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16, opacity: 0.8 }]}>
-              Data
-            </Text>
-            <PremiumSettingCard
-              icon="download-outline"
-              title="Export Data"
-              subtitle="Download all your content and settings"
-              onPress={handleExportData}
-              index={4}
-            />
-            <PremiumSettingCard
-              icon="trash-outline"
-              title="Clear All Data"
-              subtitle="Reset app to initial state"
-              onPress={handleClearData}
-              index={5}
-            />
-          </View>
+            {/* Data Section */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={[commonStyles.subtitle, { marginBottom: 16, opacity: 0.8 }]}>
+                Data Management
+              </Text>
+              <PremiumSettingCard
+                icon="download-outline"
+                title="Export Data"
+                subtitle="Download all your content and settings"
+                onPress={handleExportData}
+                index={2}
+              />
+              <PremiumSettingCard
+                icon="trash-outline"
+                title="Clear All Data"
+                subtitle="Reset app to initial state"
+                onPress={handleClearData}
+                index={3}
+              />
+            </View>
 
-          {/* Account Section */}
-          <View style={{ marginBottom: 32 }}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16, opacity: 0.8 }]}>
-              Account
-            </Text>
-            <PremiumSettingCard
-              icon="log-out-outline"
-              title={user ? 'Sign Out' : 'Account Status'}
-              subtitle={user ? user.email : 'Using as guest'}
-              onPress={user ? handleSignOut : undefined}
-              index={6}
-            />
-          </View>
-        </ScrollView>
+            {/* Account Section */}
+            <View style={{ marginBottom: 32 }}>
+              <Text style={[commonStyles.subtitle, { marginBottom: 16, opacity: 0.8 }]}>
+                Account
+              </Text>
+              <PremiumSettingCard
+                icon="log-out-outline"
+                title={user ? 'Sign Out' : 'Account Status'}
+                subtitle={user ? user.email : 'Using as guest'}
+                onPress={user ? handleSignOut : undefined}
+                index={4}
+              />
+            </View>
+          </ScrollView>
+        </View>
 
         {/* Logout Modal */}
         <LogoutModal
@@ -437,3 +422,20 @@ export default function SettingsScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = {
+  settingsOverlay: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+    backgroundColor: 'rgba(11, 15, 20, 0.95)',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+  },
+};
