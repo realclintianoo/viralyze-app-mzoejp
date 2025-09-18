@@ -106,6 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .from('profiles')
       .upsert({
         id: userId,
+        user_id: userId,
         platforms: profile.platforms,
         niche: profile.niche,
         followers: profile.followers,

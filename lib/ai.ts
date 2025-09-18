@@ -52,12 +52,136 @@ export interface AICompletionOptions {
   signal?: AbortSignal;
 }
 
+const getPersonalizedSystemPrompt = (profile: OnboardingData | null, kind: string): string => {
+  let basePrompt = `You are an expert social media growth coach and content creator. You provide actionable, specific advice tailored to each creator's unique situation.`;
+  
+  if (profile) {
+    const { niche, followers, goal, platforms } = profile;
+    
+    // Format follower count for context
+    const followerText = followers >= 1000000 
+      ? `${(followers / 1000000).toFixed(1)}M` 
+      : followers >= 1000 
+        ? `${(followers / 1000).toFixed(1)}K` 
+        : followers.toString();
+    
+    // Determine follower tier for appropriate advice
+    let tierAdvice = '';
+    if (followers < 1000) {
+      tierAdvice = 'Focus on consistency, trending hashtags, and engaging with your community to grow your initial audience.';
+    } else if (followers < 10000) {
+      tierAdvice = 'Leverage your growing audience with community engagement, collaborations, and consistent quality content.';
+    } else if (followers < 100000) {
+      tierAdvice = 'Consider monetization opportunities, exclusive content, and building deeper relationships with your audience.';
+    } else {
+      tierAdvice = 'Focus on brand partnerships, premium content offerings, and scaling your influence across platforms.';
+    }
+    
+    basePrompt += `
+
+CREATOR PROFILE:
+- Niche: ${niche} creator
+- Audience: ${followerText} followers
+- Platforms: ${platforms?.join(', ') || 'Multi-platform'}
+- Goal: ${goal}
+- Tier Strategy: ${tierAdvice}
+
+PERSONALIZATION GUIDELINES:
+- Always reference their ${niche} niche naturally in responses
+- Tailor examples and suggestions to ${niche} content
+- Consider their ${followerText} follower count when suggesting strategies
+- Align advice with their goal: "${goal}"
+- Use platform-specific advice for: ${platforms?.join(', ') || 'general platforms'}`;
+  }
+
+  // Add kind-specific instructions
+  switch (kind) {
+    case 'hooks':
+      basePrompt += `
+
+HOOK GENERATION RULES:
+- Create attention-grabbing opening lines under 12 words
+- Make them specific to ${profile?.niche || 'general'} content
+- Use psychological triggers (curiosity, urgency, controversy, benefit)
+- Include numbers, questions, or bold statements when relevant
+- Ensure they're platform-appropriate for ${profile?.platforms?.join('/') || 'social media'}`;
+      break;
+      
+    case 'scripts':
+      basePrompt += `
+
+SCRIPT STRUCTURE (30-60 seconds):
+1. HOOK (0-3s): Grab attention immediately
+2. VALUE (3-45s): Deliver core content/teaching
+3. CTA (45-60s): Clear call-to-action
+- Tailor language and examples to ${profile?.niche || 'general'} audience
+- Include suggested posting times and platform optimizations`;
+      break;
+      
+    case 'captions':
+      basePrompt += `
+
+CAPTION GUIDELINES:
+- Match the tone and style of ${profile?.niche || 'general'} content
+- Include relevant hashtags for ${profile?.niche || 'general'} niche
+- Vary between educational, entertaining, and engaging styles
+- Include clear calls-to-action appropriate for ${profile?.followers || 0} follower audience`;
+      break;
+      
+    case 'calendar':
+      basePrompt += `
+
+CONTENT CALENDAR REQUIREMENTS:
+- Create 7-day posting schedule
+- Mix content types appropriate for ${profile?.niche || 'general'} creators
+- Include optimal posting times for ${profile?.platforms?.join('/') || 'social platforms'}
+- Balance educational, entertaining, and promotional content
+- Consider ${profile?.followers || 0} follower engagement patterns`;
+      break;
+      
+    case 'rewriter':
+      basePrompt += `
+
+PLATFORM ADAPTATION RULES:
+- Adapt content for different platform audiences and formats
+- Maintain core message while optimizing for each platform's style
+- Consider character limits, hashtag strategies, and engagement patterns
+- Tailor for ${profile?.niche || 'general'} audience across platforms`;
+      break;
+      
+    case 'chat':
+      basePrompt += `
+
+CONVERSATION GUIDELINES:
+- Provide specific, actionable advice for ${profile?.niche || 'content'} creators
+- Reference their follower count (${profile?.followers || 0}) when giving growth strategies
+- Ask clarifying questions when needed to provide better advice
+- Share relevant examples from ${profile?.niche || 'general'} industry
+- Keep responses conversational but professional`;
+      break;
+  }
+
+  basePrompt += `
+
+RESPONSE STYLE:
+- Be encouraging and motivational
+- Provide specific, actionable steps
+- Use examples relevant to their niche and follower level
+- Keep advice practical and implementable
+- Reference current social media trends when relevant`;
+
+  return basePrompt;
+};
+
 export const aiComplete = async (options: AICompletionOptions): Promise<string[]> => {
   const { kind, profile, input, n = 3, stream = false, onChunk, signal } = options;
   
   console.log('🤖 AI Complete called:', { 
     kind, 
     input: input.substring(0, 100) + '...', 
+    hasProfile: !!profile,
+    niche: profile?.niche,
+    followers: profile?.followers,
     hasApiKey: !!openaiApiKey,
     apiKeyValid: !PLACEHOLDER_VALUES.includes(openaiApiKey || ''),
     platform: Platform.OS,
@@ -82,27 +206,11 @@ export const aiComplete = async (options: AICompletionOptions): Promise<string[]
     throw new Error('OpenAI client not initialized. Please check your API key and restart the app.');
   }
 
-  const systemPrompt = `You are an expert social media growth coach. Tailor your outputs to the user's profile and create engaging, platform-appropriate content.
-
-User Profile:
-- Platforms: ${profile?.platforms?.join(', ') || 'General'}
-- Niche: ${profile?.niche || 'General'}
-- Followers: ${profile?.followers ? `${profile.followers.toLocaleString()}` : '0'}
-- Goal: ${profile?.goal || 'Growth'}
-
-Guidelines:
-- For scripts: Create 30-60 second content with Hook → Value → CTA structure. Include suggested posting times.
-- For hooks: Create compelling opening lines under 12 words that grab attention immediately.
-- For captions: Match the platform style, include relevant hashtags, and maintain brand voice.
-- For calendars: Provide 7-day content plans with specific posting schedules and content types.
-- For rewrites: Adapt content for different platforms while maintaining the core message.
-- Always include a clear call-to-action and suggest optimal posting times when relevant.
-- Keep content authentic, engaging, and tailored to the user's niche and follower count.`;
-
-  const userPrompt = `Create ${kind} content: ${input}`;
+  const systemPrompt = getPersonalizedSystemPrompt(profile, kind);
+  const userPrompt = input;
 
   try {
-    console.log('📡 Making OpenAI API request...');
+    console.log('📡 Making personalized OpenAI API request...');
     const startTime = Date.now();
     
     if (stream) {
@@ -135,7 +243,7 @@ Guidelines:
       }
 
       const duration = Date.now() - startTime;
-      console.log(`✅ Streaming completed: ${fullContent.length} chars, ${chunkCount} chunks, ${duration}ms`);
+      console.log(`✅ Personalized streaming completed: ${fullContent.length} chars, ${chunkCount} chunks, ${duration}ms`);
       return [fullContent];
     } else {
       const response = await openai.chat.completions.create({
@@ -151,7 +259,7 @@ Guidelines:
 
       const duration = Date.now() - startTime;
       const results = response.choices.map((choice) => choice.message.content || '');
-      console.log(`✅ Non-streaming response: ${response.choices?.length} choices, ${duration}ms`);
+      console.log(`✅ Personalized response: ${response.choices?.length} choices, ${duration}ms`);
       console.log(`📝 First response preview: ${results[0]?.substring(0, 100)}...`);
       
       return results;

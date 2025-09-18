@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ToastProvider } from '../contexts/ToastContext';
+import { PersonalizationProvider } from '../contexts/PersonalizationContext';
 import StartupNotification from '../components/StartupNotification';
 import { logSystemCheck } from '../utils/systemCheck';
 
@@ -19,41 +20,43 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <ToastProvider>
-          <StatusBar style="light" backgroundColor="#0B0F14" />
-          
-          {showStartupNotification && (
-            <StartupNotification 
-              onDismiss={() => setShowStartupNotification(false)} 
-            />
-          )}
-          
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: '#0B0F14' },
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="onboarding" />
-            <Stack.Screen name="tabs" />
-            <Stack.Screen name="tool/[id]" />
-            <Stack.Screen 
-              name="profile/edit" 
-              options={{
-                presentation: 'modal',
-                animation: 'slide_from_right',
+        <PersonalizationProvider>
+          <ToastProvider>
+            <StatusBar style="light" backgroundColor="#0B0F14" />
+            
+            {showStartupNotification && (
+              <StartupNotification 
+                onDismiss={() => setShowStartupNotification(false)} 
+              />
+            )}
+            
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: '#0B0F14' },
               }}
-            />
-            <Stack.Screen 
-              name="paywall" 
-              options={{
-                presentation: 'modal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-          </Stack>
-        </ToastProvider>
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen name="onboarding" />
+              <Stack.Screen name="tabs" />
+              <Stack.Screen name="tool/[id]" />
+              <Stack.Screen 
+                name="profile/edit" 
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_right',
+                }}
+              />
+              <Stack.Screen 
+                name="paywall" 
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
+              />
+            </Stack>
+          </ToastProvider>
+        </PersonalizationProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );
