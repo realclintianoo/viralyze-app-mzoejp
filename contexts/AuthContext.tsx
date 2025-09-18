@@ -4,6 +4,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { storage } from '../utils/storage';
 import { OnboardingData, SavedItem } from '../types';
+import { router } from 'expo-router';
 
 interface AuthContextType {
   session: Session | null;
@@ -92,6 +93,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           await storage.clearAll();
           console.log('All local data cleared after sign out');
+          
+          // Force navigation to onboarding after sign out
+          console.log('🔄 Redirecting to onboarding after sign out');
+          router.replace('/onboarding');
         } catch (error) {
           console.error('Error clearing data on sign out:', error);
         }
@@ -158,15 +163,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      console.log('Starting complete logout process...');
+      console.log('🚪 Starting complete logout process...');
       
       // Step 1: Clear all local storage data FIRST - this is the most important step
-      console.log('Clearing all local storage data...');
+      console.log('🧹 Clearing all local storage data...');
       await storage.clearAll();
       console.log('✅ All local storage cleared successfully');
       
       // Step 2: Sign out from Supabase
-      console.log('Signing out from Supabase...');
+      console.log('🔐 Signing out from Supabase...');
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('❌ Error signing out from Supabase:', error);
@@ -176,18 +181,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Step 3: Force clear session state immediately to ensure UI updates
-      console.log('Clearing session state...');
+      console.log('🔄 Clearing session state...');
       setSession(null);
       setUser(null);
       console.log('✅ Session state cleared');
+      
+      // Step 4: Force navigation to onboarding
+      console.log('🎯 Forcing navigation to onboarding...');
+      router.replace('/onboarding');
       
       console.log('🎉 Complete logout process finished successfully');
       
     } catch (error) {
       console.error('❌ Error during logout process:', error);
-      // Even if there's an error, try to clear local state
+      // Even if there's an error, try to clear local state and redirect
       setSession(null);
       setUser(null);
+      router.replace('/onboarding');
       throw error;
     }
   };

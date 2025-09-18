@@ -24,14 +24,14 @@ export default function Index() {
       if (!authLoading) {
         initializeApp();
       }
-    }, [authLoading, isPersonalized])
+    }, [authLoading, isPersonalized, user, session])
   );
 
   useEffect(() => {
     if (!authLoading) {
       initializeApp();
     }
-  }, [authLoading, isPersonalized]);
+  }, [authLoading, isPersonalized, user, session]);
 
   const initializeApp = async () => {
     try {
@@ -40,25 +40,26 @@ export default function Index() {
       // Perform system check
       logSystemCheck();
       
-      // Always show onboarding for personalization - this is the key change
-      // Even existing users should go through onboarding to update their preferences
-      console.log('🎯 Checking personalization status:', { 
+      console.log('🎯 Checking app state:', { 
         hasProfile: !!profile, 
         isPersonalized,
-        user: !!user 
+        hasUser: !!user,
+        hasSession: !!session
       });
       
       // Show onboarding if:
-      // 1. No profile exists (new user)
-      // 2. User is logged in but we want to refresh their preferences
-      // 3. Guest user without profile
-      const needsOnboarding = !isPersonalized || (user && !profile);
+      // 1. No profile exists (new user or after sign out)
+      // 2. User is not personalized
+      // 3. Fresh app start without proper setup
+      const needsOnboarding = !isPersonalized || !profile;
       
       console.log('🎯 Needs onboarding:', needsOnboarding);
       setShouldShowOnboarding(needsOnboarding);
       
     } catch (error) {
       console.error('Error initializing app:', error);
+      // On error, show onboarding to reset state
+      setShouldShowOnboarding(true);
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +79,7 @@ export default function Index() {
   // Always redirect to onboarding first for personalization
   // The onboarding screen will handle whether to show welcome or go directly to app
   if (shouldShowOnboarding) {
-    console.log('🎯 Redirecting to onboarding for personalization');
+    console.log('🎯 Redirecting to onboarding for setup');
     return <Redirect href="/onboarding" />;
   }
 

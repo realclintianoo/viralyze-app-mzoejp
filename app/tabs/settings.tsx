@@ -520,6 +520,7 @@ export default function SettingsScreen() {
   
   const [quota, setQuota] = useState<QuotaUsage>({ text: 0, image: 0 });
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
   
   const { user, signOut } = useAuth();
   const { profile, theme, isPersonalized, refreshPersonalization } = usePersonalization();
@@ -578,14 +579,7 @@ export default function SettingsScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out? Your local data will be cleared.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: performSignOut },
-      ]
-    );
+    setShowSignOutModal(true);
   };
 
   const handleClearData = () => {
@@ -614,10 +608,11 @@ export default function SettingsScreen() {
 
   const performSignOut = async () => {
     try {
+      console.log('🚪 Initiating sign out from settings...');
       await signOut();
-      console.log('✅ Sign out completed successfully');
+      console.log('✅ Sign out completed successfully from settings');
     } catch (error) {
-      console.error('❌ Error during sign out:', error);
+      console.error('❌ Error during sign out from settings:', error);
       Alert.alert('Error', 'Failed to sign out. Please try again.');
     }
   };
@@ -679,7 +674,7 @@ export default function SettingsScreen() {
           >
             <View style={{ marginBottom: 16 }}>
               <SparklineChart 
-                data={[quota.text, 2 - quota.text]} 
+                data={[quota.text, 10 - quota.text]} 
                 width={200} 
                 height={60} 
               />
@@ -762,6 +757,21 @@ export default function SettingsScreen() {
           {/* Bottom spacing */}
           <View style={{ height: 40 }} />
         </ScrollView>
+
+        {/* Sign Out Confirmation Modal */}
+        <PremiumConfirmModal
+          visible={showSignOutModal}
+          title="Sign Out"
+          message="Are you sure you want to sign out? Your local data will be cleared and you'll be redirected to the onboarding screen."
+          confirmText="Sign Out"
+          cancelText="Cancel"
+          isDestructive={true}
+          onConfirm={() => {
+            setShowSignOutModal(false);
+            performSignOut();
+          }}
+          onCancel={() => setShowSignOutModal(false)}
+        />
       </Animated.View>
     </SafeAreaView>
   );

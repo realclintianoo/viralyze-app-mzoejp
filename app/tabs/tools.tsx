@@ -1,16 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 import { QuotaUsage } from '../../types';
-import { Ionicons } from '@expo/vector-icons';
-import { storage } from '../../utils/storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Dimensions,
+} from 'react-native';
 import { usePersonalization } from '../../contexts/PersonalizationContext';
-import { getPersonalizedRecommendations } from '../../utils/personalization';
-import * as Haptics from 'expo-haptics';
-import { commonStyles, colors } from '../../styles/commonStyles';
+import { BlurView } from 'expo-blur';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -22,14 +21,16 @@ import Animated, {
   withRepeat,
   withSequence,
 } from 'react-native-reanimated';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Dimensions,
-} from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { commonStyles, colors } from '../../styles/commonStyles';
+import { storage } from '../../utils/storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState, useEffect } from 'react';
+import { getPersonalizedRecommendations } from '../../utils/personalization';
+import { router } from 'expo-router';
+import PremiumFeatureLock from '../../components/PremiumFeatureLock';
 
 interface PremiumToolCardProps {
   tool: typeof TOOLS[0];
@@ -44,83 +45,86 @@ interface PremiumStatsCardProps {
 
 const TOOLS = [
   {
-    id: 'script',
+    id: 'script-generator',
     title: 'Script Generator',
-    description: '30-60s video scripts',
-    icon: 'videocam',
-    gradient: ['#22C55E', '#0891B2'],
-    type: 'text' as const,
+    description: 'Create 30-60s video scripts with hooks, value, and CTAs',
+    icon: 'document-text',
+    gradient: ['rgba(34, 197, 94, 0.1)', 'rgba(22, 163, 74, 0.1)'],
+    glowColor: 'rgba(34, 197, 94, 0.6)',
+    isPremium: false,
   },
   {
-    id: 'hook',
+    id: 'hook-generator',
     title: 'Hook Generator',
-    description: 'Attention-grabbing openers',
+    description: 'Generate 10 viral hooks under 12 words each',
     icon: 'fish',
-    gradient: ['#F59E0B', '#06B6D4'],
-    type: 'text' as const,
+    gradient: ['rgba(59, 130, 246, 0.1)', 'rgba(37, 99, 235, 0.1)'],
+    glowColor: 'rgba(59, 130, 246, 0.6)',
+    isPremium: false,
   },
   {
-    id: 'caption',
+    id: 'caption-generator',
     title: 'Caption Generator',
-    description: 'Engaging post captions',
-    icon: 'create',
-    gradient: ['#8B5CF6', '#06B6D4'],
-    type: 'text' as const,
+    description: 'Create captions in 5 different styles and tones',
+    icon: 'chatbubble-ellipses',
+    gradient: ['rgba(168, 85, 247, 0.1)', 'rgba(147, 51, 234, 0.1)'],
+    glowColor: 'rgba(168, 85, 247, 0.6)',
+    isPremium: false,
   },
   {
     id: 'calendar',
     title: 'Content Calendar',
-    description: '7-day posting plan',
+    description: 'Generate a 7-day posting schedule with optimal times',
     icon: 'calendar',
-    gradient: ['#06B6D4', '#22C55E'],
-    type: 'text' as const,
-    isPro: true,
+    gradient: ['rgba(245, 158, 11, 0.1)', 'rgba(217, 119, 6, 0.1)'],
+    glowColor: 'rgba(245, 158, 11, 0.6)',
+    isPremium: false,
   },
   {
     id: 'rewriter',
     title: 'Cross-Post Rewriter',
-    description: 'Adapt for platforms',
-    icon: 'refresh',
-    gradient: ['#EC4899', '#06B6D4'],
-    type: 'text' as const,
-    isPro: true,
+    description: 'Adapt content for TikTok, Instagram, YouTube, X, and LinkedIn',
+    icon: 'repeat',
+    gradient: ['rgba(6, 182, 212, 0.1)', 'rgba(8, 145, 178, 0.1)'],
+    glowColor: 'rgba(6, 182, 212, 0.6)',
+    isPremium: false,
   },
   {
     id: 'guardian',
     title: 'Guideline Guardian',
-    description: 'Safe content checker',
+    description: 'Detect risky content and get safe rewrites',
     icon: 'shield-checkmark',
-    gradient: ['#EF4444', '#F59E0B'],
-    type: 'text' as const,
-    isPro: true,
+    gradient: ['rgba(239, 68, 68, 0.1)', 'rgba(220, 38, 38, 0.1)'],
+    glowColor: 'rgba(239, 68, 68, 0.6)',
+    isPremium: true, // This is now a premium feature
   },
   {
-    id: 'image',
+    id: 'ai-image',
     title: 'AI Image Maker',
-    description: 'Custom visuals',
+    description: 'Generate images in 16:9, 4:5, and 1:1 formats',
     icon: 'image',
-    gradient: ['#10B981', '#06B6D4'],
-    type: 'image' as const,
-    isPro: true,
+    gradient: ['rgba(139, 92, 246, 0.1)', 'rgba(124, 58, 237, 0.1)'],
+    glowColor: 'rgba(139, 92, 246, 0.6)',
+    isPremium: false,
   },
   {
     id: 'analytics',
     title: 'Content Analytics',
-    description: 'Performance insights',
+    description: 'Advanced insights and performance tracking',
     icon: 'analytics',
-    gradient: ['#8B5CF6', '#EC4899'],
-    type: 'text' as const,
-    isPro: true,
+    gradient: ['rgba(16, 185, 129, 0.1)', 'rgba(5, 150, 105, 0.1)'],
+    glowColor: 'rgba(16, 185, 129, 0.6)',
+    isPremium: true, // This is now a premium feature
   },
   {
-    id: 'scheduler',
-    title: 'Auto Scheduler',
-    description: 'Smart posting times',
-    icon: 'time',
-    gradient: ['#06B6D4', '#8B5CF6'],
-    type: 'text' as const,
-    isPro: true,
-  },
+    id: 'competitor',
+    title: 'Competitor Analysis',
+    description: 'Analyze competitor content and strategies',
+    icon: 'search',
+    gradient: ['rgba(251, 146, 60, 0.1)', 'rgba(249, 115, 22, 0.1)'],
+    glowColor: 'rgba(251, 146, 60, 0.6)',
+    isPremium: true, // This is now a premium feature
+  }
 ];
 
 const PremiumToolCard: React.FC<PremiumToolCardProps> = ({ tool, index, onPress, quota }) => {
@@ -134,7 +138,7 @@ const PremiumToolCard: React.FC<PremiumToolCardProps> = ({ tool, index, onPress,
   }));
 
   useEffect(() => {
-    fadeAnim.value = withDelay(index * 100, withTiming(1, { duration: 400 }));
+    fadeAnim.value = withDelay(index * 100, withTiming(1, { duration: 600 }));
     scaleAnim.value = withDelay(index * 100, withSpring(1, { tension: 300, friction: 8 }));
   }, [index]);
 
@@ -153,73 +157,67 @@ const PremiumToolCard: React.FC<PremiumToolCardProps> = ({ tool, index, onPress,
 
   const isLowQuota = () => {
     if (!quota) return false;
-    if (tool.type === 'text') return quota.text >= 10;
-    if (tool.type === 'image') return quota.image >= 1;
-    return false;
+    return quota.text >= 8; // Show warning when 8/10 used
   };
 
   const getRemainingUses = () => {
-    if (!quota) return 'N/A';
-    if (tool.type === 'text') return `${10 - quota.text}/10`;
-    if (tool.type === 'image') return `${1 - quota.image}/1`;
-    return 'N/A';
+    if (!quota) return 10;
+    return Math.max(0, 10 - quota.text);
   };
 
   const getUsageColor = () => {
-    if (!quota) return colors.textSecondary;
-    const remaining = tool.type === 'text' ? 10 - quota.text : 1 - quota.image;
-    if (remaining === 0) return colors.error;
-    if (remaining <= 2 && tool.type === 'text') return colors.warning;
-    return colors.accent;
+    const remaining = getRemainingUses();
+    if (remaining <= 2) return colors.error;
+    if (remaining <= 5) return colors.warning;
+    return colors.success;
   };
 
   return (
-    <Animated.View style={[{ width: '48%', marginBottom: 16 }, animatedStyle]}>
+    <Animated.View style={[{ margin: 8 }, animatedStyle]}>
       <TouchableOpacity
         style={[
-          commonStyles.glassCard,
+          commonStyles.ultraCard,
           {
             padding: 20,
-            minHeight: 160,
-            opacity: isLowQuota() ? 0.6 : 1,
-            borderColor: isLowQuota() ? colors.error + '30' : colors.glassBorderStrong,
+            borderColor: tool.isPremium ? 'rgba(139, 92, 246, 0.3)' : colors.glassBorderStrong,
+            shadowColor: tool.glowColor,
+            opacity: tool.isPremium ? 0.8 : 1,
           }
         ]}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
-        disabled={isLowQuota()}
         activeOpacity={0.8}
       >
         <LinearGradient
-          colors={[
-            tool.gradient[0] + '15',
-            tool.gradient[1] + '15'
-          ]}
+          colors={tool.gradient}
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            borderRadius: 24,
+            borderRadius: 28,
           }}
         />
         
-        {/* Pro Badge */}
-        {tool.isPro && (
+        {/* Premium Badge */}
+        {tool.isPremium && (
           <View style={{
             position: 'absolute',
             top: 12,
             right: 12,
-            backgroundColor: colors.warning + '20',
-            borderColor: colors.warning + '40',
-            borderWidth: 1,
+            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+            borderRadius: 12,
             paddingHorizontal: 8,
             paddingVertical: 4,
-            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: 'rgba(139, 92, 246, 0.4)',
           }}>
-            <Text style={[commonStyles.textSmall, { color: colors.warning, fontSize: 10 }]}>
+            <Text style={[
+              commonStyles.textBold,
+              { color: '#8B5CF6', fontSize: 10 }
+            ]}>
               PRO
             </Text>
           </View>
@@ -227,52 +225,95 @@ const PremiumToolCard: React.FC<PremiumToolCardProps> = ({ tool, index, onPress,
         
         {/* Icon */}
         <View style={{
-          backgroundColor: tool.gradient[0] + '20',
-          borderRadius: 16,
-          padding: 12,
+          backgroundColor: colors.glassBackgroundStrong,
+          borderRadius: 20,
+          padding: 16,
+          marginBottom: 16,
           alignSelf: 'flex-start',
-          marginBottom: 12,
+          borderWidth: 1,
+          borderColor: colors.glassBorderStrong,
         }}>
-          <Ionicons name={tool.icon as any} size={24} color={tool.gradient[0]} />
+          <Ionicons 
+            name={tool.icon as any} 
+            size={28} 
+            color={tool.isPremium ? '#8B5CF6' : colors.accent} 
+          />
         </View>
         
         {/* Content */}
-        <View style={{ flex: 1, justifyContent: 'space-between' }}>
-          <View>
-            <Text style={[commonStyles.textBold, { fontSize: 16, marginBottom: 4 }]}>
-              {tool.title}
-            </Text>
-            <Text style={[commonStyles.textSmall, { fontSize: 12 }]}>
-              {tool.description}
-            </Text>
-          </View>
-          
-          {/* Usage indicator */}
+        <Text style={[
+          commonStyles.textBold,
+          { 
+            fontSize: 18, 
+            marginBottom: 8,
+            color: tool.isPremium ? colors.textSecondary : colors.text
+          }
+        ]}>
+          {tool.title}
+        </Text>
+        
+        <Text style={[
+          commonStyles.textSmall,
+          { 
+            color: colors.textSecondary, 
+            lineHeight: 18,
+            marginBottom: 16
+          }
+        ]}>
+          {tool.description}
+        </Text>
+        
+        {/* Usage Indicator for non-premium tools */}
+        {!tool.isPremium && quota && (
           <View style={{
             flexDirection: 'row',
-            justifyContent: 'space-between',
             alignItems: 'center',
-            marginTop: 12,
+            justifyContent: 'space-between',
+            paddingTop: 12,
+            borderTopWidth: 1,
+            borderTopColor: colors.glassBorder,
           }}>
             <Text style={[
               commonStyles.textSmall,
-              { color: getUsageColor(), fontSize: 11, fontWeight: '600' }
+              { color: colors.textTertiary }
+            ]}>
+              Usage Today
+            </Text>
+            <Text style={[
+              commonStyles.textBold,
+              { color: getUsageColor(), fontSize: 12 }
             ]}>
               {getRemainingUses()} left
             </Text>
-            
-            {isLowQuota() && (
-              <Ionicons name="lock-closed" size={14} color={colors.error} />
-            )}
           </View>
-        </View>
+        )}
+        
+        {/* Premium Lock Indicator */}
+        {tool.isPremium && (
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingTop: 12,
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(139, 92, 246, 0.2)',
+          }}>
+            <Ionicons name="lock-closed" size={14} color="#8B5CF6" style={{ marginRight: 6 }} />
+            <Text style={[
+              commonStyles.textBold,
+              { color: '#8B5CF6', fontSize: 12 }
+            ]}>
+              Premium Feature
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
 const PremiumStatsCard: React.FC<PremiumStatsCardProps> = ({ quota }) => {
-  const { theme, profile, recommendations } = usePersonalization();
+  const { theme } = usePersonalization();
   const pulseAnim = useSharedValue(1);
   const fadeAnim = useSharedValue(0);
   
@@ -284,7 +325,7 @@ const PremiumStatsCard: React.FC<PremiumStatsCardProps> = ({ quota }) => {
   useEffect(() => {
     fadeAnim.value = withTiming(1, { duration: 600 });
     
-    if (quota && (quota.text >= 10 || quota.image >= 1)) {
+    if (quota && quota.text >= 8) {
       pulseAnim.value = withRepeat(
         withSequence(
           withTiming(1.02, { duration: 1000 }),
@@ -296,70 +337,93 @@ const PremiumStatsCard: React.FC<PremiumStatsCardProps> = ({ quota }) => {
     }
   }, [quota]);
 
+  const getUsagePercentage = () => {
+    if (!quota) return 0;
+    return (quota.text / 10) * 100;
+  };
+
+  const getUsageColor = () => {
+    const percentage = getUsagePercentage();
+    if (percentage >= 80) return colors.error;
+    if (percentage >= 60) return colors.warning;
+    return colors.success;
+  };
+
   return (
-    <Animated.View style={[commonStyles.glassCard, { margin: 16 }, animatedStyle]}>
+    <Animated.View style={[
+      commonStyles.ultraCard,
+      { margin: 16, padding: 24 },
+      animatedStyle
+    ]}>
       <LinearGradient
-        colors={[theme.gradient[0] + '10', theme.gradient[1] + '10']}
+        colors={[theme.gradient[0] + '08', theme.gradient[1] + '08']}
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          borderRadius: 24,
+          borderRadius: 28,
         }}
       />
       
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-        <View>
-          <Text style={[commonStyles.textBold, { fontSize: 18, marginBottom: 4 }]}>
-            Daily Usage
-          </Text>
-          <Text style={commonStyles.textSmall}>
-            Track your AI requests
-          </Text>
-        </View>
-        
+      <Text style={[commonStyles.subtitle, { marginBottom: 20, textAlign: 'center' }]}>
+        Daily Usage
+      </Text>
+      
+      <View style={{ alignItems: 'center', marginBottom: 20 }}>
+        <Text style={[
+          commonStyles.title,
+          { 
+            fontSize: 36, 
+            color: getUsageColor(),
+            marginBottom: 4
+          }
+        ]}>
+          {quota ? 10 - quota.text : 10}
+        </Text>
+        <Text style={[
+          commonStyles.textSmall,
+          { color: colors.textSecondary }
+        ]}>
+          AI requests remaining
+        </Text>
+      </View>
+      
+      {/* Progress Bar */}
+      <View style={{
+        height: 8,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: 16,
+      }}>
         <View style={{
-          backgroundColor: theme.primary + '20',
-          borderRadius: 12,
-          padding: 8,
-        }}>
-          <Ionicons name="analytics" size={20} color={theme.primary} />
-        </View>
+          height: '100%',
+          width: `${getUsagePercentage()}%`,
+          backgroundColor: getUsageColor(),
+          borderRadius: 4,
+        }} />
       </View>
       
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1, marginRight: 8 }}>
-          <Text style={[commonStyles.textBold, { color: colors.accent }]}>
-            {quota?.text || 0}/10
-          </Text>
-          <Text style={[commonStyles.textSmall, { fontSize: 11 }]}>
-            Text Requests
-          </Text>
-        </View>
-        
-        <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={[commonStyles.textBold, { color: colors.warning }]}>
-            {quota?.image || 0}/1
-          </Text>
-          <Text style={[commonStyles.textSmall, { fontSize: 11 }]}>
-            Image Requests
-          </Text>
-        </View>
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <Text style={[
+          commonStyles.textSmall,
+          { color: colors.textTertiary }
+        ]}>
+          {quota?.text || 0}/10 used
+        </Text>
+        <Text style={[
+          commonStyles.textSmall,
+          { color: colors.textTertiary }
+        ]}>
+          Resets daily
+        </Text>
       </View>
-      
-      {/* Personalized recommendations */}
-      {profile && recommendations.length > 0 && (
-        <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.glassBorder }}>
-          <Text style={[commonStyles.textBold, { fontSize: 14, marginBottom: 8 }]}>
-            Recommended for {profile.niche} creators:
-          </Text>
-          <Text style={[commonStyles.textSmall, { fontSize: 12 }]}>
-            • {recommendations[0]}
-          </Text>
-        </View>
-      )}
     </Animated.View>
   );
 };
@@ -368,8 +432,9 @@ export default function ToolsScreen() {
   console.log('🛠️ Tools screen rendered');
   
   const [quota, setQuota] = useState<QuotaUsage | null>(null);
+  const [showPremiumLock, setShowPremiumLock] = useState(false);
   
-  const { profile, theme, isPersonalized } = usePersonalization();
+  const { profile, theme } = usePersonalization();
   
   const fadeAnim = useSharedValue(0);
 
@@ -392,47 +457,36 @@ export default function ToolsScreen() {
   };
 
   const handleToolPress = (tool: typeof TOOLS[0]) => {
-    // Check quota before proceeding
-    if (tool.type === 'text' && quota && quota.text >= 10) {
+    if (tool.isPremium) {
+      setShowPremiumLock(true);
+      return;
+    }
+
+    // Check quota for non-premium tools
+    if (quota && quota.text >= 10) {
       showUpgradeModal('text');
       return;
     }
-    
-    if (tool.type === 'image' && quota && quota.image >= 1) {
-      showUpgradeModal('image');
-      return;
-    }
-    
-    if (tool.isPro) {
-      showProModal();
-      return;
-    }
-    
+
+    // Navigate to tool
     router.push(`/tool/${tool.id}`);
   };
 
   const showProModal = () => {
-    Alert.alert(
-      'Pro Feature',
-      'This tool is available with Viralyze Pro. Upgrade to unlock all premium features!',
-      [
-        { text: 'Maybe Later', style: 'cancel' },
-        { text: 'Upgrade to Pro', onPress: () => router.push('/paywall') },
-      ]
-    );
+    router.push('/paywall');
   };
 
   const showUpgradeModal = (type: 'text' | 'image') => {
     const message = type === 'text' 
-      ? 'You\'ve used all 10 of your free AI text requests for today.'
-      : 'You\'ve used your free AI image request for today.';
-      
+      ? 'You\'ve used all 10 of your free AI requests today. Upgrade to Pro for unlimited access!'
+      : 'You\'ve used your free image generation for today. Upgrade to Pro for unlimited images!';
+    
     Alert.alert(
       'Daily Limit Reached',
-      `${message} Upgrade to Pro for unlimited access!`,
+      message,
       [
         { text: 'Maybe Later', style: 'cancel' },
-        { text: 'Upgrade to Pro', onPress: () => router.push('/paywall') },
+        { text: 'Upgrade to Pro', onPress: showProModal },
       ]
     );
   };
@@ -441,79 +495,95 @@ export default function ToolsScreen() {
     <SafeAreaView style={commonStyles.safeArea}>
       <Animated.View style={[commonStyles.container, animatedStyle]}>
         {/* Header */}
-        <View style={[commonStyles.header, { paddingBottom: 8 }]}>
-          <View>
-            <Text style={commonStyles.headerTitle}>Tools</Text>
-            {isPersonalized && (
-              <Text style={[commonStyles.textSmall, { color: theme.primary }]}>
-                Personalized for {profile?.niche || 'Content'} creators
-              </Text>
-            )}
-          </View>
+        <View style={commonStyles.header}>
+          <Text style={commonStyles.headerTitle}>AI Tools</Text>
+          <TouchableOpacity
+            style={commonStyles.headerButton}
+            onPress={showProModal}
+          >
+            <Ionicons name="diamond" size={24} color="#8B5CF6" />
+          </TouchableOpacity>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Stats Card */}
           <PremiumStatsCard quota={quota} />
 
+          {/* Personalized Recommendations */}
+          {profile && (
+            <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+              <Text style={[
+                commonStyles.subtitle,
+                { marginBottom: 12, color: theme.primary }
+              ]}>
+                Recommended for {profile.niche} Creators
+              </Text>
+              <Text style={[
+                commonStyles.textSmall,
+                { color: colors.textSecondary, marginBottom: 16 }
+              ]}>
+                {getPersonalizedRecommendations(profile)[0]}
+              </Text>
+            </View>
+          )}
+
           {/* Tools Grid */}
           <View style={{
             flexDirection: 'row',
             flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            paddingHorizontal: 16,
+            paddingHorizontal: 8,
           }}>
             {TOOLS.map((tool, index) => (
-              <PremiumToolCard
-                key={tool.id}
-                tool={tool}
-                index={index}
-                onPress={() => handleToolPress(tool)}
-                quota={quota}
-              />
+              <View key={tool.id} style={{ width: '50%' }}>
+                <PremiumToolCard
+                  tool={tool}
+                  index={index}
+                  onPress={() => handleToolPress(tool)}
+                  quota={quota}
+                />
+              </View>
             ))}
           </View>
-
-          {/* Personalized Recommendations */}
-          {isPersonalized && (
-            <View style={[commonStyles.glassCard, { margin: 16 }]}>
-              <LinearGradient
-                colors={[theme.gradient[0] + '08', theme.gradient[1] + '08']}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  borderRadius: 24,
-                }}
-              />
-              
-              <Text style={[commonStyles.textBold, { marginBottom: 12 }]}>
-                Recommended Tools for You
-              </Text>
-              
-              <Text style={[commonStyles.textSmall, { marginBottom: 8 }]}>
-                As a {profile?.niche || 'content'} creator with {profile?.followers || 0} followers:
-              </Text>
-              
-              <View>
-                <Text style={[commonStyles.textSmall, { marginBottom: 4 }]}>
-                  • Try the <Text style={{ fontWeight: '600' }}>Hook Generator</Text> for engaging openers
-                </Text>
-                <Text style={[commonStyles.textSmall, { marginBottom: 4 }]}>
-                  • Use <Text style={{ fontWeight: '600' }}>Script Generator</Text> for video content
-                </Text>
-                <Text style={[commonStyles.textSmall, { marginBottom: 4 }]}>
-                  • Plan with <Text style={{ fontWeight: '600' }}>Content Calendar</Text> for consistency
-                </Text>
-              </View>
-            </View>
-          )}
 
           {/* Bottom spacing */}
           <View style={{ height: 40 }} />
         </ScrollView>
+
+        {/* Premium Feature Lock Modal */}
+        {showPremiumLock && (
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+          }}>
+            <TouchableOpacity
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+              onPress={() => setShowPremiumLock(false)}
+            />
+            
+            <PremiumFeatureLock
+              title="Premium Feature"
+              description="This advanced tool is available with VIRALYZE Pro. Upgrade now to unlock unlimited AI requests and premium features."
+              onUpgrade={() => {
+                setShowPremiumLock(false);
+                showProModal();
+              }}
+              icon="diamond"
+            />
+          </View>
+        )}
       </Animated.View>
     </SafeAreaView>
   );

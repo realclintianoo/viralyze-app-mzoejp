@@ -17,7 +17,7 @@ export const useQuota = () => {
   const [quota, setQuota] = useState<QuotaLimits>({
     textRequests: 0,
     imageRequests: 0,
-    maxTextRequests: 10,
+    maxTextRequests: 10, // Updated from 2 to 10
     maxImageRequests: 1,
     isPro: false,
   });
@@ -29,9 +29,9 @@ export const useQuota = () => {
         // Load from local storage for guests
         const localQuota = await storage.getQuotaUsage();
         setQuota({
-          textRequests: localQuota.textRequests,
-          imageRequests: localQuota.imageRequests,
-          maxTextRequests: 10,
+          textRequests: localQuota.text,
+          imageRequests: localQuota.image,
+          maxTextRequests: 10, // Updated from 2 to 10
           maxImageRequests: 1,
           isPro: false,
         });
@@ -54,7 +54,7 @@ export const useQuota = () => {
         setQuota({
           textRequests: textUsage,
           imageRequests: imageUsage,
-          maxTextRequests: isPro ? 999999 : 10,
+          maxTextRequests: isPro ? 999999 : 10, // Updated from 2 to 10
           maxImageRequests: isPro ? 999999 : 1,
           isPro,
         });
@@ -77,8 +77,7 @@ export const useQuota = () => {
         const currentQuota = await storage.getQuotaUsage();
         const newQuota = {
           ...currentQuota,
-          [type === 'text' ? 'textRequests' : 'imageRequests']: 
-            currentQuota[type === 'text' ? 'textRequests' : 'imageRequests'] + 1,
+          [type]: currentQuota[type] + 1,
         };
         await storage.setQuotaUsage(newQuota);
         

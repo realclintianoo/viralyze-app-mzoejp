@@ -75,7 +75,7 @@ export const storage = {
     }
   },
 
-  // Quota usage methods
+  // Quota usage methods - Updated to support new 10 credit system
   async getQuotaUsage(): Promise<QuotaUsage> {
     try {
       const usage = await AsyncStorage.getItem(KEYS.QUOTA_USAGE);
@@ -128,6 +128,19 @@ export const storage = {
     }
   },
 
+  // New method to set quota usage directly
+  async setQuotaUsage(quota: QuotaUsage): Promise<void> {
+    try {
+      const quotaWithReset = {
+        ...quota,
+        resetDate: new Date().toDateString(),
+      };
+      await AsyncStorage.setItem(KEYS.QUOTA_USAGE, JSON.stringify(quotaWithReset));
+    } catch (error) {
+      console.log('Error setting quota usage:', error);
+    }
+  },
+
   // Onboarding data methods
   async getOnboardingData(): Promise<OnboardingData | null> {
     try {
@@ -156,18 +169,18 @@ export const storage = {
     }
   },
 
-  // Clear all data
+  // Clear all data - Enhanced for better logout
   async clearAll(): Promise<void> {
     try {
-      console.log('Clearing all storage data...');
+      console.log('🧹 Starting complete storage cleanup...');
       
       // Get all keys and remove them to ensure complete cleanup
       const allKeys = await AsyncStorage.getAllKeys();
-      console.log('Found storage keys:', allKeys);
+      console.log('📋 Found storage keys:', allKeys);
       
       if (allKeys.length > 0) {
         await AsyncStorage.multiRemove(allKeys);
-        console.log('All storage keys cleared');
+        console.log('✅ All storage keys cleared');
       }
       
       // Also explicitly clear our known keys as backup
@@ -178,9 +191,9 @@ export const storage = {
         KEYS.CHAT_MESSAGES,
       ]);
       
-      console.log('Storage cleared successfully');
+      console.log('✅ Storage cleared successfully');
     } catch (error) {
-      console.log('Error clearing storage:', error);
+      console.log('❌ Error clearing storage:', error);
       throw error;
     }
   },
